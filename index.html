@@ -4,6 +4,39 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Leaflet Campaign Tracker</title>
+<script>
+(function(){
+  const PASSWORD = 'WillsX2025!';
+  const COOKIE = 'lct_auth';
+  const DAYS = 14;
+  function getCookie(name){
+    return document.cookie.split(';').some(c=>c.trim().startsWith(name+'='));
+  }
+  function setCookie(name,days){
+    const exp=new Date(Date.now()+days*864e5).toUTCString();
+    document.cookie=name+'=1;expires='+exp+';path=/;SameSite=Lax';
+  }
+  if(!getCookie(COOKIE)){
+    document.addEventListener('DOMContentLoaded',function(){
+      document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f0f4f8;font-family:Segoe UI,sans-serif;">'+
+        '<div style="background:white;padding:40px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.1);text-align:center;max-width:320px;width:100%;">'+
+        '<div style="font-size:2rem;margin-bottom:12px;">&#128202;</div>'+
+        '<h2 style="color:#1a3a5c;margin-bottom:6px;font-size:1.2rem;">WillSolicitor</h2>'+
+        '<p style="color:#888;font-size:0.85rem;margin-bottom:24px;">Leaflet Campaign Tracker</p>'+
+        '<input id="pw" type="password" placeholder="Password" style="width:100%;padding:10px 12px;border:1px solid #ccd3db;border-radius:6px;font-size:1rem;margin-bottom:12px;box-sizing:border-box;" autofocus>'+
+        '<button onclick="checkPw()" style="width:100%;padding:10px;background:#1a3a5c;color:white;border:none;border-radius:6px;font-size:1rem;cursor:pointer;">Enter</button>'+
+        '<p id="pwerr" style="color:#c0392b;font-size:0.82rem;margin-top:10px;display:none;">Incorrect password</p>'+
+        '</div></div>';
+      document.getElementById('pw').addEventListener('keydown',function(e){if(e.key==='Enter')checkPw();});
+    });
+    window.checkPw=function(){
+      const val=document.getElementById('pw').value;
+      if(val===PASSWORD){setCookie(COOKIE,DAYS);location.reload();}
+      else{document.getElementById('pwerr').style.display='block';}
+    };
+  }
+})();
+</script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #222; }
