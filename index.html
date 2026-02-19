@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leaflet Campaign Tracker</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #222; }
+header { background: #1a3a5c; color: white; padding: 20px 24px; }
+header h1 { font-size: 1.4rem; }
+header p { font-size: 0.85rem; opacity: 0.8; margin-top: 4px; }
+.sync-bar { background: #fff; border-bottom: 1px solid #dde3ea; padding: 6px 24px; font-size: 0.75rem; color: #888; display: flex; align-items: center; gap: 8px; }
+.sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; flex-shrink: 0; }
+.sync-dot.ok { background: #27ae60; }
+.sync-dot.saving { background: #f39c12; }
+.sync-dot.err { background: #c0392b; }
+.summary-bar { display: flex; flex-wrap: wrap; gap: 12px; background: #fff; padding: 16px 24px; border-bottom: 1px solid #dde3ea; }
+.stat { text-align: center; min-width: 110px; }
+.stat .val { font-size: 1.5rem; font-weight: 700; color: #1a3a5c; }
+.stat .lbl { font-size: 0.72rem; color: #666; text-transform: uppercase; letter-spacing: 0.04em; }
+.progress-bar-wrap { flex: 1 1 200px; display: flex; align-items: center; gap: 10px; }
+.progress-bar { flex: 1; height: 14px; background: #dde3ea; border-radius: 7px; overflow: hidden; }
+.progress-bar-fill { height: 100%; background: #2e86ab; border-radius: 7px; transition: width 0.4s; }
+.main { padding: 20px 24px; }
+h2 { font-size: 1rem; color: #1a3a5c; margin-bottom: 12px; margin-top: 24px; }
+.week-block { margin-bottom: 28px; }
+.week-label { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #888; margin-bottom: 8px; }
+.session-card { background: white; border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; border-left: 5px solid #2e86ab; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+.session-card.complete { border-left-color: #27ae60; }
+.session-card.partial { border-left-color: #f39c12; }
+.session-card.future { border-left-color: #bbb; }
+.session-header { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+.session-date { font-weight: 700; font-size: 0.95rem; min-width: 130px; }
+.session-area { font-size: 0.9rem; color: #444; flex: 1; }
+.session-target { font-size: 0.82rem; color: #888; white-space: nowrap; }
+.badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+.badge-complete { background: #d5f5e3; color: #1e8449; }
+.badge-partial { background: #fef9e7; color: #b7770d; }
+.badge-future { background: #f2f2f2; color: #888; }
+.briefing { background: #f7faff; border: 1px solid #d0e4f5; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; font-size: 0.82rem; line-height: 1.6; color: #333; }
+.briefing strong { color: #1a3a5c; }
+.session-fields { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.field { display: flex; flex-direction: column; gap: 3px; }
+.field label { font-size: 0.72rem; color: #888; font-weight: 600; text-transform: uppercase; }
+.field input, .field select { border: 1px solid #ccd3db; border-radius: 6px; padding: 5px 8px; font-size: 0.85rem; background: #fafbfc; }
+.field select { width: 140px; }
+.field input[type=number] { width: 110px; }
+.field input[type=text] { width: 220px; }
+.field input:focus, .field select:focus { outline: none; border-color: #2e86ab; background: #fff; }
+.reforecast { background: #eaf6ff; border: 1px solid #b3d9f5; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; }
+.reforecast h3 { font-size: 0.9rem; color: #1a3a5c; margin-bottom: 8px; }
+.warn { color: #c0392b; font-weight: 600; }
+.good { color: #1e8449; font-weight: 600; }
+.finance-section { background: white; border-radius: 10px; padding: 18px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+.finance-inputs { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #eee; }
+.finance-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.finance-table th { background: #1a3a5c; color: white; padding: 8px 10px; text-align: left; }
+.finance-table td { padding: 8px 10px; border-bottom: 1px solid #eee; }
+.finance-table tr:last-child td { border-bottom: none; }
+.finance-table td.highlight { font-weight: 700; color: #1a3a5c; }
+.actual-row td { background: #eafaf1; }
+footer { text-align: center; font-size: 0.72rem; color: #aaa; padding: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>&#128202; WillSolicitor &mdash; Leaflet Drop Campaign Tracker</h1>
+  <p>20,000 leaflets &middot; Richard, Josh, Dan &amp; Cahner &middot; Tue&ndash;Fri &middot; Target completion: Wed 25 Mar 2026</p>
+</header>
+<div class="sync-bar">
+  <div class="sync-dot" id="syncDot"></div>
+  <span id="syncMsg">Connecting to live database&hellip;</span>
+</div>
+<div class="summary-bar">
+  <div class="stat"><div class="val" id="sumDelivered">0</div><div class="lbl">Delivered</div></div>
+  <div class="stat"><div class="val" id="sumRemaining">20,000</div><div class="lbl">Remaining</div></div>
+  <div class="stat"><div class="val" id="sumSessions">0</div><div class="lbl">Sessions Done</div></div>
+  <div class="stat"><div class="val" id="sumProjected">&mdash;</div><div class="lbl">Proj. Completion</div></div>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar"><div class="progress-bar-fill" id="progressFill" style="width:0%"></div></div>
+    <span id="progressPct" style="font-size:0.85rem;font-weight:700;color:#1a3a5c">0%</span>
+  </div>
+</div>
+<div class="main">
+  <div class="reforecast"><h3>&#128202; Schedule Status</h3><p id="reforecastMsg">Loading&hellip;</p></div>
+  <h2>Campaign Schedule</h2>
+  <div id="schedule"></div>
+  <h2>Financial Projections</h2>
+  <div class="finance-section">
+    <div class="finance-inputs">
+      <div class="field"><label>Enquiries Received</label><input type="number" id="fi_enquiries" min="0" placeholder="0" style="width:140px"></div>
+      <div class="field"><label>Cases Instructed</label><input type="number" id="fi_cases" min="0" placeholder="0" style="width:140px"></div>
+      <div class="field"><label>Total Instruction Value (&pound;)</label><input type="number" id="fi_instrvalue" min="0" placeholder="0" style="width:160px"></div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:16px;background:#f7faff;border:1px solid #d0e4f5;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:0.82rem;">
+      <div><span style="color:#888">Avg case value:</span> <strong id="dm_avgcase">&mdash;</strong></div>
+      <div><span style="color:#888">Enquiry&rarr;instruction rate:</span> <strong id="dm_convrate">&mdash;</strong></div>
+      <div><span style="color:#888">Revenue per 100 leaflets:</span> <strong id="dm_per100">&mdash;</strong></div>
+      <div><span style="color:#888">Revenue per enquiry:</span> <strong id="dm_perenquiry">&mdash;</strong></div>
+      <div><span style="color:#888">Leaflets per case:</span> <strong id="dm_percase">&mdash;</strong></div>
+    </div>
+    <table class="finance-table">
+      <thead><tr><th>Scenario</th><th>Response Rate</th><th>Enquiries from delivered</th><th>Enquiries from remaining</th><th>Total proj. enquiries</th><th>Total proj. revenue</th></tr></thead>
+      <tbody>
+        <tr class="actual-row"><td><strong>&#9989; Actual to date</strong></td><td id="fa_rate">&mdash;</td><td id="fa_enquiries" colspan="2">&mdash;</td><td id="fa_cases">&mdash;</td><td id="fa_revenue" class="highlight">&mdash;</td></tr>
+        <tr id="f_extrap_row" style="display:none;background:#fff8e1;"><td><strong>&#128200; Extrapolated (actual rate)</strong></td><td id="f_ext_rate">&mdash;</td><td id="f_ext_sofar">&mdash;</td><td id="f_ext_todo">&mdash;</td><td id="f_ext_total">&mdash;</td><td id="f_ext_rev" class="highlight" style="color:#b7770d;font-weight:700;">&mdash;</td></tr>
+        <tr><td>Conservative</td><td>0.25%</td><td id="f1_sofar">&mdash;</td><td id="f1_todo">&mdash;</td><td id="f1_total">&mdash;</td><td id="f1_rev" class="highlight">&mdash;</td></tr>
+        <tr><td>Target</td><td>0.5%</td><td id="f2_sofar">&mdash;</td><td id="f2_todo">&mdash;</td><td id="f2_total">&mdash;</td><td id="f2_rev" class="highlight">&mdash;</td></tr>
+        <tr><td>Optimistic</td><td>1.0%</td><td id="f3_sofar">&mdash;</td><td id="f3_todo">&mdash;</td><td id="f3_total">&mdash;</td><td id="f3_rev" class="highlight">&mdash;</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:0.72rem;color:#999;margin-top:8px">* Once real data is entered, the extrapolated row uses your actual response rate across all 20,000 leaflets.</p>
+  </div>
+</div>
+<footer>Live data &middot; Supabase &middot; willsolicitor-leaflet-campaign</footer>
+
+<script>
+const SUPABASE_URL='https://tjebidvgvbpnxgnphcrg.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqZWJpZHZndmJwbnhnbnBoY3JnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0ODkyNDcsImV4cCI6MjA4NzA2NTI0N30.7MyRW330dP1ZkCqOqTykjRo6Y-cM4ow3aJ-6_H82BUY';
+const TOTAL=20000,DEFAULT_CASE_VAL=294.42,DAILY_TARGET=1000;
+const STAFF=['\u2014 Assign \u2014','Richard','Josh','Dan','Cahner'];
+const sessions=[
+{id:0,date:'Fri 20 Feb',week:'Kick-off (Week 0)',area:'Wilmslow \u2014 Dean Row',postcode:'SK9 2BY',target:500,briefing:'<strong>Where to park:</strong> Free parking near Summerfields Village, Dean Row Road SK9 2BY \u2014 aim to arrive by 9am.<br><strong>What you are doing:</strong> Post a WillSolicitor leaflet through the letterbox of every house around Summerfields Village. Walk up one side of the street and back down the other.<br><strong>Which streets:</strong> Start on Dean Row Road, then work into Adlington Road, Moor Lane and surrounding cul-de-sacs.<br><strong>Target today:</strong> 500 leaflets (250 each). Half day \u2014 finish by 12:30pm.<br><strong>When done:</strong> Count leftovers, log the number delivered here.'},
+{id:1,date:'Tue 24 Feb',week:'Week 1',area:'Wilmslow \u2014 Dean Row (continued)',postcode:'SK9 2BY',target:1000,briefing:'<strong>Where to park:</strong> Same as Friday \u2014 Summerfields Village, Dean Row Road SK9 2BY.<br><strong>What you are doing:</strong> Pick up from where Friday finished, covering remaining Dean Row streets.<br><strong>Which streets:</strong> Check Friday notes for last street. Continue into Deanway, Hawthorn Lane and south toward the A34. Skip flats and social housing.<br><strong>Target today:</strong> 1,000 leaflets. Full 5-hour shift.<br><strong>When done:</strong> Log count and note last street completed.'},
+{id:2,date:'Wed 25 Feb',week:'Week 1',area:'Wilmslow (finish) \u2192 Lacey Green (start)',postcode:'SK9 2BY \u2192 SK9 5BP',target:1000,briefing:'<strong>Where to park:</strong> Morning: Dean Row SK9 2BY. Afternoon: Twinnies Road SK9 5BP.<br><strong>What you are doing:</strong> Transition day. Finish Dean Row in the morning, start Lacey Green in the afternoon.<br><strong>Which streets:</strong> Finish any unticked Dean Row streets, then Twinnies Road and surrounding avenues. Avoid the rural northern edge near the river.<br><strong>Target today:</strong> 1,000 combined.<br><strong>When done:</strong> Note exactly which Lacey Green street you stopped on.'},
+{id:3,date:'Thu 26 Feb',week:'Week 1',area:'Wilmslow \u2014 Lacey Green',postcode:'SK9 5BP',target:1000,briefing:'<strong>Where to park:</strong> Twinnies Road SK9 5BP.<br><strong>What you are doing:</strong> Complete Lacey Green from where Wednesday left off.<br><strong>Which streets:</strong> Check Wednesday notes. Work south and east through remaining avenues.<br><strong>Target today:</strong> 1,000 leaflets.<br><strong>When done:</strong> Log total and note streets skipped.'},
+{id:4,date:'Fri 27 Feb',week:'Week 1',area:'Knutsford \u2014 Mobberley Village',postcode:'WA16 7HE',target:1000,briefing:'<strong>Where to park:</strong> Town Lane, Mobberley WA16 7HE \u2014 near the church or pub car park.<br><strong>What you are doing:</strong> Cover Mobberley village. Houses grouped together, very efficient.<br><strong>Which streets:</strong> Start on Town Lane, fan out into Church Lane, Knutsford Road, Ilford Mill Lane and cul-de-sacs. Skip long rural driveways.<br><strong>Target today:</strong> 1,000 leaflets (around 1,200 targetable homes).<br><strong>When done:</strong> Log count and note roads not reached.'},
+{id:5,date:'Tue 03 Mar',week:'Week 2',area:'Knutsford \u2014 Cross Town (Manor Park)',postcode:'WA16 8DB',target:1000,briefing:'<strong>Where to park:</strong> Manor Park North, Knutsford WA16 8DB.<br><strong>What you are doing:</strong> Start the Manor Park estate \u2014 grid-pattern streets, excellent density.<br><strong>Which streets:</strong> Manor Park North, then Manor Park South, Bexton Road and surrounding closes.<br><strong>Target today:</strong> 1,000 leaflets.<br><strong>When done:</strong> Note last street for tomorrow.'},
+{id:6,date:'Wed 04 Mar',week:'Week 2',area:'Knutsford \u2014 Cross Town (completion)',postcode:'WA16 8DB',target:1000,briefing:'<strong>Where to park:</strong> Continue from Tuesday in WA16 8DB.<br><strong>What you are doing:</strong> Complete Knutsford Cross Town.<br><strong>Which streets:</strong> From Tuesday notes, continue toward Chelford Road and the southern edge.<br><strong>Target today:</strong> 1,000 leaflets \u2014 Knutsford complete!<br><strong>When done:</strong> Log total.'},
+{id:7,date:'Thu 05 Mar',week:'Week 2',area:'Lymm \u2014 Booths Hill',postcode:'WA13 0DL',target:1000,briefing:'<strong>Where to park:</strong> Booths Hill Road, Lymm WA13 0DL \u2014 near Barsbank Lane junction.<br><strong>What you are doing:</strong> Start Lymm \u2014 affluent village, ideal households for Wills.<br><strong>Which streets:</strong> From Barsbank Lane end, work east into Booths Hill Road, Elm Tree Avenue, Cherry Lane and branching roads.<br><strong>Target today:</strong> 1,000 leaflets.<br><strong>When done:</strong> Note finishing street for tomorrow.'},
+{id:8,date:'Fri 06 Mar',week:'Week 2',area:'Lymm \u2014 Booths Hill toward Statham',postcode:'WA13 9BP',target:1000,briefing:'<strong>Where to park:</strong> Continue from Thursday. For Statham: Statham Lane WA13 9BP.<br><strong>What you are doing:</strong> Continue west through Lymm toward Statham hamlet.<br><strong>Which streets:</strong> From Thursday last street, complete remaining Booths Hill roads then Statham Lane. Stay in built-up clusters.<br><strong>Target today:</strong> 1,000 leaflets.<br><strong>When done:</strong> Note if Lymm is complete or needs mop-up.'},
+{id:9,date:'Tue 10 Mar',week:'Week 3',area:'Lymm (mop-up) \u2192 Poynton West (start)',postcode:'WA13 \u2192 SK12 1RE',target:1000,briefing:'<strong>Where to park:</strong> Morning: Lymm WA13 0DL. Afternoon: Park Lane, Poynton SK12 1RE.<br><strong>What you are doing:</strong> Transition day. Morning finishes Lymm, afternoon starts Poynton West (Bird Estate).<br><strong>Bird Estate:</strong> Avenues named after birds \u2014 Robin Drive, Wren Close etc. Flat, dense, fast to leaflet.<br><strong>Target today:</strong> 1,000 combined.<br><strong>When done:</strong> Note finishing street in Poynton.'},
+{id:10,date:'Wed 11 Mar',week:'Week 3',area:'Poynton \u2014 West (Bird Estate)',postcode:'SK12 1RE',target:1000,briefing:'<strong>Where to park:</strong> Park Lane, Poynton SK12 1RE.<br><strong>What you are doing:</strong> Full day on the Bird Estate. Flat, short paths, fast progress.<br><strong>Which streets:</strong> Continue from Tuesday: Linnet Drive, Robin Drive, Wren Close, Mallard Close, Kestrel Avenue. Stay west of A523.<br><strong>Target today:</strong> 1,000 leaflets.<br><strong>When done:</strong> Log count and note finishing point.'},
+{id:11,date:'Thu 12 Mar',week:'Week 3',area:'Poynton \u2014 West (final streets)',postcode:'SK12 1RE',target:1000,briefing:'<strong>Where to park:</strong> Continue from Wednesday SK12 1RE.<br><strong>What you are doing:</strong> Wrap up Poynton West.<br><strong>Which streets:</strong> From Wednesday notes. If done early, extend into streets north of Dickens Lane.<br><strong>Target today:</strong> 1,000 leaflets \u2014 Poynton complete.<br><strong>When done:</strong> Log total.'},
+{id:12,date:'Fri 13 Mar',week:'Week 3',area:'Cheadle Hulme \u2014 South (Grove Lane)',postcode:'SK8 7NB',target:1000,briefing:'<strong>Where to park:</strong> Grove Lane, Cheadle Hulme SK8 7NB \u2014 near Turves Road junction.<br><strong>What you are doing:</strong> Start the largest area \u2014 3,500 homes, 1930s semis. Classic owner-occupied family homes.<br><strong>Which streets:</strong> Grove Lane near Cheadle College, work south and east into Turves Road, Gillbent Road and branching avenues. Skip flat complexes.<br><strong>Target today:</strong> 1,000 leaflets (about one third of area). Keep precise notes.<br><strong>When done:</strong> Log count and note finishing street precisely.'},
+{id:13,date:'Tue 17 Mar',week:'Week 4',area:'Cheadle Hulme \u2014 South (toward Bramhall border)',postcode:'SK8 7NB',target:1000,briefing:'<strong>Where to park:</strong> Continue from Friday SK8 7NB.<br><strong>What you are doing:</strong> Second day in Cheadle Hulme South, pushing toward the Bramhall border.<br><strong>Which streets:</strong> From Friday notes, continue into the grid toward Bramhall Lane South and roads bordering Bramhall Park.<br><strong>Target today:</strong> 1,000 leaflets.<br><strong>When done:</strong> Log total and note precise finishing street.'},
+{id:14,date:'Wed 18 Mar',week:'Week 4',area:'Cheadle Hulme (completion) + East Didsbury (start)',postcode:'SK8 7NB \u2192 M20 5NP',target:1000,briefing:'<strong>Where to park:</strong> Morning: SK8 7NB. Afternoon: Parrs Wood Road, East Didsbury M20 5NP.<br><strong>What you are doing:</strong> Transition day. Morning finishes Cheadle Hulme (~500 leaflets), afternoon starts East Didsbury.<br><strong>East Didsbury:</strong> Streets between Parrs Wood Road and Kingsway \u2014 Victorian and Edwardian terraces, good owner-occupied homes.<br><strong>Target today:</strong> 1,000 across both areas.<br><strong>When done:</strong> Log total and note East Didsbury finishing street.'},
+{id:15,date:'Thu 19 Mar',week:'Week 4',area:'East Didsbury \u2014 Parrs Wood area',postcode:'M20 5NP',target:1000,briefing:'<strong>Where to park:</strong> Parrs Wood Road, East Didsbury M20 5NP.<br><strong>What you are doing:</strong> Full day in East Didsbury \u2014 popular suburb, good family and professional households.<br><strong>Which streets:</strong> Continue from Wednesday: Dene Road, Willoughby Avenue, Sandringham Road and surroundings. Stay south of Didsbury village centre.<br><strong>Target today:</strong> 1,000 leaflets.<br><strong>When done:</strong> Log count and note streets skipped.'},
+{id:16,date:'Fri 20 Mar',week:'Week 4',area:'East Didsbury \u2014 completion',postcode:'M20 5NP',target:1000,briefing:'<strong>Where to park:</strong> Continue from Thursday M20 5NP.<br><strong>What you are doing:</strong> Complete East Didsbury.<br><strong>Which streets:</strong> From Thursday notes, finish Parrs Wood/Kingsway zone. If done early, extend north toward roads south of Lapwing Lane.<br><strong>Target today:</strong> 1,000 leaflets \u2014 East Didsbury complete!<br><strong>When done:</strong> Log total. Only Handforth left!'},
+{id:17,date:'Tue 24 Mar',week:'Week 5',area:'Handforth \u2014 South (Hall Road / Spath Lane)',postcode:'SK9 3AD',target:1000,briefing:'<strong>Where to park:</strong> Hall Road, Handforth SK9 3AD.<br><strong>What you are doing:</strong> Private housing in southern Handforth near the Wilmslow border. Stick to these streets only.<br><strong>Which streets:</strong> Hall Road, Spath Lane, The Bollin and avenues toward the Wilmslow border. Do NOT head north toward the A34.<br><strong>Target today:</strong> 1,000 leaflets (~1,300 targetable homes).<br><strong>When done:</strong> Log count and note streets not reached.'},
+{id:18,date:'Wed 25 Mar',week:'Week 5',area:'Mop-up Day \u2014 Handforth / Wilmslow border',postcode:'SK9 3AD',target:500,briefing:'<strong>Where to park:</strong> Hall Road SK9 3AD or wherever mop-up takes you.<br><strong>What you are doing:</strong> Final day of the campaign! Check all notes from every previous session. Any street flagged as skipped or unfinished gets done today.<br><strong>Which streets:</strong> Prioritise Handforth and the Wilmslow border. If you run out of missed streets, revisit the area with thinnest coverage.<br><strong>Target today:</strong> 500 leaflets \u2014 the final 500 to reach 20,000.<br><strong>When done:</strong> Log final count. Campaign complete! &#127881;'}
+];
+
+async function sbFetch(path,opts={}){
+  const res=await fetch(SUPABASE_URL+path,{...opts,headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation',...(opts.headers||{})}});
+  if(!res.ok)throw new Error(await res.text());
+  const t=await res.text();return t?JSON.parse(t):null;
+}
+function setSyncStatus(s,msg){document.getElementById('syncDot').className='sync-dot '+s;document.getElementById('syncMsg').textContent=msg;}
+let sessionState={},saveTimers={};
+async function loadAll(){
+  setSyncStatus('saving','Loading\u2026');
+  try{
+    const[rows,fin]=await Promise.all([sbFetch('/rest/v1/session_log?select=*'),sbFetch('/rest/v1/finance_actuals?select=*&id=eq.1')]);
+    sessionState={};(rows||[]).forEach(r=>{sessionState[r.id]=r;});
+    if(fin&&fin[0]){const f=fin[0];document.getElementById('fi_enquiries').value=f.enquiries||'';document.getElementById('fi_cases').value=f.cases_instructed||'';document.getElementById('fi_instrvalue').value=f.instruction_value||'';}
+    setSyncStatus('ok','Live \u2014 all changes sync automatically');render();updateSummary();
+  }catch(e){setSyncStatus('err','Connection error \u2014 '+e.message);}
+}
+function scheduleSessionSave(id){clearTimeout(saveTimers[id]);saveTimers[id]=setTimeout(()=>saveSession(id),800);}
+async function saveSession(id){
+  setSyncStatus('saving','Saving\u2026');const row=sessionState[id]||{};
+  try{
+    await sbFetch('/rest/v1/session_log',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=representation'},body:JSON.stringify({id,staff1:row.staff1||null,staff2:row.staff2||null,delivered:row.delivered||null,comment:row.comment||null,updated_at:new Date().toISOString()})});
+    setSyncStatus('ok','Saved \u00b7 '+new Date().toLocaleTimeString());
+  }catch(e){setSyncStatus('err','Save failed \u2014 '+e.message);}
+}
+let financeTimer;
+function scheduleFinanceSave(){clearTimeout(financeTimer);financeTimer=setTimeout(saveFinance,800);}
+async function saveFinance(){
+  setSyncStatus('saving','Saving\u2026');
+  try{
+    await sbFetch('/rest/v1/finance_actuals',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=representation'},body:JSON.stringify({id:1,enquiries:parseInt(document.getElementById('fi_enquiries').value)||0,cases_instructed:parseInt(document.getElementById('fi_cases').value)||0,instruction_value:parseFloat(document.getElementById('fi_instrvalue').value)||0,updated_at:new Date().toISOString()})});
+    setSyncStatus('ok','Saved \u00b7 '+new Date().toLocaleTimeString());
+    let td=0;sessions.forEach(s=>{td+=sessionState[s.id]?.delivered||0;});updateFinance(td,20000-td);
+  }catch(e){setSyncStatus('err','Save failed \u2014 '+e.message);}
+}
+function render(){
+  const container=document.getElementById('schedule');container.innerHTML='';
+  let currentWeek='',weekDiv;
+  sessions.forEach(s=>{
+    if(s.week!==currentWeek){currentWeek=s.week;weekDiv=document.createElement('div');weekDiv.className='week-block';weekDiv.innerHTML='<div class="week-label">'+s.week+'</div>';container.appendChild(weekDiv);}
+    const row=sessionState[s.id]||{};
+    const delivered=parseInt(row.delivered)||0;
+    const status=delivered>=s.target?'complete':delivered>0?'partial':'future';
+    const badgeText=status==='complete'?'\u2713 Complete':status==='partial'?'\u26a1 Partial':'Upcoming';
+    const badgeClass='badge-'+(status==='future'?'future':status==='complete'?'complete':'partial');
+    const card=document.createElement('div');card.className='session-card '+status;
+    card.innerHTML='<div class="session-header"><div class="session-date">'+s.date+'</div><div class="session-area">'+s.area+' <span style="color:#888;font-size:0.8rem">('+s.postcode+')</span></div><div class="session-target">Target: '+s.target.toLocaleString()+'</div><span class="badge '+badgeClass+'">'+badgeText+'</span></div>'+
+      '<div class="briefing">'+s.briefing+'</div>'+
+      '<div class="session-fields">'+
+      '<div class="field"><label>Staff Member 1</label><select data-id="'+s.id+'" data-field="staff1">'+STAFF.map(n=>'<option value="'+n+'"'+((row.staff1||'')===n?' selected':'')+'>'+n+'</option>').join('')+'</select></div>'+
+      '<div class="field"><label>Staff Member 2</label><select data-id="'+s.id+'" data-field="staff2">'+STAFF.map(n=>'<option value="'+n+'"'+((row.staff2||'')===n?' selected':'')+'>'+n+'</option>').join('')+'</select></div>'+
+      '<div class="field"><label>Leaflets Delivered</label><input type="number" min="0" max="1500" placeholder="0" data-id="'+s.id+'" data-field="delivered" value="'+(row.delivered||'')+'"></div>'+
+      '<div class="field"><label>Notes / Issues</label><input type="text" placeholder="e.g. skipped Elm Close" data-id="'+s.id+'" data-field="comment" value="'+(row.comment||'')+'" style="width:240px"></div>'+
+      '</div>';
+    weekDiv.appendChild(card);
+  });
+  container.querySelectorAll('select,input').forEach(el=>{
+    el.addEventListener('change',()=>{
+      const id=parseInt(el.dataset.id);if(!sessionState[id])sessionState[id]={};
+      sessionState[id][el.dataset.field]=el.type==='number'?(parseInt(el.value)||null):el.value;
+      scheduleSessionSave(id);updateSummary();if(el.dataset.field==='delivered')render();
+    });
+  });
+}
+function fmtCurrency(n){return n.toLocaleString('en-GB',{style:'currency',currency:'GBP',maximumFractionDigits:0});}
+function updateSummary(){
+  let td=0,cs=0;sessions.forEach(s=>{const d=parseInt(sessionState[s.id]?.delivered)||0;td+=d;if(d>0)cs++;});
+  const rem=Math.max(0,20000-td),pct=Math.min(100,Math.round(td/20000*100));
+  document.getElementById('sumDelivered').textContent=td.toLocaleString();
+  document.getElementById('sumRemaining').textContent=rem.toLocaleString();
+  document.getElementById('sumSessions').textContent=cs;
+  document.getElementById('progressFill').style.width=pct+'%';
+  document.getElementById('progressPct').textContent=pct+'%';
+  const sl=sessions.filter(s=>!(parseInt(sessionState[s.id]?.delivered)||0)).length;
+  if(cs>0){const avg=td/cs,proj=td+avg*sl;document.getElementById('sumProjected').textContent=proj>=20000?'On track \u2713':Math.round(proj/1000)+'k est.';}
+  else document.getElementById('sumProjected').textContent='\u2014';
+  const rfMsg=document.getElementById('reforecastMsg');
+  if(cs===0){rfMsg.innerHTML='No sessions logged yet. Fill in completions after each session to see your re-forecast.';}
+  else{
+    const avg=Math.round(td/cs),diff=avg-1000;
+    const dl=diff>=0?'<span class="good">+'+diff+' ahead of daily target</span>':'<span class="warn">'+diff+' behind daily target</span>';
+    const proj=td+avg*sl,sf=20000-proj;
+    const pm=sf<=0?'<span class="good">On course to deliver all 20,000 leaflets!</span>':'<span class="warn">Projected shortfall of ~'+Math.round(sf).toLocaleString()+' leaflets at current pace.</span>';
+    rfMsg.innerHTML=cs+' session(s) completed &nbsp;&middot;&nbsp; Average: <strong>'+avg.toLocaleString()+'</strong>/session &nbsp;&middot;&nbsp; '+dl+'<br><br>'+pm;
+  }
+  updateFinance(td,rem);
+}
+function updateFinance(td,rem){
+  const enq=parseInt(document.getElementById('fi_enquiries').value)||0;
+  const cas=parseInt(document.getElementById('fi_cases').value)||0;
+  const inv=parseFloat(document.getElementById('fi_instrvalue').value)||0;
+  const avgCV=cas>0&&inv>0?inv/cas:294.42,convR=enq>0&&cas>0?cas/enq:1;
+  const leafR=td>0&&enq>0?enq/td:null,rev100=td>0&&inv>0?(inv/td)*100:null;
+  const revPEnq=enq>0&&inv>0?inv/enq:null,lpc=td>0&&cas>0?Math.round(td/cas):null;
+  document.getElementById('dm_avgcase').textContent=inv>0&&cas>0?fmtCurrency(avgCV):'\u2014';
+  document.getElementById('dm_convrate').textContent=enq>0&&cas>0?Math.round(convR*100)+'%':'\u2014';
+  document.getElementById('dm_per100').textContent=rev100!==null?fmtCurrency(rev100):'\u2014';
+  document.getElementById('dm_perenquiry').textContent=revPEnq!==null?fmtCurrency(revPEnq):'\u2014';
+  document.getElementById('dm_percase').textContent=lpc!==null?lpc.toLocaleString():'\u2014';
+  if(enq>0){
+    document.getElementById('fa_rate').textContent=leafR!==null?(leafR*100).toFixed(2)+'%':'\u2014';
+    document.getElementById('fa_enquiries').textContent=enq+' enquiries';
+    document.getElementById('fa_cases').textContent=cas>0?cas+' cases':'\u2014';
+    document.getElementById('fa_revenue').textContent=inv>0?fmtCurrency(inv):'\u2014';
+  }else{
+    ['fa_rate','fa_cases','fa_revenue'].forEach(id=>document.getElementById(id).textContent='\u2014');
+    document.getElementById('fa_enquiries').textContent='Enter data above';
+  }
+  const hasA=leafR!==null&&cas>0&&inv>0;
+  document.getElementById('f_extrap_row').style.display=hasA?'':'none';
+  if(hasA){
+    const ef=Math.round(20000*leafR),cf=Math.round(ef*convR);
+    document.getElementById('f_ext_rate').textContent=(leafR*100).toFixed(2)+'%';
+    document.getElementById('f_ext_sofar').textContent=enq;
+    document.getElementById('f_ext_todo').textContent=Math.round(rem*leafR);
+    document.getElementById('f_ext_total').textContent=ef;
+    document.getElementById('f_ext_rev').textContent=fmtCurrency(cf*avgCV);
+  }
+  [[0.0025,'f1'],[0.005,'f2'],[0.01,'f3']].forEach(([sr,p])=>{
+    const es=Math.round(td*sr),et=Math.round(rem*sr),te=es+et;
+    const cr=cas>0&&enq>0?convR:1,cv=cas>0&&inv>0?avgCV:294.42;
+    document.getElementById(p+'_sofar').textContent=td>0?es:'\u2014';
+    document.getElementById(p+'_todo').textContent=et;
+    document.getElementById(p+'_total').textContent=te;
+    document.getElementById(p+'_rev').textContent=fmtCurrency(Math.round(te*cr)*cv);
+  });
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  ['fi_enquiries','fi_cases','fi_instrvalue'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.addEventListener('input',scheduleFinanceSave);
+  });
+  loadAll();setInterval(loadAll,30000);
+});
+</script>
+</body>
+</html>
