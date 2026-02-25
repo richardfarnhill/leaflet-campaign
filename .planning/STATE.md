@@ -98,7 +98,6 @@ Progress: [████████████████░░░░] ~80%
      REQUIRED: Claim here before making ANY code changes. Remove when done.
      Format: - [AGENT] [scope] — [brief description] — claimed [YYYY-MM-DD HH:MM UTC] -->
 
-- Claude [05-T6] — Response rate + case value overrides (CFG-02/04) — claimed 2026-02-25 UTC
 
 ## Session Continuity
 
@@ -135,7 +134,7 @@ Resume file: None
 | T3: Config button | ✓ Done | OC |
 | T4: DB-driven summary bar | ✓ Done | Claude |
 | T5: Aggregated stats | ✓ Done | Claude |
-| T6: Response rate config | ○ Pending | Claude (claimed) |
+| T6: Response rate config | ✓ Done | Claude |
 | T7: New campaign UI | ✓ Done | Claude |
 | T7a: Seed test campaign | ○ Pending | - |
 | T8: Remove hardcoded STAFF | ✓ Done | OC |
