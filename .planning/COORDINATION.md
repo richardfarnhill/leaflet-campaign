@@ -73,6 +73,26 @@ When you finish a session (whether or not it was a formal GSD plan), update STAT
 
 ---
 
+## Rule: Phase Plans Must Be Backchecked Against PROJECT.md
+
+**Before finalising any phase plan, both agents MUST verify it against PROJECT.md.**
+
+Gaps have appeared in past phases where features planned in PROJECT.md were not scheduled
+in any phase plan (e.g. OS Names API geocoding, route-level postcodes). This rule prevents
+that.
+
+**Backcheck process:**
+1. Read `## Key Decisions` and `## Active Requirements` in PROJECT.md
+2. For each item, confirm it is either: assigned to a phase in ROADMAP.md, or explicitly
+   deferred to v2 in REQUIREMENTS.md
+3. If any item is unscheduled: add it to REQUIREMENTS.md and assign it to the appropriate
+   phase in ROADMAP.md BEFORE the phase plan is considered complete
+4. Phase plans must reference the requirement IDs they satisfy (e.g. `Satisfies: GEO-01`)
+
+**This applies to both agents for every new phase plan.**
+
+---
+
 ## Why This Exists
 
 GSD was designed for a single AI agent. This project uses two. Without coordination:

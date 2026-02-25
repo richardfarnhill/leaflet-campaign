@@ -20,7 +20,7 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 | 1 - Database Foundation | Supabase schema with RLS and PostGIS operational | None | TER-01, TER-02, TER-03 |
 | 2 - Territory & Reservation | Teams can claim geographic chunks with date selection | Phase 1 | TER-01, TER-02, TER-03 |
 | 3 - Delivery Recording | Teams can record delivery completions with leaflet counts | Phase 2 | TER-01 (completion) |
-| 4 - Analytics & Heatmaps | Users can visualize delivery coverage and enquiry locations | Phase 3 | ANL-01, ANL-02, ANL-03, ANL-04 |
+| 4 - Analytics & Heatmaps | Users can visualize delivery coverage and enquiry locations | Phase 3 | ANL-01, ANL-02, ANL-03, ANL-04, GEO-01 |
 | 5 - Campaign Management | Users can switch between campaigns and configure settings | Phase 1 | CMP-01, CMP-02, CFG-01, CFG-02, DEM-01 |
 | 6 - Enquiry & Team | Robust enquiry recording with heatmap and team progress | Phase 4 | ENQ-01, ENQ-02, TEA-01, TEA-02 |
 | 7 - Integrations | External tool connections (ClickUp, Sheets, Gmail) | Phase 4 | INT-01, INT-02, INT-03 |
@@ -100,6 +100,7 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 - ANL-02: Heat Maps (Enquiries)
 - ANL-03: Completion Rate by Area
 - ANL-04: Analytics Dashboard
+- GEO-01: Accurate Route Geocoding (unique postcode per route, geocoded via postcodes.io)
 
 **Dependencies:** Phase 3 (requires delivery data)
 
