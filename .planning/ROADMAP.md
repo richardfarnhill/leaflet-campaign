@@ -38,11 +38,18 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 - Row Level Security enabled on all tables
 - PostGIS extension enabled for spatial queries
 
-**Success Criteria (4):**
+**⚠️ CRITICAL: Data Migration Required**
+- Existing data from session_log, finance_actuals, rescheduled_sessions MUST be preserved
+- Migrate existing deliveries to new schema structure
+- Migrate existing enquiries/cases to new schema
+- Keep old tables as backup until migration verified
+
+**Success Criteria (5):**
 1. Developer can create new campaign via database or UI with name, start_date, end_date, target_leaflets
 2. Developer can create team members with name, role, contact details
 3. All database tables have RLS policies enforced - authenticated users can only see assigned campaign data
 4. PostGIS extension is enabled and spatial queries work (distance calculations, bounding boxes)
+5. **Existing delivery data migrated** - All yesterday's deliveries preserved in new schema
 
 ---
 

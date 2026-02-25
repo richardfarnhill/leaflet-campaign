@@ -1,30 +1,90 @@
 -- ============================================================
--- LEAFLET CAMPAIGN - NEW DATABASE SCHEMA
--- Run this SQL in Supabase SQL Editor
+-- LEAFLET CAMPAIGN - ACTUAL CURRENT SCHEMA
+-- Retrieved from Supabase via REST API
+-- Date: 2026-02-25
 -- ============================================================
 
 -- ============================================================
--- CAMPAIGN CONFIGURATION TABLES
+-- CURRENT TABLES (IN USE)
 -- ============================================================
 
--- Singleton config table
-CREATE TABLE campaign_config (
+-- Session Log (delivery tracking)
+CREATE TABLE IF NOT EXISTS session_log (
+    id INTEGER PRIMARY KEY,
+    staff1 TEXT,
+    staff2 TEXT,
+    delivered INTEGER,
+    comment TEXT,
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    went_out BOOLEAN DEFAULT true
+);
+
+-- Finance Actual (enquiries/cases tracking)
+CREATE TABLE IF NOT EXISTS finance_actuals (
     id INTEGER PRIMARY KEY DEFAULT 1,
-    total_leaflets INTEGER NOT NULL DEFAULT 30000,
-    default_case_value DECIMAL(10,2) NOT NULL DEFAULT 294.42,
-    response_rate_conservative DECIMAL(5,4) NOT NULL DEFAULT 0.0025,
-    response_rate_target DECIMAL(5,4) NOT NULL DEFAULT 0.0050,
-    response_rate_optimistic DECIMAL(5,4) NOT NULL DEFAULT 0.0075,
+    enquiries INTEGER DEFAULT 0,
+    cases_instructed INTEGER DEFAULT 0,
+    instruction_value NUMERIC(10,2) DEFAULT 0.00,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Rescheduled Sessions
+CREATE TABLE IF NOT EXISTS rescheduled_sessions (
+    id INTEGER PRIMARY KEY,
+    original_id TEXT NOT NULL,
+    date_iso TEXT NOT NULL,
+    area TEXT,
+    postcode TEXT,
+    target INTEGER DEFAULT 1000,
+    briefing TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ============================================================
+-- CURRENT DATA (as of 2026-02-25)
+-- ============================================================
+
+-- session_log contains: id 0-5 (some delivered, some pending)
+-- finance_actuals: id=1, all values 0 (no enquiries/cases yet)
+-- rescheduled_sessions: may contain rescheduled session data
+
+-- ============================================================
+-- MIGRATION NOTES FOR V2 SCHEMA
+-- ============================================================
+-- When implementing card-based system, migrate data:
+-- 1. Keep session_log as backup
+-- 2. Create new tables (campaigns, target_areas, reservations, deliveries, enquiries_new, cases_new)
+-- 3. Migrate existing deliveries to new schema
+-- 4. NEW enquiries table should have: client_name, postcode, instructed (y/n), value
+-- 5. Add campaign_id to all tables for multi-campaign support
+-- ============================================================
+
+-- ============================================================
+-- NEW SCHEMA (for card-based system - Phase 1 implementation)
+-- ============================================================
+
+-- Enable PostGIS
+-- CREATE EXTENSION IF NOT EXISTS postgis;
+
+-- Campaigns table (for multi-campaign support)
+CREATE TABLE IF NOT EXISTS campaigns (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    start_date DATE,
+    end_date DATE,
+    target_leaflets INTEGER DEFAULT 30000,
+    is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Insert default config
-INSERT INTO campaign_config (id) VALUES (1)
-ON CONFLICT (id) DO NOTHING;
+-- Insert first campaign (migrate from current setup)
+INSERT INTO campaigns (name, target_leaflets) 
+VALUES ('Current Campaign', 30000)
+ON CONFLICT DO NOTHING;
 
--- Team members
-CREATE TABLE team_members (
+-- Team members (enhanced from current)
+CREATE TABLE IF NOT EXISTS team_members (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL UNIQUE,
     is_active BOOLEAN DEFAULT true,
@@ -33,64 +93,43 @@ CREATE TABLE team_members (
 
 -- Insert current team
 INSERT INTO team_members (name) VALUES 
-    ('Richard'), 
-    ('Josh'), 
-    ('Dan'), 
-    ('Cahner'),
-    ('Orla')
+    ('Richard'), ('Josh'), ('Dan'), ('Cahner'), ('Orla')
 ON CONFLICT (name) DO NOTHING;
 
--- ============================================================
--- TARGET AREAS (Door chunks - ~1000 sections)
--- NOT linked to dates
--- ============================================================
-
-CREATE TABLE target_areas (
+-- Target Areas (card-based chunks)
+CREATE TABLE IF NOT EXISTS target_areas (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    campaign_id UUID REFERENCES campaigns(id),
     area_name TEXT NOT NULL,
     postcode TEXT NOT NULL,
-    streets TEXT[] NOT NULL DEFAULT '{}',
-    house_count INTEGER NOT NULL DEFAULT 0,
+    streets TEXT[] DEFAULT '{}',
+    house_count INTEGER DEFAULT 0,
     gps_bounds JSONB,
     google_maps_link TEXT,
-    status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available', 'reserved', 'completed')),
-    sort_order INTEGER,
+    status TEXT DEFAULT 'available' CHECK (status IN ('available', 'reserved', 'completed')),
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Indexes
-CREATE INDEX idx_target_areas_status ON target_areas(status);
-CREATE INDEX idx_target_areas_postcode ON target_areas(postcode);
-
--- ============================================================
--- RESERVATIONS (Users reserve card + date)
--- ============================================================
-
-CREATE TABLE reservations (
+-- Reservations (team reserves area + date)
+CREATE TABLE IF NOT EXISTS reservations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    target_area_id UUID NOT NULL REFERENCES target_areas(id) ON DELETE CASCADE,
-    team_member_1_id UUID NOT NULL REFERENCES team_members(id),
+    target_area_id UUID REFERENCES target_areas(id) ON DELETE CASCADE,
+    team_member_1_id UUID REFERENCES team_members(id),
     team_member_2_id UUID REFERENCES team_members(id),
     delivery_date DATE NOT NULL,
     reserved_at TIMESTAMPTZ DEFAULT NOW(),
-    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'cancelled', 'completed')),
+    status TEXT DEFAULT 'active' CHECK (status IN ('active', 'cancelled', 'completed')),
     notes TEXT
 );
 
--- Indexes
-CREATE INDEX idx_reservations_delivery_date ON reservations(delivery_date);
-CREATE INDEX idx_reservations_status ON reservations(status);
-
--- ============================================================
--- DELIVERIES (Record completion)
--- ============================================================
-
-CREATE TABLE deliveries (
+-- Deliveries (completion records)
+CREATE TABLE IF NOT EXISTS deliveries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    target_area_id UUID NOT NULL REFERENCES target_areas(id) ON DELETE CASCADE,
-    team_member_1_id UUID NOT NULL REFERENCES team_members(id),
+    campaign_id UUID REFERENCES campaigns(id),
+    target_area_id UUID REFERENCES target_areas(id) ON DELETE CASCADE,
+    team_member_1_id UUID REFERENCES team_members(id),
     team_member_2_id UUID REFERENCES team_members(id),
     delivery_date DATE NOT NULL,
     leaflets_delivered INTEGER NOT NULL,
@@ -100,79 +139,51 @@ CREATE TABLE deliveries (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Indexes
-CREATE INDEX idx_deliveries_delivery_date ON deliveries(delivery_date);
-
--- ============================================================
--- ENQUIRIES (Date-stamped)
--- ============================================================
-
-CREATE TABLE enquiries (
+-- Enquiries (NEW robust structure)
+CREATE TABLE IF NOT EXISTS enquiries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    campaign_id UUID REFERENCES campaigns(id),
     enquiry_date DATE NOT NULL,
+    client_name TEXT NOT NULL,
+    postcode TEXT NOT NULL,
+    instructed BOOLEAN DEFAULT false,
+    instruction_value NUMERIC(10,2) DEFAULT 0,
     source TEXT,
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_enquiries_enquiry_date ON enquiries(enquiry_date);
-
--- ============================================================
--- CASES (Date-stamped)
--- ============================================================
-
-CREATE TABLE cases (
+-- Cases (linked to enquiries)
+CREATE TABLE IF NOT EXISTS cases (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    campaign_id UUID REFERENCES campaigns(id),
     enquiry_id UUID REFERENCES enquiries(id) ON DELETE SET NULL,
     instruction_date DATE NOT NULL,
-    instruction_value DECIMAL(10,2) NOT NULL,
+    instruction_value NUMERIC(10,2) NOT NULL,
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_cases_instruction_date ON cases(instruction_date);
+-- ============================================================
+-- RLS POLICIES (enable in Phase 1)
+-- ============================================================
+-- ALTER TABLE campaigns ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE team_members ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE target_areas ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE reservations ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE deliveries ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE enquiries ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE cases ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
--- VIEWS FOR ANALYTICS
+-- INDEXES
 -- ============================================================
-
--- Campaign Status View
-CREATE OR REPLACE VIEW v_campaign_status AS
-SELECT 
-    cc.total_leaflets,
-    COALESCE(SUM(d.leaflets_delivered), 0) AS total_delivered,
-    cc.total_leaflets - COALESCE(SUM(d.leaflets_delivered), 0) AS remaining,
-    COUNT(DISTINCT d.id) AS completed_chunks,
-    (SELECT COUNT(*) FROM target_areas WHERE status = 'available') AS available_chunks,
-    (SELECT COUNT(*) FROM target_areas WHERE status = 'reserved') AS reserved_chunks
-FROM campaign_config cc
-LEFT JOIN deliveries d ON true;
-
--- Deliveries Over Time
-CREATE OR REPLACE VIEW v_deliveries_over_time AS
-SELECT 
-    delivery_date,
-    COUNT(*) AS sessions_that_day,
-    SUM(leaflets_delivered) AS leaflets_that_day
-FROM deliveries
-GROUP BY delivery_date
-ORDER BY delivery_date;
-
--- Enquiries Over Time
-CREATE OR REPLACE VIEW v_enquiries_over_time AS
-SELECT 
-    enquiry_date,
-    COUNT(*) AS enquiries_that_day
-FROM enquiries
-GROUP BY enquiry_date
-ORDER BY enquiry_date;
-
--- Revenue Over Time
-CREATE OR REPLACE VIEW v_revenue_over_time AS
-SELECT 
-    instruction_date,
-    COUNT(*) AS cases_that_day,
-    SUM(instruction_value) AS revenue_that_day
-FROM cases
-GROUP BY instruction_date
-ORDER BY instruction_date;
+CREATE INDEX IF NOT EXISTS idx_target_areas_status ON target_areas(status);
+CREATE INDEX IF NOT EXISTS idx_target_areas_campaign ON target_areas(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_reservations_delivery_date ON reservations(delivery_date);
+CREATE INDEX IF NOT EXISTS idx_deliveries_delivery_date ON deliveries(delivery_date);
+CREATE INDEX IF NOT EXISTS idx_deliveries_campaign ON deliveries(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_enquiries_enquiry_date ON enquiries(enquiry_date);
+CREATE INDEX IF NOT EXISTS idx_enquiries_campaign ON enquiries(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_cases_instruction_date ON cases(instruction_date);
+CREATE INDEX IF NOT EXISTS idx_cases_campaign ON cases(campaign_id);
