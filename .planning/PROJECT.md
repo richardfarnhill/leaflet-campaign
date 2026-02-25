@@ -62,8 +62,12 @@ A **commercial** leaflet delivery tracking application that enables teams to res
 | Heatmap (deliveries + enquiries) | Visualize both completed areas AND enquiry locations | — Pending |
 | OS Names API integration | Get accurate street names and counts for chunking | — Pending |
 | Census 2021 demographic filtering | Target 60-80% owner-occupied areas | — Pending |
+| **libpostal + demography integration** | **CRITICAL - chunking and area selection from criteria** | — Pending |
+| **Planning Screen** | Define criteria → generate target areas → create campaign in DB | — Pending (v2) |
+| **ClickUp integration stub** | Create API structure for ClickUp, full implementation v2 | — Pending |
 | Supabase for backend | Already in use, provides auth and database | — Pending |
 | Chunking strategy: keep streets together | Never split a street across delivery chunks | — Pending |
+| **Composio integration** | Use free toolkits - Google Sheets, ClickUp, Gmail, etc. | — Pending |
 | No FOSS alternatives used | Existing FOSS options (Fleetbase, LOBSTA) are overkill for our needs | — Pending |
 
 ## External Tools Research
@@ -80,27 +84,47 @@ A **commercial** leaflet delivery tracking application that enables teams to res
 
 ### Composio / MCP Integration
 
-**Status:** Not recommended for v1 (requires paid API)
+**Status:** REVISED - Use free toolkits!
 
-Relevant toolkits available:
-- **Supabase** - Could integrate DB operations
-- **Google Sheets** - Export data
-- **Slack/Discord** - Team notifications
+Free toolkits to use:
+- **Google Sheets** - Export campaign data
+- **ClickUp** - Integration stub (create API endpoints)
 - **Gmail** - Auto-email reports
 - **Notion** - Documentation sync
-- **GitHub** - Code management
+- **Slack/Discord** - Team notifications
+- And 850+ others with free tiers
 
-**Decision:** Revisit in v2 after core features are working.
+**Decision:** Create stub integration in v1, full implementation v2.
+
+### libpostal + demography (CRITICAL!)
+
+These are **essential** for the chunking/planning workflow:
+
+| Library | Purpose | Use Case |
+|---------|---------|----------|
+| **libpostal** | UK address parsing & normalization | Parse street names, validate postcodes |
+| **demography** | UK postcode demographic data | Filter by owner-occupied %, social housing % |
+| **ONS Census** | Official UK demographics | Source for tenure data |
+| **OS Names API** | Street names & locations | Get accurate street data |
+
+**Planning Screen workflow (v2):**
+1. User enters: Total leaflets (50,000), chunk size (850), demographics (social housing ONLY), radius (20 miles), centre postcode (E4 9UT)
+2. System uses libpostal + demography + ONS data to:
+   - Find all streets within radius
+   - Filter by demographic criteria
+   - Chunk into appropriate sizes (never split streets)
+3. User reviews → clicks "Create Campaign"
+4. Campaign + target_areas created in Supabase
 
 ### HuggingFace Datasets
 
 | Dataset | Description | Relevance |
 |---------|-------------|-----------|
-| **libpostal** | UK address parsing (1.74M addresses) | Could help with address normalization |
+| **libpostal** | UK address parsing (1.74M addresses) | CRITICAL for chunking |
+| **demography** package | Python lib for UK postcode demographics | CRITICAL for filtering |
 | **ONS Census** | Available via data.gov.uk, not HF | Primary source for demographics |
-| **demography** package | Python lib for UK postcode demographics | Useful for demographic enrichment |
 
-**Conclusion:** Use ONS data directly from data.gov.uk (free), consider libpostal for address parsing.
+**Conclusion:** Use ONS data + libpostal + demography together for intelligent area selection.
 
 ## Existing Code (Brownfield)
 
@@ -128,6 +152,7 @@ This is a brownfield project. Codebase analysis completed:
 - [ ] **Aggregated data view** - See data across all campaigns
 - [ ] OS Names API integration for street data
 - [ ] Census 2021 demographic filtering (60-80% owner-occupied)
+- [ ] **libpostal + demography integration** - Critical for chunking/area selection
 - [ ] Chunking algorithm (800-1200 doors per chunk)
 - [ ] Analytics dashboard with charts
 - [ ] **Heatmap visualization** - Show completed areas AND enquiries on map
@@ -136,6 +161,8 @@ This is a brownfield project. Codebase analysis completed:
 - [ ] **Campaign config UI** - Frontend ability to update total leaflets, team members
 - [ ] **Robust enquiry recording** - Client name, postcode, if instructed (yes/no), instruction value (£)
 - [ ] **Enquiry heatmap** - Visualize enquiries on same map as delivery coverage
+- [ ] **ClickUp integration stub** - API endpoints for ClickUp (full implementation v2)
+- [ ] **Planning Screen** - Define criteria → generate areas → create campaign (v2)
 
 ### Out of Scope
 
