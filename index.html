@@ -499,29 +499,61 @@ async function loadHeatmap() {
   }
   
   try {
-    const areas = await sbFetch('/rest/v1/target_areas?select=*&status=eq.completed');
-    const deliveries = await sbFetch('/rest/v1/deliveries?select=*');
-    
-    const heatData = (areas || []).map(a => {
-      const areaDelivery = (deliveries || []).find(d => d.target_area_id === a.id);
-      const count = areaDelivery?.leaflets_delivered || 0;
-      return [a.lat, a.lng, count / 1000];
-    }).filter(p => p[0] && p[1]);
-    
-    if (window.heatLayer) window.heatLayer.remove();
+    const [allAreas, deliveries, enquiries] = await Promise.all([
+      sbFetch('/rest/v1/target_areas?select=*&campaign_id=eq.' + currentCampaignId),
+      sbFetch('/rest/v1/deliveries?select=*'),
+      sbFetch('/rest/v1/enquiries?select=*')
+    ]);
+
+    // Remove existing layers
+    if (window.heatLayer) { window.heatLayer.remove(); window.heatLayer = null; }
+    if (window.areaMarkers) { window.areaMarkers.forEach(m => m.remove()); }
+    window.areaMarkers = [];
+
+    const statusColour = { available: '#6b7280', reserved: '#f59e0b', completed: '#16a34a' };
+
+    // Show all areas as circle markers, colour-coded by status
+    (allAreas || []).filter(a => a.lat && a.lng).forEach(a => {
+      const delivered = (deliveries || []).filter(d => d.target_area_id === a.id)
+        .reduce((s, d) => s + (d.leaflets_delivered || 0), 0);
+      const pct = a.house_count > 0 ? Math.round(delivered / a.house_count * 100) : 0;
+      const marker = L.circleMarker([a.lat, a.lng], {
+        radius: 10,
+        fillColor: statusColour[a.status] || '#6b7280',
+        color: '#fff',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.85
+      }).bindPopup(`<strong>${a.area_name}</strong><br>${a.postcode}<br>Status: ${a.status}${delivered > 0 ? `<br>Delivered: ${delivered.toLocaleString()} (${pct}%)` : ''}`);
+      marker.addTo(window.analyticsMap);
+      window.areaMarkers.push(marker);
+    });
+
+    // Heatmap overlay for completed areas only
+    const heatData = (allAreas || [])
+      .filter(a => a.status === 'completed' && a.lat && a.lng)
+      .map(a => {
+        const count = (deliveries || []).filter(d => d.target_area_id === a.id)
+          .reduce((s, d) => s + (d.leaflets_delivered || 0), 0);
+        return [a.lat, a.lng, Math.max(count / 1000, 0.1)];
+      });
     if (heatData.length > 0) {
       window.heatLayer = L.heatLayer(heatData, {radius: 25, blur: 15}).addTo(window.analyticsMap);
     }
-    
-    const enquiries = await sbFetch('/rest/v1/enquiries?select=*&location=not.is.null');
-    if (enquiries && enquiries.length > 0) {
-      (enquiries || []).forEach(e => {
-        if (e.location?.lat && e.location?.lng) {
-          L.marker([e.location.lat, e.location.lng])
-            .bindPopup(`Enquiry: ${e.postcode || 'No postcode'}`)
-            .addTo(window.analyticsMap);
-        }
-      });
+
+    // Enquiry markers
+    (enquiries || []).forEach(e => {
+      if (e.location?.lat && e.location?.lng) {
+        L.marker([e.location.lat, e.location.lng])
+          .bindPopup(`Enquiry: ${e.postcode || 'No postcode'}`)
+          .addTo(window.analyticsMap);
+      }
+    });
+
+    // Fit map to markers if any
+    if (window.areaMarkers.length > 0) {
+      const group = L.featureGroup(window.areaMarkers);
+      window.analyticsMap.fitBounds(group.getBounds().pad(0.1));
     }
   } catch(e) {
     Logger.error('Failed to load heatmap', e);
@@ -547,6 +579,67 @@ async function loadCompletionRate() {
     if (el) el.textContent = rate + '% (' + totalLeaflets.toLocaleString() + '/' + CAMPAIGN_TARGET_LEAFLETS.toLocaleString() + ' leaflets)';
   } catch(e) {
     Logger.error('Failed to load completion rate', e);
+  }
+}
+
+// Phase 4: Load full analytics dashboard
+async function loadAnalyticsDashboard() {
+  await loadCompletionRate();
+  await loadAnalyticsCharts();
+}
+
+// Phase 4: Analytics charts
+async function loadAnalyticsCharts() {
+  try {
+    const deliveries = await sbFetch('/rest/v1/deliveries?select=*&order=delivery_date.asc');
+    const enquiries = await sbFetch('/rest/v1/enquiries?select=*&order=created_at.asc');
+    
+    const deliveryByDate = {};
+    (deliveries || []).forEach(d => {
+      const date = d.delivery_date;
+      if (date) deliveryByDate[date] = (deliveryByDate[date] || 0) + (d.leaflets_delivered || 0);
+    });
+    
+    const deliveriesCtx = document.getElementById('chartDeliveries');
+    if (deliveriesCtx) {
+      new Chart(deliveriesCtx, {
+        type: 'line',
+        data: { labels: Object.keys(deliveryByDate), datasets: [{ label: 'Leaflets', data: Object.values(deliveryByDate), borderColor: '#2563eb', fill: true, tension: 0.3 }] },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+    }
+    
+    const revenueByDate = {};
+    (enquiries || []).forEach(e => {
+      const date = e.created_at?.slice(0, 10);
+      if (date && e.instruction_value) revenueByDate[date] = (revenueByDate[date] || 0) + e.instruction_value;
+    });
+    
+    const revenueCtx = document.getElementById('chartRevenue');
+    if (revenueCtx) {
+      new Chart(revenueCtx, {
+        type: 'line',
+        data: { labels: Object.keys(revenueByDate), datasets: [{ label: 'Revenue (£)', data: Object.values(revenueByDate), borderColor: '#16a34a', fill: true, tension: 0.3 }] },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+    }
+    
+    const enquiriesByDate = {};
+    (enquiries || []).forEach(e => {
+      const date = e.created_at?.slice(0, 10);
+      if (date) enquiriesByDate[date] = (enquiriesByDate[date] || 0) + 1;
+    });
+    
+    const enquiriesCtx = document.getElementById('chartEnquiries');
+    if (enquiriesCtx) {
+      new Chart(enquiriesCtx, {
+        type: 'bar',
+        data: { labels: Object.keys(enquiriesByDate), datasets: [{ label: 'Enquiries', data: Object.values(enquiriesByDate), backgroundColor: '#8b5cf6' }] },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+    }
+  } catch(e) {
+    Logger.error('Failed to load analytics charts', e);
   }
 }
 
