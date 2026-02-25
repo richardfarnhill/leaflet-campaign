@@ -496,8 +496,21 @@ async function loadHeatmap() {
       attribution: '© OpenStreetMap'
     }).addTo(map);
     window.analyticsMap = map;
+
+    // Map legend
+    const legend = L.control({ position: 'bottomleft' });
+    legend.onAdd = function() {
+      const div = L.DomUtil.create('div');
+      div.style.cssText = 'background:#fff;padding:8px 12px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.2);font-size:13px;line-height:1.8;';
+      div.innerHTML = '<strong style="display:block;margin-bottom:4px;">Routes</strong>'
+        + '<span style="color:#6b7280;">●</span> Available<br>'
+        + '<span style="color:#f59e0b;">●</span> Reserved<br>'
+        + '<span style="color:#16a34a;">●</span> Completed';
+      return div;
+    };
+    legend.addTo(window.analyticsMap);
   }
-  
+
   try {
     const [allAreas, deliveries, enquiries] = await Promise.all([
       sbFetch('/rest/v1/target_areas?select=*&campaign_id=eq.' + currentCampaignId),
@@ -942,23 +955,55 @@ async function loadDeliveredTotal(){
 
 async function loadDeliveryJournal(){
   try{
-    const rows=await sbFetch('/rest/v1/deliveries?select=leaflets_delivered,delivery_date,notes,created_at,target_areas(area_name),team_member_1:team_members!team_member_1_id(name),team_member_2:team_members!team_member_2_id(name)&order=created_at.desc');
+    const rows=await sbFetch('/rest/v1/deliveries?select=leaflets_delivered,delivery_date,notes,created_at,target_areas(area_name),team_member_1:team_members!team_member_1_id(name),team_member_2:team_members!team_member_2_id(name)&order=delivery_date.desc');
     const el=document.getElementById('journalList');
     if(!rows||rows.length===0){el.innerHTML='<p style="color:#888;font-size:0.9rem;">No deliveries recorded yet.</p>';return;}
-    el.innerHTML=rows.map(r=>{
+    
+    function fmtDate(iso){
+      if(!iso)return'';
+      const d=new Date(iso+'T12:00:00');
+      const dn=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+      const mn=['January','February','March','April','May','June','July','August','September','October','November','December'];
+      const day=d.getDate();
+      const suffix=day===1||day===21||day===31?'st':day===2||day===22?'nd':day===3||day===23?'rd':'th';
+      return day+suffix+' '+mn[d.getMonth()]+' '+d.getFullYear();
+    }
+    
+    const totalLeaflets=rows.reduce((sum,r)=>sum+(r.leaflets_delivered||0),0);
+    const totalAreas=rows.length;
+    const totalTeamMembers=new Set([...rows.map(r=>r.team_member_1?.name).filter(Boolean),...rows.map(r=>r.team_member_2?.name).filter(Boolean)]).size;
+    
+    let html='<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">';
+    html+='<thead><tr style="background:#1a3a5c;color:white;">';
+    html+='<th style="padding:8px;text-align:left;">Date</th>';
+    html+='<th style="padding:8px;text-align:left;">Route</th>';
+    html+='<th style="padding:8px;text-align:right;">Leaflets</th>';
+    html+='<th style="padding:8px;text-align:left;">Team</th>';
+    html+='<th style="padding:8px;text-align:left;">Notes</th></tr></thead>';
+    html+='<tbody>';
+    rows.forEach(r=>{
       const area=r.target_areas?.area_name||'Unknown area';
       const tm1=r.team_member_1?.name||'';
       const tm2=r.team_member_2?.name||'';
       const team=tm2?tm1+' & '+tm2:tm1;
-      const date=r.delivery_date||r.created_at?.slice(0,10)||'';
-      const notes=r.notes?'<span style="color:#888;font-size:0.82rem;"> — '+r.notes+'</span>':'';
-      return '<div style="padding:8px 0;border-bottom:1px solid #eee;font-size:0.9rem;">'+
-        '<strong>'+area+'</strong> &mdash; '+
-        r.leaflets_delivered.toLocaleString()+' leaflets'+
-        (team?' &mdash; '+team:'')+
-        ' &mdash; <span style="color:#666;">'+date+'</span>'+
-        notes+'</div>';
-    }).join('');
+      const date=fmtDate(r.delivery_date||r.created_at?.slice(0,10));
+      const notes=r.notes||'';
+      html+='<tr style="border-bottom:1px solid #eee;">';
+      html+='<td style="padding:8px;">'+date+'</td>';
+      html+='<td style="padding:8px;"><strong>'+area+'</strong></td>';
+      html+='<td style="padding:8px;text-align:right;">'+r.leaflets_delivered.toLocaleString()+'</td>';
+      html+='<td style="padding:8px;">'+(team||'—')+'</td>';
+      html+='<td style="padding:8px;color:#666;">'+notes+'</td>';
+      html+='</tr>';
+    });
+    html+='<tr style="background:#e8f4f8;font-weight:700;">';
+    html+='<td style="padding:8px;">Total</td>';
+    html+='<td style="padding:8px;">'+totalAreas+' routes</td>';
+    html+='<td style="padding:8px;text-align:right;">'+totalLeaflets.toLocaleString()+'</td>';
+    html+='<td style="padding:8px;">'+totalTeamMembers+' team members</td>';
+    html+='<td style="padding:8px;"></td>';
+    html+='</tr></tbody></table>';
+    el.innerHTML=html;
   }catch(e){
     document.getElementById('journalList').innerHTML='<p style="color:#888;font-size:0.9rem;">Could not load journal.</p>';
   }
