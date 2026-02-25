@@ -178,7 +178,7 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 | 1 - Database Foundation | ✅ Complete | Implicit |
 | 2 - Territory & Reservation | ✅ Complete | 3 |
 | 3 - Delivery Recording | 🔄 In Progress | Implicit |
-| 4 - Analytics & Heatmaps | ⏳ Pending | 4 |
+| 4 - Analytics & Heatmaps | 📋 Ready to execute | 4 |
 | 5 - Campaign Management | ⏳ Pending | 5 |
 | 6 - Enquiry & Team | ⏳ Pending | 4 |
 | 7 - Integrations | ⏳ Pending | 3 |
