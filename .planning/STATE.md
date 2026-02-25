@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 Phase: 3 of 7 (Delivery Recording)
 Plan: 0 of ? in current phase
 Status: Ready to plan
-Last activity: 2026-02-25 — Phase 2 complete, unassign_area SQL needs running in Supabase
+Last activity: 2026-02-25 — Phase 3: unassign_area RPC created, dual team member feature added and tested
 
 Progress: [███░░░░░░░░░░░░░░░░░] ~14%
 
@@ -29,6 +29,8 @@ Progress: [███░░░░░░░░░░░░░░░░░] ~14%
 
 - [Phase 2]: No user roles — anyone can reserve, complete, or reassign any area
 - [Phase 2]: Completed cards hidden from grid — only available/reserved shown
+- [Phase 3]: Optional dual team member assignment — can assign 1 or 2 team members per area
+- [Phase 3]: Cards display both team members (e.g. "John & Jane")
 - [All]: Single-file app (index.html) — no build system, keep it that way for now
 
 ### Pending Todos
@@ -37,20 +39,18 @@ None.
 
 ### Blockers/Concerns
 
-- [Phase 3]: `unassign_area` Supabase RPC not yet created — SQL in ROADMAP notes, must be run manually in Supabase SQL editor before Unassign button will work
 - [Phase 3]: Summary stats (`sumDelivered`) still reads from `session_log`, not from area `deliveries` table — these are two separate tracking systems
 
 ## Active Tasks
 
-<!-- TASK CLAIMING: Before starting a plan, add an entry here. Remove it when done.
-     Format: - [AGENT] [plan-id] — [brief description] — claimed [YYYY-MM-DD HH:MM]
-     AGENT = "Claude" or "OpenCode"
-     Purpose: Prevent both AIs from working the same plan simultaneously. -->
+<!-- Multi-agent coordination — see .planning/COORDINATION.md for full protocol.
+     REQUIRED: Claim here before making ANY code changes. Remove when done.
+     Format: - [AGENT] [scope] — [brief description] — claimed [YYYY-MM-DD HH:MM UTC] -->
 
 None.
 
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Phase 2 complete, Phase 3 changes committed and pushed to `feature/card-based-reservation-system`
+Stopped at: Dual team member feature implemented and tested — SQL RPCs created, UI updated
 Resume file: None

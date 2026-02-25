@@ -141,24 +141,29 @@ Wait for confirmation before proceeding.
 </step>
 
 <step name="claim_task">
-Before executing, claim the plan in STATE.md to prevent concurrent work by another AI agent.
+This project uses two concurrent AI agents (Claude + OpenCode). Claim this plan before
+executing to prevent conflicts. Full protocol: `.planning/COORDINATION.md`.
 
-**Check for existing claim:**
+**1. Check for existing claims:**
 ```bash
-grep -A1 "## Active Tasks" .planning/STATE.md
+grep -A 10 "## Active Tasks" .planning/STATE.md
 ```
 
-If another agent has already claimed this plan, STOP and notify the user. Do not proceed.
+If another agent has already claimed overlapping work, STOP and notify the user. Do not proceed.
 
-**Write your claim** by editing `.planning/STATE.md` — replace the `None.` under `## Active Tasks` (or append) with:
+**2. Write your claim** — edit `.planning/STATE.md`, replacing `None.` under `## Active Tasks`
+(or appending if other unrelated claims exist):
 ```
-- OpenCode [phase-plan-id] — [brief plan description] — claimed [YYYY-MM-DD HH:MM UTC]
+- OpenCode [phase-plan-id] — [brief description] — claimed [YYYY-MM-DD HH:MM UTC]
 ```
 
 Example:
 ```
 - OpenCode 03-01 — Delivery recording UI — claimed 2026-02-25 14:30 UTC
 ```
+
+This also applies to **ad-hoc work outside GSD plans**. If you make code changes in any
+session, claim them first using `scope: ad-hoc` and a brief description.
 </step>
 
 <step name="record_start_time">
