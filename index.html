@@ -599,14 +599,16 @@ async function loadHeatmap() {
       div.innerHTML = '<strong style="display:block;margin-bottom:4px;">Routes</strong>'
         + '<span style="color:#6b7280;">●</span> Available<br>'
         + '<span style="color:#f59e0b;">●</span> Reserved<br>'
-        + '<span style="color:#16a34a;">●</span> Completed';
+        + '<span style="color:#16a34a;">●</span> Completed<br>'
+        + '<span style="color:#dc2626;">⚠</span> <span style="text-decoration:line-through;">Restricted</span>';
       return div;
     };
     legend.addTo(window.analyticsMap);
   }
 
   try {
-    const [allAreas, deliveries, enquiries] = await Promise.all([
+    const [campaign, allAreas, deliveries, enquiries] = await Promise.all([
+      sbFetch('/rest/v1/campaigns?select=restricted_postcodes&id=eq.' + currentCampaignId),
       sbFetch('/rest/v1/target_areas?select=*&campaign_id=eq.' + currentCampaignId),
       sbFetch('/rest/v1/deliveries?select=*'),
       sbFetch('/rest/v1/enquiries?select=*')
@@ -615,23 +617,28 @@ async function loadHeatmap() {
     // Remove existing layers
     if (window.heatLayer) { window.heatLayer.remove(); window.heatLayer = null; }
     if (window.areaMarkers) { window.areaMarkers.forEach(m => m.remove()); }
+    if (window.restrictedOverlay) { window.restrictedOverlay.remove(); }
     window.areaMarkers = [];
 
     const statusColour = { available: '#6b7280', reserved: '#f59e0b', completed: '#16a34a' };
+    const restrictedPostcodes = campaign?.[0]?.restricted_postcodes || [];
+    const isRestricted = (postcode) => restrictedPostcodes.some(rp => postcode?.toUpperCase().startsWith(rp));
 
     // Show all areas as circle markers, colour-coded by status
     (allAreas || []).filter(a => a.lat && a.lng).forEach(a => {
       const delivered = (deliveries || []).filter(d => d.target_area_id === a.id)
         .reduce((s, d) => s + (d.leaflets_delivered || 0), 0);
       const pct = a.house_count > 0 ? Math.round(delivered / a.house_count * 100) : 0;
+      const restricted = isRestricted(a.postcode);
       const marker = L.circleMarker([a.lat, a.lng], {
         radius: 10,
         fillColor: statusColour[a.status] || '#6b7280',
-        color: '#fff',
-        weight: 2,
+        color: restricted ? '#dc2626' : '#fff',
+        weight: restricted ? 4 : 2,
         opacity: 1,
-        fillOpacity: 0.85
-      }).bindPopup(`<strong>${a.area_name}</strong><br>${a.postcode}<br>Status: ${a.status}${delivered > 0 ? `<br>Delivered: ${delivered.toLocaleString()} (${pct}%)` : '<br><em>No deliveries yet</em>'}<br><button onclick="showRouteCard('${a.id}')" style="margin-top:8px;padding:4px 12px;background:#1a3a5c;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">View Route</button>`);
+        fillOpacity: 0.85,
+        dashArray: restricted ? '4,2' : null
+      }).bindPopup(`<strong>${a.area_name}</strong><br>${a.postcode}${restricted ? '<br><span style="color:#dc2626;font-weight:bold;">⚠ Restricted</span>' : ''}<br>Status: ${a.status}${delivered > 0 ? `<br>Delivered: ${delivered.toLocaleString()} (${pct}%)` : '<br><em>No deliveries yet</em>'}<br><button onclick="showRouteCard('${a.id}')" style="margin-top:8px;padding:4px 12px;background:#1a3a5c;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">View Route</button>`);
       marker.addTo(window.analyticsMap);
       window.areaMarkers.push(marker);
     });
