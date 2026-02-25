@@ -60,6 +60,42 @@ h2{font-size:1rem;color:#1a3a5c;margin-bottom:12px;margin-top:24px;}
 .badge-future{background:#f2f2f2;color:#888;}
 .badge-missed{background:#fde8e8;color:#c0392b;}
 .badge-rescheduled{background:#f3e8fd;color:#8e44ad;}
+
+/* Area Cards (Phase 2) */
+.area-cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:24px;}
+.area-card{background:white;border-radius:10px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,0.08);border-left:5px solid #ccc;transition:transform 0.2s,box-shadow 0.2s;}
+.area-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.12);}
+.area-card.available{border-left-color:#27ae60;}
+.area-card.reserved{border-left-color:#f39c12;}
+.area-card.completed{border-left-color:#2e86ab;}
+.area-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+.area-card-title{font-size:1rem;font-weight:700;color:#1a3a5c;flex:1;}
+.area-card-postcode{font-size:0.8rem;color:#888;margin-top:2px;}
+.area-card-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:0.7rem;font-weight:700;text-transform:uppercase;}
+.area-card-badge.available{background:#e8f8f0;color:#27ae60;}
+.area-card-badge.reserved{background:#fef5e7;color:#f39c12;}
+.area-card-badge.completed{background:#e8f4f8;color:#2e86ab;}
+.area-card-stats{display:flex;gap:16px;margin:12px 0;padding:10px 0;border-top:1px solid #eee;border-bottom:1px solid #eee;}
+.area-card-stat{text-align:center;}
+.area-card-stat-val{font-size:1.2rem;font-weight:700;color:#1a3a5c;}
+.area-card-stat-lbl{font-size:0.65rem;color:#888;text-transform:uppercase;}
+.area-card-team{font-size:0.85rem;color:#444;margin-bottom:8px;}
+.area-card-team strong{color:#1a3a5c;}
+.area-card-date{font-size:0.8rem;color:#888;}
+.area-card-actions{margin-top:12px;display:flex;gap:8px;}
+.area-card-btn{flex:1;padding:8px 12px;border:none;border-radius:6px;font-size:0.85rem;cursor:pointer;transition:background 0.2s;}
+.area-card-btn.reserve{background:#27ae60;color:white;}
+.area-card-btn.reserve:hover{background:#219a52;}
+.area-card-btn.complete{background:#2e86ab;color:white;}
+.area-card-btn.complete:hover{background:#2573a7;}
+.area-card-btn.reassign{background:#f39c12;color:white;}
+.area-card-btn.reassign:hover{background:#e67e22;}
+.area-card-btn:disabled{background:#ccc;cursor:not-allowed;}
+
+/* Campaign Selector */
+.campaign-selector{display:flex;align-items:center;gap:12px;margin-top:8px;}
+.campaign-selector label{font-size:0.8rem;color:rgba(255,255,255,0.8);}
+.campaign-selector select{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;padding:6px 12px;border-radius:6px;font-size:0.9rem;}
 .briefing{background:#f7faff;border:1px solid #d0e4f5;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:0.82rem;line-height:1.6;color:#333;}
 .briefing strong{color:#1a3a5c;}
 .went-out-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:0.85rem;color:#444;padding:6px 10px;background:#f7f9fc;border-radius:6px;border:1px solid #e0e6ed;}
@@ -91,6 +127,10 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
 <header>
   <h1>&#128202; WillSolicitor &mdash; Leaflet Drop Campaign Tracker</h1>
   <p>20,000 leaflets &middot; Richard, Josh, Dan &amp; Cahner &middot; Tue&ndash;Fri</p>
+  <div class="campaign-selector">
+    <label>Campaign:</label>
+    <select id="campaignSelect"><option value="">Loading...</option></select>
+  </div>
 </header>
 <div class="sync-bar"><div class="sync-dot" id="syncDot"></div><span id="syncMsg">Connecting&hellip;</span></div>
 <div class="summary-bar">
@@ -105,6 +145,14 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
 </div>
 <div class="main">
   <div class="reforecast"><h3>&#128202; Schedule Status</h3><p id="reforecastMsg">Loading&hellip;</p></div>
+  
+  <!-- Phase 2: Area Cards -->
+  <h2 style="margin-top:0;">Delivery Areas</h2>
+  <p style="font-size:0.85rem;color:#666;margin-bottom:16px;">Click "Reserve" to claim an area for delivery. Completed areas show delivery stats.</p>
+  <div id="areaCards" class="area-cards-grid">
+    <div style="grid-column:1/-1;text-align:center;padding:40px;color:#888;">Loading areas...</div>
+  </div>
+  
   <h2>Campaign Schedule</h2>
   <div id="schedule"></div>
   <h2>Financial Projections</h2>
@@ -195,6 +243,12 @@ function calcCompletion(allSessions,state){
 // State
 let sessions=[...BASE],sessionState={},saveTimers={};
 
+// Phase 2 State
+let currentCampaignId=null;
+let teamMembers=[];
+let targetAreas=[];
+let reservations=[];
+
 async function sbFetch(path,opts={}){
   const r=await fetch(SB_URL+path,{...opts,headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation',...(opts.headers||{})}});
   if(!r.ok)throw new Error(await r.text());
@@ -202,9 +256,110 @@ async function sbFetch(path,opts={}){
 }
 function setSyncStatus(s,msg){document.getElementById('syncDot').className='sync-dot '+s;document.getElementById('syncMsg').textContent=msg;}
 
+// Phase 2: Load campaigns, team members, and area cards
+async function loadCampaigns(){
+  try{
+    const campaigns=await sbFetch('/rest/v1/campaigns?select=*&is_active=eq.true&order=created_at.desc');
+    const select=document.getElementById('campaignSelect');
+    select.innerHTML='';
+    if(campaigns&&campaigns.length>0){
+      campaigns.forEach(c=>{
+        const opt=document.createElement('option');
+        opt.value=c.id;
+        opt.textContent=c.name;
+        select.appendChild(opt);
+      });
+      currentCampaignId=campaigns[0].id;
+      select.value=currentCampaignId;
+    }
+    return campaigns;
+  }catch(e){console.error('loadCampaigns error:',e);}
+  return[];
+}
+
+async function loadTeamMembers(){
+  try{
+    teamMembers=await sbFetch('/rest/v1/team_members?select=*&is_active=eq.true&order=name.asc');
+  }catch(e){console.error('loadTeamMembers error:',e);teamMembers=[];}
+  return teamMembers;
+}
+
+async function loadAreaCards(){
+  if(!currentCampaignId){targetAreas=[];reservations=[];return;}
+  try{
+    const[areas,resvs]=await Promise.all([
+      sbFetch('/rest/v1/target_areas?select=*&campaign_id=eq.'+currentCampaignId+'&order=created_at.asc'),
+      sbFetch('/rest/v1/reservations?select=*&target_area_id=in.(select id from target_areas where campaign_id=eq.'+currentCampaignId+')&status=eq.active')
+    ]);
+    targetAreas=areas||[];
+    reservations=resvs||[];
+  }catch(e){console.error('loadAreaCards error:',e);targetAreas=[];reservations=[];}
+}
+
+function getTeamMemberName(id){
+  const tm=teamMembers.find(t=>t.id===id);
+  return tm?tm.name:'Unknown';
+}
+
+function renderAreaCards(){
+  const container=document.getElementById('areaCards');
+  if(!container)return;
+  if(targetAreas.length===0){
+    container.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:#888;">No areas defined for this campaign</div>';
+    return;
+  }
+  let html='';
+  targetAreas.forEach(area=>{
+    const res=reservations.find(r=>r.target_area_id===area.id);
+    const status=area.status||'available';
+    const reservedBy=res?getTeamMemberName(res.team_member_1_id):null;
+    const deliveryDate=res?res.delivery_date:null;
+    
+    html+='<div class="area-card '+status+'">';
+    html+='<div class="area-card-header"><div><div class="area-card-title">'+area.area_name+'</div><div class="area-card-postcode">'+area.postcode+'</div></div>';
+    html+='<span class="area-card-badge '+status+'">'+status+'</span></div>';
+    html+='<div class="area-card-stats"><div class="area-card-stat"><div class="area-card-stat-val">'+(area.house_count||0)+'</div><div class="area-card-stat-lbl">Doors</div></div></div>';
+    
+    if(status==='reserved'&&reservedBy){
+      html+='<div class="area-card-team"><strong>'+reservedBy+'</strong>'+(deliveryDate?' &middot; '+deliveryDate:'')+'</div>';
+    }
+    
+    // Action buttons
+    html+='<div class="area-card-actions">';
+    if(status==='available'){
+      html+='<button class="area-card-btn reserve" onclick="openReserveModal(\''+area.id+'\')">Reserve</button>';
+    }else if(status==='reserved'){
+      html+='<button class="area-card-btn complete" onclick="openCompleteModal(\''+area.id+'\')">Complete</button>';
+      // Manual override for Richard (coordinator)
+      html+='<button class="area-card-btn reassign" onclick="openReassignModal(\''+area.id+'\')">Reassign</button>';
+    }else if(status==='completed'){
+      html+='<button class="area-card-btn" disabled style="background:#27ae60;opacity:0.7;">&#10003; Done</button>';
+    }
+    html+='</div></div>';
+  });
+  container.innerHTML=html;
+}
+
+// Placeholder functions for reservation workflow
+function openReserveModal(areaId){
+  alert('Reserve modal: '+areaId+'\\nThis will open a dialog to select team member and date. (Phase 2 Task 3)');
+}
+function openCompleteModal(areaId){
+  alert('Complete modal: '+areaId+'\\nThis will record delivery completion. (Phase 3)');
+}
+function openReassignModal(areaId){
+  alert('Reassign modal: '+areaId+'\\nThis allows coordinator to reassign. (Phase 2 Task 5)');
+}
+
 async function loadAll(){
   setSyncStatus('saving','Loading\u2026');
   try{
+    // Load Phase 2 data first
+    await loadCampaigns();
+    await loadTeamMembers();
+    await loadAreaCards();
+    renderAreaCards();
+    
     const[rows,fin,rescRows]=await Promise.all([
       sbFetch('/rest/v1/session_log?select=*'),
       sbFetch('/rest/v1/finance_actuals?select=*&id=eq.1'),
