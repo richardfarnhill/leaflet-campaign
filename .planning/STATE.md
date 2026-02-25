@@ -108,12 +108,13 @@ Resume file: None
 
 | Task | Status | Agent |
 |------|--------|-------|
-| T0: DB migration (enquiries lat/lng cols) | ○ Pending | - |
-| T1: Enquiry recording modal | ○ Pending | - |
-| T2: Enquiry list view + edit/delete | ○ Pending | - |
-| T3: Enquiry map markers (fix lat/lng) | ○ Pending | - |
-| T4: Finance projections from DB enquiries | ○ Pending | - |
-| T5: Team progress view | ○ Pending | - |
-| T6: Leaderboards | ○ Pending | - |
-| T7: Route creation UI | ○ Pending | - |
-| T8: Route deletion UI | ○ Pending | - |
+| T0.1: Per-postcode exclusion radius UI | ○ Pending | - |
+| T1: DB migration (enquiries lat/lng cols) | ○ Pending | - |
+| T2: Enquiry recording modal | ○ Pending | - |
+| T3: Enquiry list view + edit/delete | ○ Pending | - |
+| T4: Enquiry map markers (fix lat/lng) | ○ Pending | - |
+| T5: Finance projections from DB enquiries | ○ Pending | - |
+| T6: Team progress view | ○ Pending | - |
+| T7: Leaderboards | ○ Pending | - |
+| T8: Route creation UI | ○ Pending | - |
+| T9: Route deletion UI | ○ Pending | - |
