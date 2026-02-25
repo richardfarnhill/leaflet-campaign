@@ -112,22 +112,23 @@
 | TER-01: Area Reservation System | Phase 2 | ✅ Done | Cards, reserve modal, date selection |
 | TER-02: Real-time Availability | Phase 2 | ✅ Done | Cards show status, needs verification |
 | TER-03: Manual Override | Phase 2 | ✅ Done | Reassign + unassign modals |
-| ANL-01: Heat Maps (Deliveries) | Phase 4 | 🔄 In Progress | T3 heatmap layer done |
-| ANL-02: Heat Maps (Enquiries) | Phase 4 | 🔄 In Progress | T3 enquiry markers done |
-| ANL-03: Completion Rate by Area | Phase 4 | 🔄 In Progress | T4 dashboard, T14 cards |
-| ANL-04: Analytics Dashboard | Phase 4 | 🔄 In Progress | T6 charts done |
-| GEO-01: Accurate Route Geocoding | Phase 4 | 🔄 In Progress | T12 fixing coords via postcodes.io |
-| CMP-01: Campaign Switching | Phase 5 | 📋 Planned | - |
-| CMP-02: Aggregated Data View | Phase 5 | 📋 Planned | - |
-| CFG-01: Campaign Config UI | Phase 5 | 📋 Planned | - |
-| CFG-02: Response Rate Config | Phase 5 | 📋 Planned | Baselines already hardcoded correctly; Phase 5 makes them editable |
-| CFG-04: Configurable Default Case Value | Phase 5 | 📋 Planned | DEFAULT_CV=£294.42 hardcoded; store per campaign |
-| CFG-03: DB-driven Summary Bar | Phase 5 | 📋 Planned | Summary bar uses campaign.target_leaflets, not 20k hardcode |
+| ANL-01: Heat Maps (Deliveries) | Phase 4 | ✅ Done | T3 heatmap layer |
+| ANL-02: Heat Maps (Enquiries) | Phase 4 | ✅ Done | T3 enquiry markers |
+| ANL-03: Completion Rate by Area | Phase 4 | ✅ Done | T4 dashboard, T14 cards |
+| ANL-04: Analytics Dashboard | Phase 4 | ✅ Done | T6 charts |
+| GEO-01: Accurate Route Geocoding | Phase 4 | ✅ Done | T12 postcodes.io |
+| CMP-01: Campaign Switching | Phase 5 | 🔄 In Progress | T1 done |
+| CMP-02: Aggregated Data View | Phase 5 | 🔄 In Progress | T5 done |
+| CFG-01: Campaign Config UI | Phase 5 | 🔄 In Progress | T2+T3 done |
+| CFG-02: Response Rate Config | Phase 5 | 🔄 In Progress | T6 pending |
+| CFG-04: Configurable Default Case Value | Phase 5 | 🔄 In Progress | T6 pending |
+| CFG-03: DB-driven Summary Bar | Phase 5 | 🔄 In Progress | T4 done |
+| CFG-05: Restricted Areas Config | Phase 5 | 🔄 In Progress | T9 added |
 | DEM-01: Custom Demographic Rules | Phase 5 | 📋 Planned | Deferred from v1? |
-| ENQ-01: Robust Enquiry Recording | Phase 6 | 📋 Planned | - |
-| ENQ-02: Enquiry Heatmap | Phase 6 | 📋 Planned | - |
-| TEA-01: Progress Broadcasting | Phase 6 | 📋 Planned | - |
-| TEA-02: Leaderboards | Phase 6 | 📋 Planned | - |
+| ENQ-01: Robust Enquiry Recording | Phase 6 | 📋 Planned | T1 |
+| ENQ-02: Enquiry Heatmap | Phase 6 | 📋 Planned | T3 |
+| TEA-01: Progress Broadcasting | Phase 6 | 📋 Planned | T4 |
+| TEA-02: Leaderboards | Phase 6 | 📋 Planned | T5 |
 | INT-01: ClickUp Stub | Phase 7 | 📋 Planned | - |
 | INT-02: Google Sheets Export | Phase 7 | 📋 Planned | - |
 | INT-03: Gmail Notifications | Phase 7 | 📋 Planned | - |

@@ -423,6 +423,11 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
       <label>Team Members</label>
       <div id="configTeamMembers" style="max-height:120px;overflow-y:auto;border:1px solid #ddd;padding:8px;border-radius:4px;"></div>
     </div>
+    <div class="modal-field">
+      <label>Restricted Postcodes</label>
+      <input type="text" id="configRestrictedPostcodes" placeholder="WA14, WA15, M33 (comma-separated)">
+      <small style="color:#888;font-size:0.75rem;">These areas won't be targeted</small>
+    </div>
     <div class="modal-error" id="configError"></div>
     <div class="modal-actions">
       <button class="modal-btn cancel" onclick="closeCampaignConfig()">Cancel</button>
@@ -1439,6 +1444,7 @@ function openCampaignConfig(){
   document.getElementById('configStartDate').value='';
   document.getElementById('configEndDate').value='';
   document.getElementById('configTeamMembers').innerHTML='<em style="color:#888;">Loading...</em>';
+  document.getElementById('configRestrictedPostcodes').value='';
   document.getElementById('campaignConfigModal').classList.add('active');
   currentConfigCampaignId=currentCampaignId;
   
@@ -1447,6 +1453,7 @@ function openCampaignConfig(){
       document.getElementById('configTargetLeaflets').value=rows[0].target_leaflets||'';
       document.getElementById('configStartDate').value=rows[0].start_date||'';
       document.getElementById('configEndDate').value=rows[0].end_date||'';
+      document.getElementById('configRestrictedPostcodes').value=rows[0].restricted_postcodes?rows[0].restricted_postcodes.join(', '):'';
     }
   });
   
@@ -1469,6 +1476,7 @@ async function saveCampaignConfig(){
   const targetLeaflets=document.getElementById('configTargetLeaflets').value;
   const startDate=document.getElementById('configStartDate').value;
   const endDate=document.getElementById('configEndDate').value;
+  const restrictedPostcodes=document.getElementById('configRestrictedPostcodes').value;
   const errorEl=document.getElementById('configError');
   const btn=document.getElementById('configConfirmBtn');
   
@@ -1482,13 +1490,16 @@ async function saveCampaignConfig(){
   btn.textContent='Saving...';
   errorEl.classList.remove('show');
   
+  const restrictedArray=restrictedPostcodes?restrictedPostcodes.split(',').map(p=>p.trim().toUpperCase()).filter(p=>p):[];
+  
   try{
     await sbFetch('/rest/v1/campaigns?id=eq.'+currentConfigCampaignId,{
       method:'PATCH',
       body:JSON.stringify({
         target_leaflets:parseInt(targetLeaflets),
         start_date:startDate||null,
-        end_date:endDate||null
+        end_date:endDate||null,
+        restricted_postcodes:restrictedArray
       })
     });
     closeCampaignConfig();

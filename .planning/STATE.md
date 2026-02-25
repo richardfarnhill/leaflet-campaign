@@ -94,3 +94,22 @@ Resume file: None
 | T7: New campaign UI | ✓ Done | Claude |
 | T7a: Seed test campaign | ○ Pending | - |
 | T8: Remove hardcoded STAFF | ✓ Done | OC |
+| T9: Restricted areas config + overlay | ○ Pending | - |
+
+## Active Tasks
+
+<!-- Multi-agent coordination — see .planning/COORDINATION.md for full protocol.
+     REQUIRED: Claim here before making ANY code changes. Remove when done.
+     Format: - [AGENT] [scope] — [brief description] — claimed [YYYY-MM-DD HH:MM UTC] -->
+
+- OpenCode [05-T9] — Restricted areas config + overlay — claimed 2026-02-25 19:30 UTC
+
+## Phase 6 Task Checklist (06-01-PLAN.md)
+
+| Task | Status | Agent |
+|------|--------|-------|
+| T1: Enquiry recording modal | ○ Pending | - |
+| T2: Enquiry list view | ○ Pending | - |
+| T3: Enquiry heatmap overlay | ○ Pending | - |
+| T4: Team progress view | ○ Pending | - |
+| T5: Leaderboards | ○ Pending | - |
