@@ -999,7 +999,7 @@ async function loadCampaigns(){
         await loadTeamProgress();
         await loadDeliveryJournal();
         await loadEnquiryList();
-        await loadFinanceFromDB();
+        await loadFinanceFromDB();updateSummary();
       };
       Logger.success('Campaign loaded',campaigns[0].name);
     } else {
@@ -2126,7 +2126,7 @@ async function loadAll(){
     await loadDeliveryJournal();
     await loadEnquiryList();
     await loadTeamProgress();
-    await loadFinanceFromDB();
+    await loadFinanceFromDB();updateSummary();
     setSyncStatus('ok','Live \u00b7 auto-syncing every 30s');
   }catch(e){
     Logger.error('loadAll failed',e);
