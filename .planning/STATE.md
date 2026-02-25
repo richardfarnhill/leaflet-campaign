@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Teams can reserve geographic delivery areas (cards), record deliveries, and the system accurately tracks coverage, enquiries, and cases per area.
-**Current focus:** Phase 4 - Analytics & Heatmaps (T1-T14 all done, T15 remaining)
+**Current focus:** Phase 5 - Campaign Management (in progress)
 
 ## Current Position
 
@@ -52,12 +52,12 @@ Progress: [████████░░░░░░░░░░░░] ~40%
      REQUIRED: Claim here before making ANY code changes. Remove when done.
      Format: - [AGENT] [scope] — [brief description] — claimed [YYYY-MM-DD HH:MM UTC] -->
 
-- OpenCode [05-T2] — Create campaign config modal — claimed 2026-02-25 19:00 UTC
+None.
 
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Phase 4 complete - all 15 tasks done. Ready to close Phase 4.
+Stopped at: Phase 5 T2+T3 done (config modal + button). Ready for next task.
 Resume file: None
 
 ## Phase 4 Task Checklist (04-01-PLAN.md)
@@ -79,3 +79,17 @@ Resume file: None
 | T13: Map → route card navigation | ✓ Done | OC |
 | T14: Format Delivery Journal as table | ✓ Done | OC |
 | T15: Verify Phases 1-3 implementation | ✓ Done (code review) | OC |
+
+## Phase 5 Task Checklist (05-01-PLAN.md)
+
+| Task | Status | Agent |
+|------|--------|-------|
+| T1: All Campaigns option | ✓ Done | Claude |
+| T2: Campaign config modal | ✓ Done | OC |
+| T3: Config button | ✓ Done | OC |
+| T4: DB-driven summary bar | ✓ Done | Claude |
+| T5: Aggregated stats | ✓ Done | Claude |
+| T6: Response rate config | ○ Pending | - |
+| T7: New campaign UI | ○ Pending | - |
+| T7a: Seed test campaign | ○ Pending | - |
+| T8: Remove hardcoded STAFF | ○ Pending | - |

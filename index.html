@@ -154,6 +154,7 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
   <div class="campaign-selector">
     <label>Campaign:</label>
     <select id="campaignSelect"><option value="">Loading...</option></select>
+    <button onclick="openCampaignConfig()" style="background:none;border:none;cursor:pointer;font-size:1.1rem;padding:2px 6px;" title="Configure Campaign">&#9881;</button>
   </div>
 </header>
 <div class="sync-bar"><div class="sync-dot" id="syncDot"></div><span id="syncMsg">Connecting&hellip;</span></div>
@@ -208,6 +209,20 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
     <div style="background:#fff;padding:16px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);margin-bottom:24px;">
       <h3 style="margin:0 0 4px 0;font-size:1rem;">Overall Completion Rate</h3>
       <p style="font-size:2rem;font-weight:700;color:#2563eb;margin:0;" id="overallCompletionRate">—</p>
+    </div>
+    <!-- T5: Campaign breakdown — only visible in All Campaigns mode -->
+    <div id="campaignBreakdown" style="display:none;background:#fff;padding:16px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);margin-bottom:24px;">
+      <h3 style="margin:0 0 12px 0;font-size:1rem;">Campaign Breakdown</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+        <thead><tr style="border-bottom:2px solid #e5e7eb;">
+          <th style="text-align:left;padding:6px 8px;">Campaign</th>
+          <th style="text-align:right;padding:6px 8px;">Target</th>
+          <th style="text-align:right;padding:6px 8px;">Delivered</th>
+          <th style="text-align:right;padding:6px 8px;">Remaining</th>
+          <th style="text-align:right;padding:6px 8px;">Progress</th>
+        </tr></thead>
+        <tbody id="campaignBreakdownBody"></tbody>
+      </table>
     </div>
   </div>
   
@@ -642,10 +657,42 @@ async function loadCompletionRate() {
   }
 }
 
-// Phase 4: Load full analytics dashboard
+// Phase 4/5: Load full analytics dashboard
 async function loadAnalyticsDashboard() {
   await loadCompletionRate();
   await loadAnalyticsCharts();
+  await loadCampaignBreakdown();
+}
+
+// Phase 5 T5: Campaign breakdown table — shown only in All Campaigns mode
+async function loadCampaignBreakdown() {
+  const panel=document.getElementById('campaignBreakdown');
+  if(!panel) return;
+  if(currentCampaignId){panel.style.display='none';return;}
+  panel.style.display='';
+  try{
+    const campaigns=await sbFetch('/rest/v1/campaigns?select=*&is_active=eq.true&order=created_at.desc');
+    const deliveries=await sbFetch('/rest/v1/deliveries?select=campaign_id,leaflets_delivered');
+    const delivBycamp={};
+    (deliveries||[]).forEach(d=>{
+      if(d.campaign_id) delivBycamp[d.campaign_id]=(delivBycamp[d.campaign_id]||0)+(d.leaflets_delivered||0);
+    });
+    const tbody=document.getElementById('campaignBreakdownBody');
+    if(!tbody) return;
+    tbody.innerHTML=(campaigns||[]).map(c=>{
+      const delivered=delivBycamp[c.id]||0;
+      const target=c.target_leaflets||0;
+      const remaining=Math.max(0,target-delivered);
+      const pct=target>0?Math.min(100,Math.round(delivered/target*100)):0;
+      return '<tr style="border-bottom:1px solid #f3f4f6;">'+
+        '<td style="padding:6px 8px;">'+c.name+'</td>'+
+        '<td style="text-align:right;padding:6px 8px;">'+target.toLocaleString()+'</td>'+
+        '<td style="text-align:right;padding:6px 8px;">'+delivered.toLocaleString()+'</td>'+
+        '<td style="text-align:right;padding:6px 8px;">'+remaining.toLocaleString()+'</td>'+
+        '<td style="text-align:right;padding:6px 8px;">'+pct+'%</td>'+
+        '</tr>';
+    }).join('');
+  }catch(e){Logger.error('loadCampaignBreakdown failed',e);}
 }
 
 // Phase 4: Analytics charts
@@ -1300,6 +1347,83 @@ async function confirmUnassign(){
   }
   btn.disabled=false;
   btn.textContent='Unassign';
+}
+
+// Campaign Config Modal
+let currentConfigCampaignId=null;
+
+function openCampaignConfig(){
+  if(!currentCampaignId){
+    alert('Please select a campaign first');
+    return;
+  }
+  const campaign=targetAreas.length>0?{name:document.getElementById('campaignSelect').value}:null;
+  document.getElementById('configCampaignName').value=campaign?campaign.name:'Unknown';
+  document.getElementById('configTargetLeaflets').value='';
+  document.getElementById('configStartDate').value='';
+  document.getElementById('configEndDate').value='';
+  document.getElementById('configTeamMembers').innerHTML='<em style="color:#888;">Loading...</em>';
+  document.getElementById('campaignConfigModal').classList.add('active');
+  currentConfigCampaignId=currentCampaignId;
+  
+  sbFetch('/rest/v1/campaigns?id=eq.'+currentCampaignId).then(rows=>{
+    if(rows&&rows[0]){
+      document.getElementById('configTargetLeaflets').value=rows[0].target_leaflets||'';
+      document.getElementById('configStartDate').value=rows[0].start_date||'';
+      document.getElementById('configEndDate').value=rows[0].end_date||'';
+    }
+  });
+  
+  sbFetch('/rest/v1/campaign_members?campaign_id=eq.'+currentCampaignId+'&select=team_members(id,name)').then(rows=>{
+    const container=document.getElementById('configTeamMembers');
+    if(!rows||rows.length===0){
+      container.innerHTML='<span style="color:#888;">No team members assigned</span>';
+    }else{
+      container.innerHTML=rows.map(r=>r.team_members?.name).filter(Boolean).join(', ')||'None';
+    }
+  });
+}
+
+function closeCampaignConfig(){
+  document.getElementById('campaignConfigModal').classList.remove('active');
+  currentConfigCampaignId=null;
+}
+
+async function saveCampaignConfig(){
+  const targetLeaflets=document.getElementById('configTargetLeaflets').value;
+  const startDate=document.getElementById('configStartDate').value;
+  const endDate=document.getElementById('configEndDate').value;
+  const errorEl=document.getElementById('configError');
+  const btn=document.getElementById('configConfirmBtn');
+  
+  if(!targetLeaflets){
+    errorEl.textContent='Please enter target leaflets';
+    errorEl.classList.add('show');
+    return;
+  }
+  
+  btn.disabled=true;
+  btn.textContent='Saving...';
+  errorEl.classList.remove('show');
+  
+  try{
+    await sbFetch('/rest/v1/campaigns?id=eq.'+currentConfigCampaignId,{
+      method:'PATCH',
+      body:JSON.stringify({
+        target_leaflets:parseInt(targetLeaflets),
+        start_date:startDate||null,
+        end_date:endDate||null
+      })
+    });
+    closeCampaignConfig();
+    loadDeliveredTotal();
+    setSyncStatus('ok','Campaign updated!');
+  }catch(e){
+    errorEl.textContent='Error: '+e.message;
+    errorEl.classList.add('show');
+  }
+  btn.disabled=false;
+  btn.textContent='Save';
 }
 
 async function loadAll(){
