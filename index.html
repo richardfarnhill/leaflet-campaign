@@ -761,12 +761,17 @@ async function confirmReassignment(){
 }
 
 async function loadAll(){
+  Logger.info('loadAll() called - starting data load');
   setSyncStatus('saving','Loading\u2026');
   try{
     // Load Phase 2 data first
+    Logger.info('Loading campaigns...');
     await loadCampaigns();
+    Logger.info('Loading team members...');
     await loadTeamMembers();
+    Logger.info('Loading area cards...');
     await loadAreaCards();
+    Logger.info('Rendering area cards...');
     renderAreaCards();
     
     const[rows,fin,rescRows]=await Promise.all([
