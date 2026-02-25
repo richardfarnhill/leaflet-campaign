@@ -4,9 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Leaflet Campaign Tracker</title>
+<script src="config.js"></script>
 <script>
 (function(){
-  const PASSWORD='WillsX2025!',COOKIE='lct_auth',DAYS=14;
+  // Use config.js values with fallbacks for development
+  const PASSWORD=typeof CONFIG!=='undefined'?CONFIG.APP_PASSWORD:'WillsX2025!';
+  const SB_URL=typeof CONFIG!=='undefined'?CONFIG.SUPABASE_URL:'https://tjebidvgvbpnxgnphcrg.supabase.co';
+  const SB_KEY=typeof CONFIG!=='undefined'?CONFIG.SUPABASE_KEY:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqZWJpZHZndmJwbnhnbnBoY3JnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0ODkyNDcsImV4cCI6MjA4NzA2NTI0N30.7MyRW330dP1ZkCqOqTykjRo6Y-cM4ow3aJ-6_H82BUY';
+  const COOKIE='lct_auth',DAYS=14;
+  
   function getCookie(n){return document.cookie.split(';').some(c=>c.trim().startsWith(n+'='));}
   function setCookie(n,d){const e=new Date(Date.now()+d*864e5).toUTCString();document.cookie=n+'=1;expires='+e+';path=/;SameSite=Lax';}
   if(!getCookie(COOKIE)){
@@ -131,8 +137,8 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
 <footer>Live data &middot; Supabase &middot; WillSolicitor Leaflet Campaign</footer>
 
 <script>
-const SB_URL='https://tjebidvgvbpnxgnphcrg.supabase.co';
-const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqZWJpZHZndmJwbnhnbnBoY3JnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0ODkyNDcsImV4cCI6MjA4NzA2NTI0N30.7MyRW330dP1ZkCqOqTykjRo6Y-cM4ow3aJ-6_H82BUY';
+const SB_URL=typeof CONFIG!=='undefined'?CONFIG.SUPABASE_URL:'https://tjebidvgvbpnxgnphcrg.supabase.co';
+const SB_KEY=typeof CONFIG!=='undefined'?CONFIG.SUPABASE_KEY:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqZWJpZHZndmJwbnhnbnBoY3JnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0ODkyNDcsImV4cCI6MjA4NzA2NTI0N30.7MyRW330dP1ZkCqOqTykjRo6Y-cM4ow3aJ-6_H82BUY';
 const TOTAL=20000,DEFAULT_CV=294.42,DAILY_TARGET=1000;
 const STAFF=['\u2014 Unassigned \u2014','Richard','Josh','Dan','Cahner'];
 
