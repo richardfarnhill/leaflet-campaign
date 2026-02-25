@@ -381,10 +381,18 @@ async function loadTeamMembers(){
 async function loadAreaCards(){
   if(!currentCampaignId){targetAreas=[];reservations=[];return;}
   try{
-    const[areas,resvs]=await Promise.all([
-      sbFetch('/rest/v1/target_areas?select=*&campaign_id=eq.'+currentCampaignId+'&order=created_at.asc'),
-      sbFetch('/rest/v1/reservations?select=*&target_area_id=in.(select id from target_areas where campaign_id=eq.'+currentCampaignId+')&status=eq.active')
-    ]);
+    // First get areas for this campaign
+    const areas=await sbFetch('/rest/v1/target_areas?select=*&campaign_id=eq.'+currentCampaignId+'&order=created_at.asc');
+    const areaIds=areas?areas.map(a=>a.id):[];
+    
+    // Then get reservations for those areas
+    let resvs=[];
+    if(areaIds.length>0){
+      // Build an 'in' filter manually
+      const areaIdFilter=areaIds.map(id=>'"'+id+'"').join(',');
+      resvs=await sbFetch('/rest/v1/reservations?select=*&status=eq.active&target_area_id=in.('+areaIdFilter+')');
+    }
+    
     targetAreas=areas||[];
     reservations=resvs||[];
   }catch(e){console.error('loadAreaCards error:',e);targetAreas=[];reservations=[];}
