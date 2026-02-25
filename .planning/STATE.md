@@ -115,7 +115,7 @@ Resume file: None
 | T1a: Route unknown default + target_area_id in modal | ✓ Done | Claude |
 | T2: Enquiry recording modal | ✓ Done | OC |
 | T3: Enquiry list view + edit/delete | ✓ Done | OC |
-| T4: Enquiry map markers (fix lat/lng) | ○ Pending | - |
+| T4: Enquiry map markers (fix lat/lng) | ✓ Done | Claude |
 | T5: Finance projections from DB enquiries | ○ Pending | - |
 | T6: Team progress view | ○ In Progress | OC |
 | T7: Leaderboards | ○ Pending | - |

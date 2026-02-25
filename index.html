@@ -226,6 +226,12 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
         <tbody id="campaignBreakdownBody"></tbody>
       </table>
     </div>
+
+    <!-- Phase 6: Team Progress -->
+    <div id="teamProgressSection" style="background:#fff;padding:16px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);margin-bottom:24px;">
+      <h3 style="margin:0 0 12px 0;font-size:1rem;">Team Progress</h3>
+      <div id="teamProgressList"><p style="color:#888;font-size:0.9rem;">Loading...</p></div>
+    </div>
   </div>
   
   <!-- Phase 3: Delivery Journal -->
@@ -695,7 +701,10 @@ async function loadHeatmap() {
         + '<span style="color:#6b7280;">●</span> Available<br>'
         + '<span style="color:#f59e0b;">●</span> Reserved<br>'
         + '<span style="color:#16a34a;">●</span> Completed<br>'
-        + '<span style="color:#dc2626;">⚠</span> <span style="text-decoration:line-through;">Restricted</span>';
+        + '<span style="color:#dc2626;">⚠</span> <span style="text-decoration:line-through;">Restricted</span><br>'
+        + '<strong style="display:block;margin:4px 0 2px;">Enquiries</strong>'
+        + '<span style="color:#7c3aed;">●</span> Instructed<br>'
+        + '<span style="color:#c4b5fd;">●</span> Enquiry';
       return div;
     };
     legend.addTo(window.analyticsMap);
@@ -752,10 +761,19 @@ async function loadHeatmap() {
 
     // Enquiry markers
     (enquiries || []).forEach(e => {
-      if (e.location?.lat && e.location?.lng) {
-        L.marker([e.location.lat, e.location.lng])
-          .bindPopup(`Enquiry: ${e.postcode || 'No postcode'}`)
-          .addTo(window.analyticsMap);
+      if (e.lat && e.lng) {
+        const color = e.instructed ? '#7c3aed' : '#c4b5fd';
+        const marker = L.circleMarker([e.lat, e.lng], {
+          radius: 8,
+          color: color,
+          fillColor: color,
+          fillOpacity: e.instructed ? 0.85 : 0.5,
+          weight: 2
+        });
+        const valueStr = e.instructed && e.instruction_value ? ` — £${Number(e.instruction_value).toLocaleString()}` : '';
+        const nameStr = e.client_name ? e.client_name : 'Anonymous';
+        marker.bindPopup(`<strong>${nameStr}</strong><br>${e.postcode || ''}${valueStr}<br><em>${e.instructed ? 'Instructed' : 'Enquiry'}</em>`);
+        marker.addTo(window.analyticsMap);
       }
     });
 
@@ -1383,6 +1401,86 @@ async function loadEnquiryList(){
     el.innerHTML=html;
   }catch(e){
     document.getElementById('enquiryList').innerHTML='<p style="color:#888;font-size:0.9rem;">Could not load enquiries.</p>';
+  }
+}
+
+async function loadTeamProgress(){
+  const section=document.getElementById('teamProgressSection');
+  if(!currentCampaignId){
+    section.style.display='none';
+    return;
+  }
+  section.style.display='block';
+  
+  try{
+    const campFilter='?campaign_id=eq.'+currentCampaignId;
+    
+    const [teamMembers, areas, deliveries]=await Promise.all([
+      sbFetch('/rest/v1/team_members?select=*&is_active=eq.true&order=name.asc'),
+      sbFetch('/rest/v1/target_areas'+campFilter),
+      sbFetch('/rest/v1/deliveries'+campFilter)
+    ]);
+    
+    const totalDelivered=(deliveries||[]).reduce((sum,d)=>sum+(d.leaflets_delivered||0),0);
+    const totalTarget=areas?.reduce((sum,a)=>sum+(a.house_count||0),0)||0;
+    
+    const stats={};
+    (teamMembers||[]).forEach(tm=>{
+      stats[tm.id]={
+        name:tm.name,
+        reserved:0,
+        completed:0,
+        delivered:0
+      };
+    });
+    
+    (areas||[]).forEach(a=>{
+      if(a.team_member_1_id&&stats[a.team_member_1_id]){
+        stats[a.team_member_1_id].reserved++;
+        if(a.status==='completed')stats[a.team_member_1_id].completed++;
+      }
+      if(a.team_member_2_id&&stats[a.team_member_2_id]){
+        stats[a.team_member_2_id].reserved++;
+        if(a.status==='completed')stats[a.team_member_2_id].completed++;
+      }
+    });
+    
+    (deliveries||[]).forEach(d=>{
+      if(d.team_member_1_id&&stats[d.team_member_1_id]){
+        stats[d.team_member_1_id].delivered+=d.leaflets_delivered||0;
+      }
+      if(d.team_member_2_id&&stats[d.team_member_2_id]){
+        stats[d.team_member_2_id].delivered+=d.leaflets_delivered||0;
+      }
+    });
+    
+    const list=Object.values(stats).sort((a,b)=>b.delivered-a.delivered);
+    const el=document.getElementById('teamProgressList');
+    
+    if(list.length===0){
+      el.innerHTML='<p style="color:#888;font-size:0.9rem;">No team members assigned yet.</p>';
+      return;
+    }
+    
+    let html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;">';
+    list.forEach(tm=>{
+      const pct=totalDelivered>0?Math.round(tm.delivered/totalDelivered*100):0;
+      html+='<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;">';
+      html+='<div style="font-weight:600;margin-bottom:8px;">'+tm.name+'</div>';
+      html+='<div style="font-size:0.85rem;color:#64748b;">';
+      html+='<div>Routes: '+tm.reserved+' ('+tm.completed+' completed)</div>';
+      html+='<div>Delivered: '+tm.delivered.toLocaleString()+'</div>';
+      html+='</div>';
+      html+='<div style="margin-top:8px;background:#e2e8f0;border-radius:4px;height:8px;overflow:hidden;">';
+      html+='<div style="background:#16a34a;height:100%;width:'+pct+'%;"></div>';
+      html+='</div>';
+      html+='<div style="font-size:0.75rem;color:#64748b;margin-top:4px;">'+pct+'% of campaign</div>';
+      html+='</div>';
+    });
+    html+='</div>';
+    el.innerHTML=html;
+  }catch(e){
+    document.getElementById('teamProgressList').innerHTML='<p style="color:#888;font-size:0.9rem;">Could not load team progress.</p>';
   }
 }
 
