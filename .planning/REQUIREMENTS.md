@@ -29,6 +29,12 @@
 | TEA-01 | Progress Broadcasting | See team progress in real-time across all areas |
 | TEA-02 | Leaderboards | Gamify completion - show rankings by doors delivered |
 
+### GEO-01: Route Geocoding
+
+| ID | Requirement | Description |
+|----|-------------|-------------|
+| GEO-01 | Accurate Route Geocoding | Each route must have a unique, accurate postcode representing its primary delivery street (not a parking reference). Postcode is geocoded via postcodes.io to produce correct lat/lng. OS Names API used to identify a representative street postcode where needed. No two routes in the same campaign may share the same postcode. |
+
 ### ANL-04: Analytics
 
 | ID | Requirement | Description |
@@ -51,6 +57,7 @@
 |----|-------------|-------------|
 | CFG-01 | Campaign Config UI | Frontend interface to update total leaflets, team members |
 | CFG-02 | Response Rate Config | Edit response rate scenarios (0.25%, 0.5%, 0.75%) |
+| CFG-03 | DB-driven Summary Bar | Summary bar (Delivered, Remaining, Sessions Done, Est. Completion, Progress %) must read from DB (campaign.target_leaflets, deliveries, target_areas) not hardcoded values. Currently 20,000 is hardcoded in app and 30,000 is in DB — must be unified. |
 
 ### ENQ-07: Enquiries
 
@@ -99,27 +106,41 @@
 
 ## Traceability
 
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| TER-01: Area Reservation System | Phase 2 - Territory & Reservation | Pending |
-| TER-02: Real-time Availability | Phase 2 - Territory & Reservation | Pending |
-| TER-03: Manual Override | Phase 2 - Territory & Reservation | Pending |
-| ANL-01: Heat Maps (Deliveries) | Phase 4 - Analytics & Heatmaps | Pending |
-| ANL-02: Heat Maps (Enquiries) | Phase 4 - Analytics & Heatmaps | Pending |
-| ANL-03: Completion Rate by Area | Phase 4 - Analytics & Heatmaps | Pending |
-| ANL-04: Analytics Dashboard | Phase 4 - Analytics & Heatmaps | Pending |
-| CMP-01: Campaign Switching | Phase 5 - Campaign Management | Pending |
-| CMP-02: Aggregated Data View | Phase 5 - Campaign Management | Pending |
-| CFG-01: Campaign Config UI | Phase 5 - Campaign Management | Pending |
-| CFG-02: Response Rate Config | Phase 5 - Campaign Management | Pending |
-| DEM-01: Custom Demographic Rules | Phase 5 - Campaign Management | Pending |
-| ENQ-01: Robust Enquiry Recording | Phase 6 - Enquiry & Team | Pending |
-| ENQ-02: Enquiry Heatmap | Phase 6 - Enquiry & Team | Pending |
-| TEA-01: Progress Broadcasting | Phase 6 - Enquiry & Team | Pending |
-| TEA-02: Leaderboards | Phase 6 - Enquiry & Team | Pending |
-| INT-01: ClickUp Stub | Phase 7 - Integrations | Pending |
-| INT-02: Google Sheets Export | Phase 7 - Integrations | Pending |
-| INT-03: Gmail Notifications | Phase 7 - Integrations | Pending |
+| Requirement | Phase | Status | Notes |
+|-------------|-------|--------|-------|
+| TER-01: Area Reservation System | Phase 2 | ✅ Done | Cards, reserve modal, date selection |
+| TER-02: Real-time Availability | Phase 2 | ✅ Done | Cards show status, needs verification |
+| TER-03: Manual Override | Phase 2 | ✅ Done | Reassign + unassign modals |
+| ANL-01: Heat Maps (Deliveries) | Phase 4 | 🔄 In Progress | T3 heatmap layer done |
+| ANL-02: Heat Maps (Enquiries) | Phase 4 | 🔄 In Progress | T3 enquiry markers done |
+| ANL-03: Completion Rate by Area | Phase 4 | 🔄 In Progress | T4 dashboard, T14 cards |
+| ANL-04: Analytics Dashboard | Phase 4 | 🔄 In Progress | T6 charts done |
+| GEO-01: Accurate Route Geocoding | Phase 4 | 🔄 In Progress | T12 fixing coords via postcodes.io |
+| CMP-01: Campaign Switching | Phase 5 | 📋 Planned | - |
+| CMP-02: Aggregated Data View | Phase 5 | 📋 Planned | - |
+| CFG-01: Campaign Config UI | Phase 5 | 📋 Planned | - |
+| CFG-02: Response Rate Config | Phase 5 | 📋 Planned | - |
+| CFG-03: DB-driven Summary Bar | Phase 5 | 📋 Planned | Summary bar uses campaign.target_leaflets, not 20k hardcode |
+| DEM-01: Custom Demographic Rules | Phase 5 | 📋 Planned | Deferred from v1? |
+| ENQ-01: Robust Enquiry Recording | Phase 6 | 📋 Planned | - |
+| ENQ-02: Enquiry Heatmap | Phase 6 | 📋 Planned | - |
+| TEA-01: Progress Broadcasting | Phase 6 | 📋 Planned | - |
+| TEA-02: Leaderboards | Phase 6 | 📋 Planned | - |
+| INT-01: ClickUp Stub | Phase 7 | 📋 Planned | - |
+| INT-02: Google Sheets Export | Phase 7 | 📋 Planned | - |
+| INT-03: Gmail Notifications | Phase 7 | 📋 Planned | - |
+
+---
+
+## Verification Needed (Pre-Phase 5)
+
+| Item | Phase | Status | Action |
+|------|-------|--------|--------|
+| RLS policies on tables | Phase 1 | ⚠️ Unclear | Verify in Supabase |
+| PostGIS spatial queries | Phase 1 | ⚠️ Unclear | Test distance calcs |
+| Real-time updates | Phase 2 | ⚠️ Unclear | Verify polling/websocket |
+| Delivery flow E2E | Phase 2-3 | ⚠️ Unclear | Test complete flow |
+| Map/heatmap renders | Phase 4 | 🔄 Testing | T12 coords first |
 
 ---
 

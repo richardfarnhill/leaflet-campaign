@@ -487,6 +487,19 @@ function showView(view) {
   if (view === 'analytics' && typeof loadAnalyticsDashboard === 'function') loadAnalyticsDashboard();
 }
 
+// Phase 4: Map → route card navigation
+function showRouteCard(areaId) {
+  showView('cards');
+  setTimeout(() => {
+    const card = document.querySelector('.area-card[data-area-id="' + areaId + '"]');
+    if (card) {
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      card.style.boxShadow = '0 0 0 3px #2563eb';
+      setTimeout(() => card.style.boxShadow = '', 2000);
+    }
+  }, 100);
+}
+
 // Phase 4: Heatmap
 async function loadHeatmap() {
   const container = document.getElementById('heatmapContainer');
@@ -537,7 +550,7 @@ async function loadHeatmap() {
         weight: 2,
         opacity: 1,
         fillOpacity: 0.85
-      }).bindPopup(`<strong>${a.area_name}</strong><br>${a.postcode}<br>Status: ${a.status}${delivered > 0 ? `<br>Delivered: ${delivered.toLocaleString()} (${pct}%)` : '<br><em>No deliveries yet</em>'}`);
+      }).bindPopup(`<strong>${a.area_name}</strong><br>${a.postcode}<br>Status: ${a.status}${delivered > 0 ? `<br>Delivered: ${delivered.toLocaleString()} (${pct}%)` : '<br><em>No deliveries yet</em>'}<br><button onclick="showRouteCard('${a.id}')" style="margin-top:8px;padding:4px 12px;background:#1a3a5c;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">View Route</button>`);
       marker.addTo(window.analyticsMap);
       window.areaMarkers.push(marker);
     });
@@ -789,7 +802,7 @@ function renderAreaCards(){
     const reservedBy2=res&&res.team_member_2_id?getTeamMemberName(res.team_member_2_id):null;
     const deliveryDate=res?res.delivery_date:null;
 
-    html+='<div class="area-card '+status+'">';
+    html+='<div class="area-card '+status+'" data-area-id="'+area.id+'">';
     html+='<div class="area-card-header"><div><div class="area-card-title">'+area.area_name+'</div><div class="area-card-postcode">'+area.postcode+'</div></div>';
     html+='<span class="area-card-badge '+status+'">'+status+'</span></div>';
     const delivered=areaDeliveries[area.id]||0;
@@ -1222,43 +1235,18 @@ async function loadAll(){
   Logger.info('loadAll() called - starting data load');
   setSyncStatus('saving','Loading\u2026');
   try{
-    // Load Phase 2 data first
-    Logger.info('Loading campaigns...');
     await loadCampaigns();
-    Logger.info('Loading team members...');
     await loadTeamMembers();
-    Logger.info('Loading area cards...');
     await loadAreaCards();
-    Logger.info('Rendering area cards...');
     renderAreaCards();
     await loadDeliveredTotal();
     await loadDeliveryJournal();
-
-    const[rows,fin,rescRows]=await Promise.all([
-      sbFetch('/rest/v1/session_log?select=*'),
-      sbFetch('/rest/v1/finance_actuals?select=*&id=eq.1'),
-      sbFetch('/rest/v1/rescheduled_sessions?select=*&order=created_at.asc')
-    ]);
-    sessionState={};(rows||[]).forEach(r=>{sessionState[r.id]=r;});
-    sessions=[...BASE];
-    (rescRows||[]).forEach(r=>{
-      sessions.push({id:'r'+r.id,dateISO:r.date_iso,week:'Rescheduled',area:r.area,postcode:r.postcode,target:r.target,briefing:r.briefing,rescheduled:true,originalId:r.original_id});
-    });
-    if(fin&&fin[0]){const f=fin[0];document.getElementById('fi_enquiries').value=f.enquiries||'';document.getElementById('fi_cases').value=f.cases_instructed||'';document.getElementById('fi_instrvalue').value=f.instruction_value||'';}
+    // NOTE: Summary bar (Remaining, Sessions Done, Est. Completion) not yet DB-driven.
+    // Phase 5 T4 (CFG-03) will replace this with loadSummaryStats() reading from DB.
     setSyncStatus('ok','Live \u00b7 auto-syncing every 30s');
-    render();updateSummary();
   }catch(e){
     Logger.error('loadAll failed',e);
-    console.error('Full loadAll error:', e);
-    // rescheduled_sessions table may not exist yet - try without it
-    try{
-      const[rows,fin]=await Promise.all([sbFetch('/rest/v1/session_log?select=*'),sbFetch('/rest/v1/finance_actuals?select=*&id=eq.1')]);
-      sessionState={};(rows||[]).forEach(r=>{sessionState[r.id]=r;});
-      sessions=[...BASE];
-      if(fin&&fin[0]){const f=fin[0];document.getElementById('fi_enquiries').value=f.enquiries||'';document.getElementById('fi_cases').value=f.cases_instructed||'';document.getElementById('fi_instrvalue').value=f.instruction_value||'';}
-      setSyncStatus('ok','Live (run DB migration to enable reschedule feature)');
-      render();updateSummary();
-    }catch(e2){setSyncStatus('err','Connection error \u2014 '+e2.message);}
+    setSyncStatus('err','Connection error \u2014 '+e.message);
   }
 }
 
