@@ -355,6 +355,38 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
   </div>
 </div>
 
+<!-- Campaign Config Modal -->
+<div id="campaignConfigModal" class="modal-overlay">
+  <div class="modal">
+    <h3>Configure Campaign</h3>
+    <div class="modal-field">
+      <label>Campaign Name</label>
+      <input type="text" id="configCampaignName" readonly>
+    </div>
+    <div class="modal-field">
+      <label>Target Leaflets</label>
+      <input type="number" id="configTargetLeaflets">
+    </div>
+    <div class="modal-field">
+      <label>Start Date</label>
+      <input type="date" id="configStartDate">
+    </div>
+    <div class="modal-field">
+      <label>End Date</label>
+      <input type="date" id="configEndDate">
+    </div>
+    <div class="modal-field">
+      <label>Team Members</label>
+      <div id="configTeamMembers" style="max-height:120px;overflow-y:auto;border:1px solid #ddd;padding:8px;border-radius:4px;"></div>
+    </div>
+    <div class="modal-error" id="configError"></div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeCampaignConfig()">Cancel</button>
+      <button class="modal-btn confirm" id="configConfirmBtn" onclick="saveCampaignConfig()">Save</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // Read Supabase config from CONFIG (loaded by config.js)
 const SB_URL=typeof CONFIG!=='undefined'?CONFIG.SUPABASE_URL:'';
@@ -586,25 +618,27 @@ async function loadHeatmap() {
   }
 }
 
-// Phase 4: Completion rate for analytics dashboard
-// TODO: When Phase 5/6 implements campaign config, update this to use campaign.target_leaflets
-// Currently stubbed: shows % of areas completed (not leaflets vs target)
+// Phase 4/5: Completion rate for analytics dashboard — reads target from DB (CFG-03)
 async function loadCompletionRate() {
   try {
-    // Get campaign metadata - TODO: Replace hardcoded 20000 with campaign.target_leaflets after Phase 5/6
-    const CAMPAIGN_TARGET_LEAFLETS = 20000; // STUB - update when CFG-01 is implemented
-    
-    // Get all areas for current campaign
-    const areas = await sbFetch('/rest/v1/target_areas?select=id,status,house_count&campaign_id=eq.' + currentCampaignId);
-    const deliveries = await sbFetch('/rest/v1/deliveries?select=leaflets_delivered');
-    
-    const totalLeaflets = (deliveries || []).reduce((sum, d) => sum + (d.leaflets_delivered || 0), 0);
-    const rate = CAMPAIGN_TARGET_LEAFLETS > 0 ? Math.round(totalLeaflets / CAMPAIGN_TARGET_LEAFLETS * 100) : 0;
-    
-    const el = document.getElementById('overallCompletionRate');
-    if (el) el.textContent = rate + '% (' + totalLeaflets.toLocaleString() + '/' + CAMPAIGN_TARGET_LEAFLETS.toLocaleString() + ' leaflets)';
+    let targetLeaflets=20000;
+    if(currentCampaignId){
+      const camps=await sbFetch('/rest/v1/campaigns?select=target_leaflets&id=eq.'+currentCampaignId);
+      if(camps&&camps[0]&&camps[0].target_leaflets) targetLeaflets=camps[0].target_leaflets;
+    } else {
+      const camps=await sbFetch('/rest/v1/campaigns?select=target_leaflets&is_active=eq.true');
+      if(camps&&camps.length>0) targetLeaflets=camps.reduce((s,c)=>s+(c.target_leaflets||0),0);
+    }
+    const delivUrl=currentCampaignId
+      ?'/rest/v1/deliveries?select=leaflets_delivered&campaign_id=eq.'+currentCampaignId
+      :'/rest/v1/deliveries?select=leaflets_delivered';
+    const deliveries=await sbFetch(delivUrl);
+    const totalLeaflets=(deliveries||[]).reduce((sum,d)=>sum+(d.leaflets_delivered||0),0);
+    const rate=targetLeaflets>0?Math.round(totalLeaflets/targetLeaflets*100):0;
+    const el=document.getElementById('overallCompletionRate');
+    if(el) el.textContent=rate+'% ('+totalLeaflets.toLocaleString()+'/'+targetLeaflets.toLocaleString()+' leaflets)';
   } catch(e) {
-    Logger.error('Failed to load completion rate', e);
+    Logger.error('Failed to load completion rate',e);
   }
 }
 
@@ -962,12 +996,45 @@ function closeCompleteModal(){
   currentCompleteAreaId=null;
 }
 
-async function loadDeliveredTotal(){
+async function loadSummaryStats(){
   try{
-    const rows=await sbFetch('/rest/v1/deliveries?select=leaflets_delivered');
-    const total=(rows||[]).reduce((sum,r)=>sum+(r.leaflets_delivered||0),0);
-    document.getElementById('sumDelivered').textContent=total.toLocaleString();
-  }catch(e){}
+    // Fetch campaign target (or sum across all campaigns)
+    let targetLeaflets=20000; // fallback if no campaign data
+    if(currentCampaignId){
+      const camps=await sbFetch('/rest/v1/campaigns?select=target_leaflets&id=eq.'+currentCampaignId);
+      if(camps&&camps[0]&&camps[0].target_leaflets) targetLeaflets=camps[0].target_leaflets;
+    } else {
+      const camps=await sbFetch('/rest/v1/campaigns?select=target_leaflets&is_active=eq.true');
+      if(camps&&camps.length>0) targetLeaflets=camps.reduce((s,c)=>s+(c.target_leaflets||0),0);
+    }
+
+    // Fetch deliveries (filtered by campaign if one selected)
+    const delivUrl=currentCampaignId
+      ?'/rest/v1/deliveries?select=leaflets_delivered,campaign_id&campaign_id=eq.'+currentCampaignId
+      :'/rest/v1/deliveries?select=leaflets_delivered';
+    const deliveries=await sbFetch(delivUrl);
+    const totalDelivered=(deliveries||[]).reduce((s,d)=>s+(d.leaflets_delivered||0),0);
+
+    // Fetch completed routes count
+    const areasUrl=currentCampaignId
+      ?'/rest/v1/target_areas?select=status&campaign_id=eq.'+currentCampaignId
+      :'/rest/v1/target_areas?select=status';
+    const areas=await sbFetch(areasUrl);
+    const totalAreas=(areas||[]).length;
+    const completedAreas=(areas||[]).filter(a=>a.status==='completed').length;
+
+    const remaining=Math.max(0,targetLeaflets-totalDelivered);
+    const pct=targetLeaflets>0?Math.min(100,Math.round(totalDelivered/targetLeaflets*100)):0;
+
+    document.getElementById('sumDelivered').textContent=totalDelivered.toLocaleString();
+    document.getElementById('sumRemaining').textContent=remaining.toLocaleString();
+    document.getElementById('sumSessions').textContent=completedAreas+' / '+totalAreas+' routes';
+    document.getElementById('progressFill').style.width=pct+'%';
+    document.getElementById('progressPct').textContent=pct+'%';
+    document.getElementById('sumProjected').textContent='—';
+  }catch(e){
+    Logger.error('loadSummaryStats failed',e);
+  }
 }
 
 async function loadDeliveryJournal(){
@@ -1073,7 +1140,7 @@ async function confirmCompletion(){
       closeCompleteModal();
       await loadAreaCards();
       renderAreaCards();
-      await loadDeliveredTotal();
+      await loadSummaryStats();
       await loadDeliveryJournal();
       setSyncStatus('ok','Delivery completed!');
     }else if(result&&result.success&&result.delivery===null){
@@ -1243,10 +1310,8 @@ async function loadAll(){
     await loadTeamMembers();
     await loadAreaCards();
     renderAreaCards();
-    await loadDeliveredTotal();
+    await loadSummaryStats();
     await loadDeliveryJournal();
-    // NOTE: Summary bar (Remaining, Sessions Done, Est. Completion) not yet DB-driven.
-    // Phase 5 T4 (CFG-03) will replace this with loadSummaryStats() reading from DB.
     setSyncStatus('ok','Live \u00b7 auto-syncing every 30s');
   }catch(e){
     Logger.error('loadAll failed',e);
