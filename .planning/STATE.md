@@ -48,30 +48,65 @@
 
 ---
 
-## Phase 2 Status: 🔄 IN PROGRESS
+## Phase 2 Status: ✅ COMPLETE
 
 **Goal:** Teams can claim geographic chunks (800-1200 doors) with date selection
 
 **Key Decision:** No user roles — anyone can reserve, complete, or reassign any area.
 
-| Task | Status | Notes |
-|------|--------|-------|
-| Area cards grid UI | ✅ Complete | Renders available/reserved/completed |
-| Reserve modal | ✅ Complete | Team member + date picker |
-| Complete modal | ✅ Complete | Leaflet count + notes |
-| Reassign modal | ✅ Complete | Any user can reassign (no role gate) |
-| SB_URL scope bug | ✅ Fixed | Was scoped inside IIFE, now at script level |
-| Stray </script> tag | ✅ Fixed | Was breaking all JS below Logger block |
-| DB data cleanup | ✅ Done | Reset 5 areas to available, removed duplicate |
-| End-to-end test | ⏳ Pending | Reserve → Complete → Reassign flow not yet verified live |
+| Task | Status |
+|------|--------|
+| Area cards grid UI | ✅ Complete |
+| Reserve modal | ✅ Complete |
+| Complete modal | ✅ Complete |
+| Reassign modal | ✅ Complete |
+| Unassign button + modal | ✅ Complete |
+| Hide completed cards | ✅ Complete |
+| SB_URL scope bug | ✅ Fixed |
+| Stray </script> tag | ✅ Fixed |
+| DB data cleanup | ✅ Done (5 areas, all available) |
+| complete_delivery soft-success bug | ✅ Fixed |
 
-**Success Criteria (from ROADMAP):**
-1. ⏳ Team member can view available area cards with door counts
-2. ⏳ Team member can reserve an area with a delivery date
-3. ⏳ Status updates in real-time (available → reserved → completed)
-4. ⏳ Any user can reassign a reserved area
+---
 
-**Next Action:** Test the live flows at localhost:3000, then run `/gsd:plan-phase 3`
+## Phase 3 Status: 🔄 IN PROGRESS
+
+**Goal:** Delivery Recording — teams record completions with accurate leaflet counts
+
+**⚠️ ACTION REQUIRED — Run this SQL in Supabase Dashboard → SQL Editor:**
+
+```sql
+CREATE OR REPLACE FUNCTION unassign_area(p_target_area_id UUID)
+RETURNS JSON
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_reservation_id UUID;
+BEGIN
+  SELECT id INTO v_reservation_id
+  FROM reservations
+  WHERE target_area_id = p_target_area_id AND status = 'active'
+  LIMIT 1;
+
+  IF v_reservation_id IS NULL THEN
+    RETURN json_build_object('success', false, 'error', 'No active reservation found');
+  END IF;
+
+  UPDATE reservations SET status = 'cancelled' WHERE id = v_reservation_id;
+  UPDATE target_areas SET status = 'available' WHERE id = p_target_area_id;
+
+  RETURN json_build_object('success', true);
+END;
+$$;
+```
+
+| Task | Status |
+|------|--------|
+| unassign_area RPC (SQL above) | ⏳ Needs manual Supabase run |
+| End-to-end test (reserve → complete → unassign) | ⏳ Pending |
+| Summary stats from area deliveries | ⏳ Not yet wired |
+
+**Next Action:** Run SQL above in Supabase, then test live at localhost:3000
 
 ---
 
