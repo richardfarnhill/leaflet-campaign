@@ -177,6 +177,28 @@ This is a brownfield project. Codebase analysis completed:
 
 ---
 
+## Current State (v1.0 Shipped)
+
+**Shipped:** 2026-02-25
+**Tag:** v1.0
+**Status:** Stable release - production ready
+
+### What Was Delivered
+- Card-based area reservation system
+- Multi-campaign support with data isolation
+- Analytics dashboard with charts
+- Heat maps (deliveries + enquiries)
+- Team leaderboards (leaflets + revenue)
+- Robust enquiry recording
+- Route creation UI (in progress)
+
+### Next Milestone Goals (v1.1)
+- Phase 7: Core Enhancements (route cards, completion, security)
+- Phase 8: Auto-assignment & API
+- Phase 9: UI/UX (dark mode)
+
+---
+
 ## Git Repository
 
 - **Remote:** https://github.com/richardfarnhill/leaflet-campaign.git
