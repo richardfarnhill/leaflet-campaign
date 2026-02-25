@@ -1416,7 +1416,7 @@ function openEnquiryModal(enquiryId){
   document.getElementById('enquiryValueField').style.display='none';
   
   const routeSelect=document.getElementById('enquiryRoute');
-  routeSelect.innerHTML='<option value="">Select...</option>';
+  routeSelect.innerHTML='<option value="">Route unknown</option>';
   (targetAreas||[]).forEach(ta=>{
     routeSelect.innerHTML+='<option value="'+ta.id+'">'+ta.area_name+'</option>';
   });
@@ -1427,6 +1427,7 @@ function openEnquiryModal(enquiryId){
         const r=rows[0];
         document.getElementById('enquiryClientName').value=r.client_name||'';
         document.getElementById('enquiryPostcode').value=r.postcode||'';
+        document.getElementById('enquiryRoute').value=r.target_area_id||'';
         document.getElementById('enquiryInstructed').checked=r.instructed||false;
         document.getElementById('enquiryInstructionValue').value=r.instruction_value||'';
         document.getElementById('enquiryNotes').value=r.notes||'';
@@ -1463,19 +1464,12 @@ async function saveEnquiry(){
   errorEl.classList.remove('show');
   
   try{
-    let lat=null,lng=null;
-    const geoRes=await fetch('https://api.postcodes.io/postcodes/'+encodeURIComponent(postcode)).then(r=>r.json());
-    if(geoRes.status===200&&geoRes.result){
-      lat=geoRes.result.latitude;
-      lng=geoRes.result.longitude;
-    }
-    
+    const routeVal=document.getElementById('enquiryRoute').value||null;
     const data={
       campaign_id:currentCampaignId,
       client_name:document.getElementById('enquiryClientName').value.trim()||null,
       postcode:postcode,
-      lat:lat,
-      lng:lng,
+      target_area_id:routeVal,
       instructed:document.getElementById('enquiryInstructed').checked,
       instruction_value:document.getElementById('enquiryInstructed').checked?parseFloat(document.getElementById('enquiryInstructionValue').value)||null:null,
       notes:document.getElementById('enquiryNotes').value.trim()||null
