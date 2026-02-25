@@ -22,3 +22,9 @@ Thumbs.db
 # Build outputs
 dist/
 build/
+
+# Debug session files
+browser-console.js
+chrome-console.js
+puppeteer-console.js
+debug-summary.md
