@@ -175,13 +175,13 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 
 | Phase | Status | Requirements |
 |-------|--------|--------------|
-| 1 - Database Foundation | Not started | Implicit |
-| 2 - Territory & Reservation | Not started | 3 |
-| 3 - Delivery Recording | Not started | Implicit |
-| 4 - Analytics & Heatmaps | Not started | 4 |
-| 5 - Campaign Management | Not started | 5 |
-| 6 - Enquiry & Team | Not started | 4 |
-| 7 - Integrations | Not started | 3 |
+| 1 - Database Foundation | ✅ Complete | Implicit |
+| 2 - Territory & Reservation | ✅ Complete | 3 |
+| 3 - Delivery Recording | 🔄 In Progress | Implicit |
+| 4 - Analytics & Heatmaps | ⏳ Pending | 4 |
+| 5 - Campaign Management | ⏳ Pending | 5 |
+| 6 - Enquiry & Team | ⏳ Pending | 4 |
+| 7 - Integrations | ⏳ Pending | 3 |
 
 **Total: 7 phases, 19 v1 requirements mapped ✓**
 
