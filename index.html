@@ -174,6 +174,12 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
     <div style="grid-column:1/-1;text-align:center;padding:40px;color:#888;">Loading areas...</div>
   </div>
   
+  <!-- Phase 3: Delivery Journal -->
+  <div id="deliveryJournal" style="margin-bottom:24px;">
+    <h2 style="margin-bottom:12px;">Delivery Journal</h2>
+    <div id="journalList"><p style="color:#888;font-size:0.9rem;">Loading...</p></div>
+  </div>
+
   <h2>Campaign Schedule</h2>
   <div id="schedule"></div>
   <h2>Financial Projections</h2>
@@ -217,6 +223,12 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
       <label>Team Member</label>
       <select id="reserveTeamMember">
         <option value="">Select team member...</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label>Second Team Member (optional)</label>
+      <select id="reserveTeamMember2">
+        <option value="">Select second team member...</option>
       </select>
     </div>
     <div class="modal-field">
@@ -264,13 +276,23 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
       <input type="text" id="reassignAreaName" readonly>
     </div>
     <div class="modal-field">
-      <label>Current Team Member</label>
+      <label>Team Member 1</label>
       <input type="text" id="reassignCurrentMember" readonly>
     </div>
     <div class="modal-field">
-      <label>New Team Member</label>
+      <label>Team Member 2 (optional)</label>
+      <input type="text" id="reassignCurrentMember2" readonly>
+    </div>
+    <div class="modal-field">
+      <label>Reassign Team Member 1 To</label>
       <select id="reassignNewMember">
         <option value="">Select new team member...</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label>Reassign Team Member 2 To</label>
+      <select id="reassignNewMember2">
+        <option value="">Select new team member or leave empty...</option>
       </select>
     </div>
     <div class="modal-error" id="reassignError"></div>
@@ -535,6 +557,7 @@ function renderAreaCards(){
     if(status==='completed')return;
     const res=reservations.find(r=>r.target_area_id===area.id);
     const reservedBy=res?getTeamMemberName(res.team_member_1_id):null;
+    const reservedBy2=res&&res.team_member_2_id?getTeamMemberName(res.team_member_2_id):null;
     const deliveryDate=res?res.delivery_date:null;
 
     html+='<div class="area-card '+status+'">';
@@ -543,7 +566,9 @@ function renderAreaCards(){
     html+='<div class="area-card-stats"><div class="area-card-stat"><div class="area-card-stat-val">'+(area.house_count||0)+'</div><div class="area-card-stat-lbl">Doors</div></div></div>';
 
     if(status==='reserved'&&reservedBy){
-      html+='<div class="area-card-team"><strong>'+reservedBy+'</strong>'+(deliveryDate?' &middot; '+deliveryDate:'')+'</div>';
+      let teamHtml='<strong>'+reservedBy+'</strong>';
+      if(reservedBy2) teamHtml+=' & '+reservedBy2;
+      html+='<div class="area-card-team">'+teamHtml+(deliveryDate?' &middot; '+deliveryDate:'')+'</div>';
     }
 
     // Action buttons
@@ -588,6 +613,16 @@ function openReserveModal(areaId){
     select.appendChild(opt);
   });
   
+  // Populate second team member dropdown (optional)
+  const select2=document.getElementById('reserveTeamMember2');
+  select2.innerHTML='<option value="">Select second team member...</option>';
+  teamMembers.forEach(tm=>{
+    const opt=document.createElement('option');
+    opt.value=tm.id;
+    opt.textContent=tm.name;
+    select2.appendChild(opt);
+  });
+  
   // Set min date to tomorrow
   const tomorrow=new Date();
   tomorrow.setDate(tomorrow.getDate()+1);
@@ -605,6 +640,7 @@ function closeReserveModal(){
 
 async function confirmReservation(){
   const teamMemberId=document.getElementById('reserveTeamMember').value;
+  const teamMember2Id=document.getElementById('reserveTeamMember2').value;
   const deliveryDate=document.getElementById('reserveDate').value;
   const errorEl=document.getElementById('reserveError');
   const btn=document.getElementById('reserveConfirmBtn');
@@ -632,6 +668,7 @@ async function confirmReservation(){
       body:JSON.stringify({
         p_target_area_id:currentReserveAreaId,
         p_team_member_1_id:teamMemberId,
+        p_team_member_2_id:teamMember2Id||null,
         p_delivery_date:deliveryDate
       })
     });
@@ -672,6 +709,38 @@ function closeCompleteModal(){
   currentCompleteAreaId=null;
 }
 
+async function loadDeliveredTotal(){
+  try{
+    const rows=await sbFetch('/rest/v1/deliveries?select=leaflets_delivered');
+    const total=(rows||[]).reduce((sum,r)=>sum+(r.leaflets_delivered||0),0);
+    document.getElementById('sumDelivered').textContent=total.toLocaleString();
+  }catch(e){}
+}
+
+async function loadDeliveryJournal(){
+  try{
+    const rows=await sbFetch('/rest/v1/deliveries?select=leaflets_delivered,delivery_date,notes,created_at,target_areas(area_name),team_member_1:team_members!team_member_1_id(name),team_member_2:team_members!team_member_2_id(name)&order=created_at.desc');
+    const el=document.getElementById('journalList');
+    if(!rows||rows.length===0){el.innerHTML='<p style="color:#888;font-size:0.9rem;">No deliveries recorded yet.</p>';return;}
+    el.innerHTML=rows.map(r=>{
+      const area=r.target_areas?.area_name||'Unknown area';
+      const tm1=r.team_member_1?.name||'';
+      const tm2=r.team_member_2?.name||'';
+      const team=tm2?tm1+' & '+tm2:tm1;
+      const date=r.delivery_date||r.created_at?.slice(0,10)||'';
+      const notes=r.notes?'<span style="color:#888;font-size:0.82rem;"> — '+r.notes+'</span>':'';
+      return '<div style="padding:8px 0;border-bottom:1px solid #eee;font-size:0.9rem;">'+
+        '<strong>'+area+'</strong> &mdash; '+
+        r.leaflets_delivered.toLocaleString()+' leaflets'+
+        (team?' &mdash; '+team:'')+
+        ' &mdash; <span style="color:#666;">'+date+'</span>'+
+        notes+'</div>';
+    }).join('');
+  }catch(e){
+    document.getElementById('journalList').innerHTML='<p style="color:#888;font-size:0.9rem;">Could not load journal.</p>';
+  }
+}
+
 async function confirmCompletion(){
   const leaflets=parseInt(document.getElementById('completeLeaflets').value);
   const notes=document.getElementById('completeNotes').value;
@@ -700,9 +769,27 @@ async function confirmCompletion(){
     });
     
     if(result&&result.success&&result.delivery!==null){
+      // RPC doesn't write to deliveries table — insert directly
+      const area=targetAreas.find(a=>a.id===currentCompleteAreaId);
+      const res=reservations.find(r=>r.target_area_id===currentCompleteAreaId);
+      await sbFetch('/rest/v1/deliveries',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Prefer':'return=minimal'},
+        body:JSON.stringify({
+          campaign_id:area?.campaign_id||null,
+          target_area_id:currentCompleteAreaId,
+          team_member_1_id:res?.team_member_1_id||null,
+          team_member_2_id:res?.team_member_2_id||null,
+          delivery_date:res?.delivery_date||new Date().toISOString().slice(0,10),
+          leaflets_delivered:leaflets,
+          notes:notes||null
+        })
+      });
       closeCompleteModal();
       await loadAreaCards();
       renderAreaCards();
+      await loadDeliveredTotal();
+      await loadDeliveryJournal();
       setSyncStatus('ok','Delivery completed!');
     }else if(result&&result.success&&result.delivery===null){
       errorEl.textContent='Area was not in reserved state — please refresh and try again';
@@ -727,19 +814,33 @@ function openReassignModal(areaId){
   currentReassignAreaId=areaId;
   document.getElementById('reassignAreaName').value=area.area_name;
   document.getElementById('reassignCurrentMember').value=res?getTeamMemberName(res.team_member_1_id):'Unknown';
+  document.getElementById('reassignCurrentMember2').value=res&&res.team_member_2_id?getTeamMemberName(res.team_member_2_id):'None';
   document.getElementById('reassignError').className='modal-error';
   document.getElementById('reassignError').textContent='';
   
-  // Populate team member dropdown (exclude current)
+  // Populate team member 1 dropdown (exclude current members)
   const select=document.getElementById('reassignNewMember');
   select.innerHTML='<option value="">Select new team member...</option>';
   const currentMemberId=res?res.team_member_1_id:null;
+  const currentMember2Id=res?res.team_member_2_id:null;
   teamMembers.forEach(tm=>{
-    if(tm.id!==currentMemberId){
+    if(tm.id!==currentMemberId&&tm.id!==currentMember2Id){
       const opt=document.createElement('option');
       opt.value=tm.id;
       opt.textContent=tm.name;
       select.appendChild(opt);
+    }
+  });
+  
+  // Populate team member 2 dropdown
+  const select2=document.getElementById('reassignNewMember2');
+  select2.innerHTML='<option value="">Select new team member or leave empty...</option>';
+  teamMembers.forEach(tm=>{
+    if(tm.id!==currentMemberId&&tm.id!==currentMember2Id){
+      const opt=document.createElement('option');
+      opt.value=tm.id;
+      opt.textContent=tm.name;
+      select2.appendChild(opt);
     }
   });
   
@@ -754,11 +855,18 @@ function closeReassignModal(){
 
 async function confirmReassignment(){
   const newMemberId=document.getElementById('reassignNewMember').value;
+  const newMember2Id=document.getElementById('reassignNewMember2').value;
   const errorEl=document.getElementById('reassignError');
   const btn=document.getElementById('reassignConfirmBtn');
   
-  if(!newMemberId){
-    errorEl.textContent='Please select a new team member';
+  if(!newMemberId&&!newMember2Id){
+    errorEl.textContent='Please select at least one new team member';
+    errorEl.classList.add('show');
+    return;
+  }
+  
+  if(newMemberId&&newMember2Id&&newMemberId===newMember2Id){
+    errorEl.textContent='Cannot assign the same team member to both slots';
     errorEl.classList.add('show');
     return;
   }
@@ -773,7 +881,8 @@ async function confirmReassignment(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         p_target_area_id:currentReassignAreaId,
-        p_new_team_member_id:newMemberId
+        p_new_team_member_1_id:newMemberId||null,
+        p_new_team_member_2_id:newMember2Id||null
       })
     });
     
@@ -854,6 +963,8 @@ async function loadAll(){
     await loadAreaCards();
     Logger.info('Rendering area cards...');
     renderAreaCards();
+    await loadDeliveredTotal();
+    await loadDeliveryJournal();
 
     const[rows,fin,rescRows]=await Promise.all([
       sbFetch('/rest/v1/session_log?select=*'),
@@ -965,7 +1076,7 @@ function render(){
       '<div class="session-fields">'+
       '<div class="field"><label>Staff Member 1</label><select data-id="'+s.id+'" data-field="staff1">'+STAFF.map(n=>'<option value="'+n+'"'+((row.staff1||'')===n?' selected':'')+'>'+n+'</option>').join('')+'</select></div>'+
       '<div class="field"><label>Staff Member 2</label><select data-id="'+s.id+'" data-field="staff2">'+STAFF.map(n=>'<option value="'+n+'"'+((row.staff2||'')===n?' selected':'')+'>'+n+'</option>').join('')+'</select></div>'+
-      '<div class="field"><label>Leaflets Delivered</label><input type="number" min="0" max="1500" placeholder="0" data-id="'+s.id+'" data-field="delivered" value="'+(row.delivered||'')+'"></div>'+
+      '<div class="field"><label>Leaflets Delivered</label><input type="number" min="0" placeholder="0" data-id="'+s.id+'" data-field="delivered" value="'+(row.delivered||'')+'"></div>'+
       `<div class="field"><label>Notes / Issues</label><input type="text" placeholder="e.g. skipped Elm Close" data-id="${s.id}" data-field="comment" value="${row.comment||''}" style="width:240px"></div>`+
       '</div>';
     weekDiv.appendChild(card);
@@ -997,7 +1108,6 @@ function updateSummary(){
   let td=0,cs=0;
   sessions.forEach(s=>{const d=parseInt(sessionState[s.id]?.delivered)||0;td+=d;if(d>0)cs++;});
   const rem=Math.max(0,TOTAL-td),pct=Math.min(100,Math.round(td/TOTAL*100));
-  document.getElementById('sumDelivered').textContent=td.toLocaleString();
   document.getElementById('sumRemaining').textContent=rem.toLocaleString();
   document.getElementById('sumSessions').textContent=cs;
   document.getElementById('progressFill').style.width=pct+'%';
