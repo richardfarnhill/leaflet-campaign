@@ -652,8 +652,8 @@ async function loadHeatmap() {
     const [campaignRow, allAreas, deliveries, enquiries] = await Promise.all([
       currentCampaignId ? sbFetch('/rest/v1/campaigns?select=restricted_postcodes&id=eq.' + currentCampaignId) : Promise.resolve([]),
       sbFetch('/rest/v1/target_areas?select=*&campaign_id=eq.' + currentCampaignId),
-      sbFetch('/rest/v1/deliveries?select=*'),
-      sbFetch('/rest/v1/enquiries?select=*')
+      currentCampaignId ? sbFetch('/rest/v1/deliveries?select=*&campaign_id=eq.' + currentCampaignId) : sbFetch('/rest/v1/deliveries?select=*'),
+      currentCampaignId ? sbFetch('/rest/v1/enquiries?select=*&campaign_id=eq.' + currentCampaignId) : sbFetch('/rest/v1/enquiries?select=*')
     ]);
     const restrictedAreas = ((campaignRow && campaignRow[0]?.restricted_postcodes) || [])
       .map(p => ({ postcode_prefix: p, radius_miles: 2, label: p }));
@@ -831,8 +831,9 @@ async function loadCampaignBreakdown() {
 // Phase 4: Analytics charts
 async function loadAnalyticsCharts() {
   try {
-    const deliveries = await sbFetch('/rest/v1/deliveries?select=*&order=delivery_date.asc');
-    const enquiries = await sbFetch('/rest/v1/enquiries?select=*&order=created_at.asc');
+    const campFilter = currentCampaignId ? '&campaign_id=eq.' + currentCampaignId : '';
+    const deliveries = await sbFetch('/rest/v1/deliveries?select=*&order=delivery_date.asc' + campFilter);
+    const enquiries = await sbFetch('/rest/v1/enquiries?select=*&order=created_at.asc' + campFilter);
     
     const deliveryByDate = {};
     (deliveries || []).forEach(d => {
@@ -1221,7 +1222,8 @@ async function loadSummaryStats(){
 
 async function loadDeliveryJournal(){
   try{
-    const rows=await sbFetch('/rest/v1/deliveries?select=leaflets_delivered,delivery_date,notes,created_at,target_areas(area_name),team_member_1:team_members!team_member_1_id(name),team_member_2:team_members!team_member_2_id(name)&order=delivery_date.desc');
+    const journalCampFilter = currentCampaignId ? '&campaign_id=eq.' + currentCampaignId : '';
+    const rows=await sbFetch('/rest/v1/deliveries?select=leaflets_delivered,delivery_date,notes,created_at,target_areas(area_name),team_member_1:team_members!team_member_1_id(name),team_member_2:team_members!team_member_2_id(name)&order=delivery_date.desc' + journalCampFilter);
     const el=document.getElementById('journalList');
     if(!rows||rows.length===0){el.innerHTML='<p style="color:#888;font-size:0.9rem;">No deliveries recorded yet.</p>';return;}
     
@@ -1627,8 +1629,6 @@ function openCampaignConfig(){
   document.getElementById('configTargetLeaflets').value='';
   document.getElementById('configStartDate').value='';
   document.getElementById('configEndDate').value='';
-  document.getElementById('configTeamMember1').innerHTML='<option value="">Select...</option>';
-  document.getElementById('configTeamMember2').innerHTML='<option value="">Select...</option>';
   document.getElementById('campaignConfigModal').classList.add('active');
   currentConfigCampaignId=currentCampaignId;
   
@@ -1643,26 +1643,6 @@ function openCampaignConfig(){
       document.getElementById('configRateOptimistic').value=rows[0].rate_optimistic||'';
       document.getElementById('configDefaultCaseValue').value=rows[0].default_case_value||'';
       document.getElementById('configRestrictedPostcodes').value=rows[0].restricted_postcodes?rows[0].restricted_postcodes.join(', '):'';
-    }
-  });
-  
-  // Load team members into dropdowns
-  Promise.all([
-    sbFetch('/rest/v1/team_members?select=id,name&is_active=eq.true&order=name.asc'),
-    sbFetch('/rest/v1/campaign_members?campaign_id=eq.'+currentCampaignId+'&select=team_member_id')
-  ]).then(([allMembers, assigned]) => {
-    const tm1=document.getElementById('configTeamMember1');
-    const tm2=document.getElementById('configTeamMember2');
-    const assignedIds = (assigned || []).map(a => a.team_member_id);
-    
-    if(allMembers&&allMembers.length>0){
-      const opts=allMembers.map(tm => '<option value="'+tm.id+'">'+tm.name+'</option>').join('');
-      tm1.innerHTML='<option value="">Select...</option>'+opts;
-      tm2.innerHTML='<option value="">Select...</option>'+opts;
-      
-      // Set current values
-      if(assignedIds.length>0) tm1.value=assignedIds[0]||'';
-      if(assignedIds.length>1) tm2.value=assignedIds[1]||'';
     }
   });
 }
@@ -1717,27 +1697,6 @@ async function saveCampaignConfig(){
         restricted_postcodes:restrictedPostcodes
       })
     });
-    
-    // Save team members from dropdowns
-    const tm1=document.getElementById('configTeamMember1').value;
-    const tm2=document.getElementById('configTeamMember2').value;
-    const selectedTeamIds=[tm1,tm2].filter(t=>t);
-    
-    // Get current assignments
-    const currentAssign=await sbFetch('/rest/v1/campaign_members?campaign_id=eq.'+currentConfigCampaignId+'&select=team_member_id');
-    const currentIds=(currentAssign||[]).map(c=>c.team_member_id);
-    
-    // Clear and re-add
-    for(const existingId of currentIds){
-      await sbFetch('/rest/v1/campaign_members?campaign_id=eq.'+currentConfigCampaignId+'&team_member_id=eq.'+existingId,{method:'DELETE'});
-    }
-    
-    for(const tmId of selectedTeamIds){
-      await sbFetch('/rest/v1/campaign_members',{
-        method:'POST',
-        body:JSON.stringify({campaign_id:currentConfigCampaignId,team_member_id:tmId})
-      });
-    }
     
     closeCampaignConfig();
     await loadCampaigns();

@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 ## Current Position
 
 Phase: 5 of 7 (Campaign Management)
-Plan: 05-01 — T1-T5, T7, T8, T9 done. T6, T7a remaining.
-Status: Near complete
-Last activity: 2026-02-25 — T9 done (restricted areas config + map overlay)
+Plan: 05-01 — All tasks done except T7a (seed test campaign).
+Status: Near complete — only T7a outstanding
+Last activity: 2026-02-25 — T14 done (restricted area polygons on map)
 
-Progress: [████████████████░░░░] ~80%
+Progress: [███████████████████░] ~95%
 
 ## Performance Metrics
 
@@ -35,6 +35,8 @@ Progress: [████████████████░░░░] ~80%
 - [Phase 4]: "Areas" renamed to "Routes" in UI (DB table stays target_areas)
 - [Phase 4]: Geocoding uses postcodes.io (free, no key) — planned from day 1 in STACK.md/PROJECT.md
 - [Phase 4]: Map shows all routes as circle markers (grey=available, amber=reserved, green=completed)
+- [Phase 5]: Team members are route-level, not campaign-level — assignment happens on individual route cards
+- [Phase 5]: "All Campaigns" view exists via dropdown but campaign-level is the default; all stats/journal/map filter by currentCampaignId
 
 ### Pending Todos
 
@@ -46,22 +48,6 @@ Progress: [████████████████░░░░] ~80%
 - **T15 completed:** Code review verified all Phase 2-3 flows (reserve, reassign, unassign, complete) call correct RPCs
 - **DB migrations needed** (run in Supabase SQL editor):
   ```sql
-  -- Create campaign_members table (missing from Phase 1)
-  CREATE TABLE IF NOT EXISTS campaign_members (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    campaign_id UUID REFERENCES campaigns(id) ON DELETE CASCADE,
-    team_member_id UUID REFERENCES team_members(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(campaign_id, team_member_id)
-  );
-  
-  -- Enable RLS
-  ALTER TABLE campaign_members ENABLE ROW LEVEL SECURITY;
-  CREATE POLICY "Anyone can read campaign_members" ON campaign_members FOR SELECT USING (true);
-  CREATE POLICY "Anyone can insert campaign_members" ON campaign_members FOR INSERT WITH CHECK (true);
-  CREATE POLICY "Anyone can update campaign_members" ON campaign_members FOR UPDATE USING (true);
-  CREATE POLICY "Anyone can delete campaign_members" ON campaign_members FOR DELETE USING (true);
-
   -- Create restricted_areas table (postcode prefix + radius in miles)
   CREATE TABLE IF NOT EXISTS restricted_areas (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -98,11 +84,12 @@ Progress: [████████████████░░░░] ~80%
      REQUIRED: Claim here before making ANY code changes. Remove when done.
      Format: - [AGENT] [scope] — [brief description] — claimed [YYYY-MM-DD HH:MM UTC] -->
 
+None.
 
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Phase 5 T9 done. T6 and T7a remaining.
+Stopped at: T13 done. T14 (map polygons) is next — start new chat.
 Resume file: None
 
 ## Phase 4 Task Checklist (04-01-PLAN.md)
@@ -139,6 +126,11 @@ Resume file: None
 | T7a: Seed test campaign | ○ Pending | - |
 | T8: Remove hardcoded STAFF | ✓ Done | OC |
 | T9: Restricted areas config + overlay | ✓ Done | OC |
+| T10: Add missing DB columns | ✓ Done | - |
+| T11: Team member management in config | ✓ Done (REMOVED - team members are route-level, not campaign-level) | OC |
+| T12: Delivery journal edit | ✓ Done | OC |
+| T13: Restricted areas config UI | ✓ Done | Claude |
+| T14: Restricted areas as polygons | ✓ Done | Claude |
 
 ## Phase 6 Task Checklist (06-01-PLAN.md)
 
@@ -149,3 +141,4 @@ Resume file: None
 | T3: Enquiry heatmap overlay | ○ Pending | - |
 | T4: Team progress view | ○ Pending | - |
 | T5: Leaderboards | ○ Pending | - |
+| T6: Add route creation UI | ○ Pending | - |
