@@ -56,7 +56,7 @@ Progress: [████████████████████] 100%
      REQUIRED: Claim here before making ANY code changes. Remove when done.
      Format: - [AGENT] [scope] — [brief description] — claimed [YYYY-MM-DD HH:MM UTC] -->
 
-- Claude [06-T0.1] — Per-postcode exclusion radius UI — claimed 2026-02-25 22:00 UTC
+None.
 
 ## Session Continuity
 
@@ -108,7 +108,7 @@ Resume file: None
 
 | Task | Status | Agent |
 |------|--------|-------|
-| T0.1: Per-postcode exclusion radius UI | ○ Pending | - |
+| T0.1: Per-postcode exclusion radius UI | ✓ Done | Claude |
 | T1: DB migration (enquiries lat/lng cols) | ○ Pending | - |
 | T2: Enquiry recording modal | ✓ Done | OC |
 | T3: Enquiry list view + edit/delete | ✓ Done | OC |
