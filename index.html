@@ -491,11 +491,67 @@ function showView(view) {
   if (view === 'analytics' && typeof loadAnalyticsDashboard === 'function') loadAnalyticsDashboard();
 }
 
+// Phase 4: Heatmap
+async function loadHeatmap() {
+  const container = document.getElementById('heatmapContainer');
+  if (!container._leaflet_id) {
+    const map = L.map('heatmapContainer').setView([53.38, -2.32], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+    window.analyticsMap = map;
+  }
+  
+  try {
+    const areas = await sbFetch('/rest/v1/target_areas?select=*&status=eq.completed');
+    const deliveries = await sbFetch('/rest/v1/deliveries?select=*');
+    
+    const heatData = (areas || []).map(a => {
+      const areaDelivery = (deliveries || []).find(d => d.target_area_id === a.id);
+      const count = areaDelivery?.leaflets_delivered || 0;
+      return [a.lat, a.lng, count / 1000];
+    }).filter(p => p[0] && p[1]);
+    
+    if (window.heatLayer) window.heatLayer.remove();
+    if (heatData.length > 0) {
+      window.heatLayer = L.heatLayer(heatData, {radius: 25, blur: 15}).addTo(window.analyticsMap);
+    }
+    
+    const enquiries = await sbFetch('/rest/v1/enquiries?select=*&location=not.is.null');
+    if (enquiries && enquiries.length > 0) {
+      (enquiries || []).forEach(e => {
+        if (e.location?.lat && e.location?.lng) {
+          L.marker([e.location.lat, e.location.lng])
+            .bindPopup(`Enquiry: ${e.postcode || 'No postcode'}`)
+            .addTo(window.analyticsMap);
+        }
+      });
+    }
+  } catch(e) {
+    Logger.error('Failed to load heatmap', e);
+  }
+}
+
+// Phase 4: Completion rate for analytics dashboard
+async function loadCompletionRate() {
+  try {
+    const areas = await sbFetch('/rest/v1/target_areas?select=id,status,house_count&campaign_id=eq.' + currentCampaignId);
+    const completed = (areas || []).filter(a => a.status === 'completed').length;
+    const total = (areas || []).length;
+    const rate = total > 0 ? Math.round(completed / total * 100) : 0;
+    const el = document.getElementById('overallCompletionRate');
+    if (el) el.textContent = rate + '%';
+  } catch(e) {
+    Logger.error('Failed to load completion rate', e);
+  }
+}
+
 // Phase 2 State
 let currentCampaignId=null;
 let teamMembers=[];
 let targetAreas=[];
 let reservations=[];
+let areaDeliveries={}; // Phase 4: map of area_id -> leaflets_delivered
 
 async function sbFetch(path,opts={}){
   const r=await fetch(SB_URL+path,{...opts,headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation',...(opts.headers||{})}});
@@ -578,6 +634,17 @@ async function loadAreaCards(){
     
     targetAreas=areas||[];
     reservations=resvs||[];
+
+    // Phase 4: Load delivery totals per area for completion % display
+    if(areaIds.length>0){
+      const areaIdFilter=areaIds.map(id=>'"'+id+'"').join(',');
+      const delivs=await sbFetch('/rest/v1/deliveries?select=target_area_id,leaflets_delivered&target_area_id=in.('+areaIdFilter+')');
+      areaDeliveries={};
+      (delivs||[]).forEach(d=>{
+        areaDeliveries[d.target_area_id]=(areaDeliveries[d.target_area_id]||0)+(d.leaflets_delivered||0);
+      });
+    }
+
     Logger.success('Area cards loaded',{areas:targetAreas.length,reservations:reservations.length});
   }catch(e){
     Logger.error('Failed to load area cards',e);
@@ -615,7 +682,14 @@ function renderAreaCards(){
     html+='<div class="area-card '+status+'">';
     html+='<div class="area-card-header"><div><div class="area-card-title">'+area.area_name+'</div><div class="area-card-postcode">'+area.postcode+'</div></div>';
     html+='<span class="area-card-badge '+status+'">'+status+'</span></div>';
-    html+='<div class="area-card-stats"><div class="area-card-stat"><div class="area-card-stat-val">'+(area.house_count||0)+'</div><div class="area-card-stat-lbl">Doors</div></div></div>';
+    const delivered=areaDeliveries[area.id]||0;
+    const houseCount=area.house_count||0;
+    const pct=houseCount>0?Math.round(delivered/houseCount*100):0;
+    html+='<div class="area-card-stats"><div class="area-card-stat"><div class="area-card-stat-val">'+houseCount+'</div><div class="area-card-stat-lbl">Doors</div></div>';
+    if(status==='reserved'&&delivered>0){
+      html+='<div class="area-card-stat"><div class="area-card-stat-val">'+pct+'%</div><div class="area-card-stat-lbl">Delivered</div></div>';
+    }
+    html+='</div>';
 
     if(status==='reserved'&&reservedBy){
       let teamHtml='<strong>'+reservedBy+'</strong>';
