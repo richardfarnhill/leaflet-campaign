@@ -135,7 +135,6 @@ h2{font-size:1rem;color:#1a3a5c;margin-bottom:12px;margin-top:24px;}
 .warn{color:#c0392b;font-weight:600;}
 .good{color:#1e8449;font-weight:600;}
 .finance-section{background:white;border-radius:10px;padding:18px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,0.07);}
-.finance-inputs{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #eee;}
 .finance-metric-cards{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;}
 .finance-metric-card{flex:1 1 160px;background:#f7faff;border:1px solid #d0e4f5;border-radius:8px;padding:12px 14px;}
 .finance-metric-card .fmc-label{font-size:0.75rem;color:#888;margin-bottom:4px;}
@@ -997,6 +996,10 @@ async function loadCampaigns(){
         await loadAreaCards();
         renderAreaCards();
         await loadSummaryStats();
+        await loadTeamProgress();
+        await loadDeliveryJournal();
+        await loadEnquiryList();
+        await loadFinanceFromDB();
       };
       Logger.success('Campaign loaded',campaigns[0].name);
     } else {
@@ -2122,6 +2125,7 @@ async function loadAll(){
     await loadSummaryStats();
     await loadDeliveryJournal();
     await loadEnquiryList();
+    await loadTeamProgress();
     await loadFinanceFromDB();
     setSyncStatus('ok','Live \u00b7 auto-syncing every 30s');
   }catch(e){
@@ -2156,18 +2160,6 @@ async function handleMissed(originalId){
     setSyncStatus('ok','Rescheduled session added');
     loadAll();
   }catch(e){setSyncStatus('err','Reschedule failed \u2014 run the DB migration first. Error: '+e.message);}
-}
-
-let financeTimer;
-function scheduleFinanceSave(){clearTimeout(financeTimer);financeTimer=setTimeout(saveFinance,800);}
-async function saveFinance(){
-  setSyncStatus('saving','Saving\u2026');
-  try{
-    await sbFetch('/rest/v1/finance_actuals',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=representation'},
-      body:JSON.stringify({id:1,enquiries:parseInt(document.getElementById('fi_enquiries').value)||0,cases_instructed:parseInt(document.getElementById('fi_cases').value)||0,instruction_value:parseFloat(document.getElementById('fi_instrvalue').value)||0,updated_at:new Date().toISOString()})});
-    setSyncStatus('ok','Saved \u00b7 '+new Date().toLocaleTimeString());
-    let td=0;sessions.forEach(s=>{td+=parseInt(sessionState[s.id]?.delivered)||0;});updateFinance(td,TOTAL-td);
-  }catch(e){setSyncStatus('err','Save failed \u2014 '+e.message);}
 }
 
 function render(){

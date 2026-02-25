@@ -115,8 +115,10 @@ Resume file: None
 | T3: Enquiry list view + edit/delete | ✓ Done | OC |
 | T4: Enquiry map markers (fix lat/lng) | ✓ Done | Claude |
 | T5: Finance projections from DB enquiries | ✓ Done | Claude |
+| T5a: Remove finance_actuals table + dead code | ✓ Done | Claude |
 | T6: Team progress view | ✓ Done | OC |
 | T6b: Enquiry date not-null fix | ✓ Done | OC |
+| T6c: Load team progress on page init | ✓ Done | OC |
 | T7: Leaderboards | ✓ Done (merged with T6) | OC |
 | T8: Route creation UI | ○ Pending | - |
 | T9: Route deletion UI | ○ Pending | - |
