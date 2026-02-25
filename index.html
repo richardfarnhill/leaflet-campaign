@@ -280,6 +280,9 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
 </div>
 
 <script>
+// Read Supabase config from CONFIG (loaded by config.js)
+const SB_URL=typeof CONFIG!=='undefined'?CONFIG.SUPABASE_URL:'';
+const SB_KEY=typeof CONFIG!=='undefined'?CONFIG.SUPABASE_KEY:'';
 // ============================================================
 // DEBUG LOGGER - Traffic Light System
 // ============================================================
@@ -338,8 +341,7 @@ window.onunhandledrejection=function(event){
 };
 
 Logger.info('App starting...');
-</script>
-const SB_KEY=typeof CONFIG!=='undefined'?CONFIG.SUPABASE_KEY:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqZWJpZHZndmJwbnhnbnBoY3JnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0ODkyNDcsImV4cCI6MjA4NzA2NTI0N30.7MyRW330dP1ZkCqOqTykjRo6Y-cM4ow3aJ-6_H82BUY';
+
 const TOTAL=20000,DEFAULT_CV=294.42,DAILY_TARGET=1000;
 const STAFF=['\u2014 Unassigned \u2014','Richard','Josh','Dan','Cahner'];
 
@@ -412,11 +414,13 @@ function setSyncStatus(s,msg){document.getElementById('syncDot').className='sync
 // Phase 2: Load campaigns, team members, and area cards
 async function loadCampaigns(){
   try{
+    Logger.info('Fetching campaigns from Supabase...');
     const campaigns=await sbFetch('/rest/v1/campaigns?select=*&is_active=eq.true&order=created_at.desc');
     Logger.info('Loaded campaigns',{count:campaigns?.length});
     const select=document.getElementById('campaignSelect');
     select.innerHTML='';
     if(campaigns&&campaigns.length>0){
+      Logger.success(`Loaded ${campaigns.length} campaigns`);
       campaigns.forEach(c=>{
         const opt=document.createElement('option');
         opt.value=c.id;
@@ -425,6 +429,7 @@ async function loadCampaigns(){
       });
       currentCampaignId=campaigns[0].id;
       select.value=currentCampaignId;
+      Logger.info('Set currentCampaignId',{campaignId:currentCampaignId});
       // Add change handler
       select.onchange=async function(){
         currentCampaignId=this.value;
@@ -433,16 +438,16 @@ async function loadCampaigns(){
         renderAreaCards();
       };
       Logger.success('Campaign loaded',campaigns[0].name);
+    } else {
+      Logger.error('No campaigns found or campaigns array is empty');
+      Logger.info('Checking campaigns table directly...');
     }
     return campaigns;
   }catch(e){
     Logger.error('Failed to load campaigns',e);
+    console.error('Full error:', e);
     return [];
   }
-}
-    return campaigns;
-  }catch(e){console.error('loadCampaigns error:',e);}
-  return[];
 }
 
 async function loadTeamMembers(){
@@ -458,7 +463,8 @@ async function loadTeamMembers(){
 
 async function loadAreaCards(){
   if(!currentCampaignId){
-    Logger.warn('No campaign selected');
+    Logger.error('Cannot load area cards - currentCampaignId is null');
+    Logger.error('This means campaigns were not loaded successfully');
     targetAreas=[];reservations=[];return;
   }
   try{
@@ -482,6 +488,7 @@ async function loadAreaCards(){
     Logger.success('Area cards loaded',{areas:targetAreas.length,reservations:reservations.length});
   }catch(e){
     Logger.error('Failed to load area cards',e);
+    console.error('Full error:', e);
     targetAreas=[];reservations=[];
   }
 }
@@ -493,8 +500,13 @@ function getTeamMemberName(id){
 
 function renderAreaCards(){
   const container=document.getElementById('areaCards');
-  if(!container)return;
+  if(!container){
+    Logger.error('areaCards container not found in DOM');
+    return;
+  }
+  Logger.info('renderAreaCards called',{targetAreasLength:targetAreas.length});
   if(targetAreas.length===0){
+    Logger.info('No target areas to render');
     container.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:#888;">No areas defined for this campaign</div>';
     return;
   }
@@ -504,23 +516,22 @@ function renderAreaCards(){
     const status=area.status||'available';
     const reservedBy=res?getTeamMemberName(res.team_member_1_id):null;
     const deliveryDate=res?res.delivery_date:null;
-    
+
     html+='<div class="area-card '+status+'">';
     html+='<div class="area-card-header"><div><div class="area-card-title">'+area.area_name+'</div><div class="area-card-postcode">'+area.postcode+'</div></div>';
     html+='<span class="area-card-badge '+status+'">'+status+'</span></div>';
     html+='<div class="area-card-stats"><div class="area-card-stat"><div class="area-card-stat-val">'+(area.house_count||0)+'</div><div class="area-card-stat-lbl">Doors</div></div></div>';
-    
+
     if(status==='reserved'&&reservedBy){
       html+='<div class="area-card-team"><strong>'+reservedBy+'</strong>'+(deliveryDate?' &middot; '+deliveryDate:'')+'</div>';
     }
-    
+
     // Action buttons
     html+='<div class="area-card-actions">';
     if(status==='available'){
       html+='<button class="area-card-btn reserve" onclick="openReserveModal(\''+area.id+'\')">Reserve</button>';
     }else if(status==='reserved'){
       html+='<button class="area-card-btn complete" onclick="openCompleteModal(\''+area.id+'\')">Complete</button>';
-      // Manual override for Richard (coordinator)
       html+='<button class="area-card-btn reassign" onclick="openReassignModal(\''+area.id+'\')">Reassign</button>';
     }else if(status==='completed'){
       html+='<button class="area-card-btn" disabled style="background:#27ae60;opacity:0.7;">&#10003; Done</button>';
@@ -528,6 +539,7 @@ function renderAreaCards(){
     html+='</div></div>';
   });
   container.innerHTML=html;
+  Logger.success('Area cards rendered',{count:targetAreas.length});
 }
 
 // ============================================================
@@ -773,7 +785,7 @@ async function loadAll(){
     await loadAreaCards();
     Logger.info('Rendering area cards...');
     renderAreaCards();
-    
+
     const[rows,fin,rescRows]=await Promise.all([
       sbFetch('/rest/v1/session_log?select=*'),
       sbFetch('/rest/v1/finance_actuals?select=*&id=eq.1'),
@@ -788,6 +800,8 @@ async function loadAll(){
     setSyncStatus('ok','Live \u00b7 auto-syncing every 30s');
     render();updateSummary();
   }catch(e){
+    Logger.error('loadAll failed',e);
+    console.error('Full loadAll error:', e);
     // rescheduled_sessions table may not exist yet - try without it
     try{
       const[rows,fin]=await Promise.all([sbFetch('/rest/v1/session_log?select=*'),sbFetch('/rest/v1/finance_actuals?select=*&id=eq.1')]);
@@ -883,7 +897,7 @@ function render(){
       '<div class="field"><label>Staff Member 1</label><select data-id="'+s.id+'" data-field="staff1">'+STAFF.map(n=>'<option value="'+n+'"'+((row.staff1||'')===n?' selected':'')+'>'+n+'</option>').join('')+'</select></div>'+
       '<div class="field"><label>Staff Member 2</label><select data-id="'+s.id+'" data-field="staff2">'+STAFF.map(n=>'<option value="'+n+'"'+((row.staff2||'')===n?' selected':'')+'>'+n+'</option>').join('')+'</select></div>'+
       '<div class="field"><label>Leaflets Delivered</label><input type="number" min="0" max="1500" placeholder="0" data-id="'+s.id+'" data-field="delivered" value="'+(row.delivered||'')+'"></div>'+
-      '<div class="field"><label>Notes / Issues</label><input type="text" placeholder="e.g. skipped Elm Close" data-id="'+s.id+'" data-field="comment" value="'+(row.comment||'')+'" style="width:240px"></div>'+
+      `<div class="field"><label>Notes / Issues</label><input type="text" placeholder="e.g. skipped Elm Close" data-id="${s.id}" data-field="comment" value="${row.comment||''}" style="width:240px"></div>`+
       '</div>';
     weekDiv.appendChild(card);
   });
