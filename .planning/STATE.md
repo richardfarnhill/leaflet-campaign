@@ -58,6 +58,8 @@ Progress: [████████████████████] 100%
 
 None.
 
+- OpenCode [06-T06] — Team progress view — claimed 2026-02-25 22:20 UTC
+
 ## Session Continuity
 
 Last session: 2026-02-25
@@ -109,12 +111,13 @@ Resume file: None
 | Task | Status | Agent |
 |------|--------|-------|
 | T0.1: Per-postcode exclusion radius UI | ✓ Done | Claude |
-| T1: DB migration (enquiries lat/lng cols) | ○ Pending | - |
+| T1: DB migration (enquiries lat/lng cols) | ✓ Done | Claude |
+| T1a: Route unknown default + target_area_id in modal | ✓ Done | Claude |
 | T2: Enquiry recording modal | ✓ Done | OC |
 | T3: Enquiry list view + edit/delete | ✓ Done | OC |
 | T4: Enquiry map markers (fix lat/lng) | ○ Pending | - |
 | T5: Finance projections from DB enquiries | ○ Pending | - |
-| T6: Team progress view | ○ Pending | - |
+| T6: Team progress view | ○ In Progress | OC |
 | T7: Leaderboards | ○ Pending | - |
 | T8: Route creation UI | ○ Pending | - |
 | T9: Route deletion UI | ○ Pending | - |

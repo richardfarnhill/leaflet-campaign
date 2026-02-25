@@ -1465,10 +1465,15 @@ async function saveEnquiry(){
   
   try{
     const routeVal=document.getElementById('enquiryRoute').value||null;
+    let lat=null,lng=null;
+    const geoRes=await fetch('https://api.postcodes.io/postcodes/'+encodeURIComponent(postcode)).then(r=>r.json());
+    if(geoRes.status===200&&geoRes.result){lat=geoRes.result.latitude;lng=geoRes.result.longitude;}
     const data={
       campaign_id:currentCampaignId,
       client_name:document.getElementById('enquiryClientName').value.trim()||null,
       postcode:postcode,
+      lat:lat,
+      lng:lng,
       target_area_id:routeVal,
       instructed:document.getElementById('enquiryInstructed').checked,
       instruction_value:document.getElementById('enquiryInstructed').checked?parseFloat(document.getElementById('enquiryInstructionValue').value)||null:null,
