@@ -56,7 +56,8 @@
 | ID | Requirement | Description |
 |----|-------------|-------------|
 | CFG-01 | Campaign Config UI | Frontend interface to update total leaflets, team members |
-| CFG-02 | Response Rate Config | Edit response rate scenarios (0.25%, 0.5%, 0.75%) |
+| CFG-02 | Response Rate Config | Edit response rate scenarios per campaign (conservative/target/optimistic %). Hardcoded baselines (0.25%/0.5%/1.0%) are acceptable fallback when no real data exists. Finance logic already uses actual enquiry/case data when available. |
+| CFG-04 | Configurable Default Case Value | DEFAULT_CV (£294.42) hardcoded in app. Should be stored per campaign (e.g. campaigns.default_case_value) so different campaigns can have different average case values. Finance projections already use real avg when actual data exists — this improves the fallback. |
 | CFG-03 | DB-driven Summary Bar | Summary bar (Delivered, Remaining, Sessions Done, Est. Completion, Progress %) must read from DB (campaign.target_leaflets, deliveries, target_areas) not hardcoded values. Currently 20,000 is hardcoded in app and 30,000 is in DB — must be unified. |
 
 ### ENQ-07: Enquiries
@@ -119,7 +120,8 @@
 | CMP-01: Campaign Switching | Phase 5 | 📋 Planned | - |
 | CMP-02: Aggregated Data View | Phase 5 | 📋 Planned | - |
 | CFG-01: Campaign Config UI | Phase 5 | 📋 Planned | - |
-| CFG-02: Response Rate Config | Phase 5 | 📋 Planned | - |
+| CFG-02: Response Rate Config | Phase 5 | 📋 Planned | Baselines already hardcoded correctly; Phase 5 makes them editable |
+| CFG-04: Configurable Default Case Value | Phase 5 | 📋 Planned | DEFAULT_CV=£294.42 hardcoded; store per campaign |
 | CFG-03: DB-driven Summary Bar | Phase 5 | 📋 Planned | Summary bar uses campaign.target_leaflets, not 20k hardcode |
 | DEM-01: Custom Demographic Rules | Phase 5 | 📋 Planned | Deferred from v1? |
 | ENQ-01: Robust Enquiry Recording | Phase 6 | 📋 Planned | - |
