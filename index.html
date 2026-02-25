@@ -101,6 +101,7 @@ h2{font-size:1rem;color:#1a3a5c;margin-bottom:12px;margin-top:24px;}
 .campaign-selector{display:flex;align-items:center;gap:12px;margin-top:8px;}
 .campaign-selector label{font-size:0.8rem;color:rgba(255,255,255,0.8);}
 .campaign-selector select{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;padding:6px 12px;border-radius:6px;font-size:0.9rem;}
+.campaign-selector select option{color:black;background:white;}
 
 /* Modal */
 .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;display:none;}
@@ -153,7 +154,7 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
   <h1>&#128202; WillSolicitor &mdash; Leaflet Campaign Tracker</h1>
   <div class="campaign-selector">
     <label>Campaign:</label>
-    <select id="campaignSelect"><option value="">Loading...</option></select>
+    <select id="campaignSelect" style="color:white;"><option value="">Loading...</option></select>
     <button onclick="openCampaignConfig()" style="background:none;border:none;cursor:pointer;font-size:1.1rem;padding:2px 6px;" title="Configure Campaign">&#9881;</button>
     <button onclick="openNewCampaignModal()" style="background:#27ae60;color:white;padding:4px 10px;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;font-weight:600;">+ New</button>
   </div>
@@ -1847,9 +1848,9 @@ async function loadRestrictedAreasList() {
     const lbl = (r.label || '').replace(/"/g, '&quot;');
     return '<tr data-id="' + r.id + '" style="border-top:1px solid #f0f0f0;">' +
       '<td style="padding:4px 6px;font-weight:600;">' + r.postcode_prefix + '</td>' +
-      '<td style="padding:4px 6px;"><input type="number" step="0.1" min="0" value="' + rad + '" placeholder="1" style="width:70px;padding:3px 6px;border:1px solid #ccd3db;border-radius:4px;font-size:0.82rem;" onchange="saveRestrictedAreaRow('' + r.id + '',this.closest('tr'))"></td>' +
-      '<td style="padding:4px 6px;"><input type="text" value="' + lbl + '" placeholder="Label" style="width:100px;padding:3px 6px;border:1px solid #ccd3db;border-radius:4px;font-size:0.82rem;" onchange="saveRestrictedAreaRow('' + r.id + '',this.closest('tr'))"></td>' +
-      '<td style="padding:4px 6px;"><button onclick="deleteRestrictedArea('' + r.id + '')" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:1rem;" title="Delete">&#128465;</button></td></tr>';
+      '<td style="padding:4px 6px;"><input type="number" step="0.1" min="0" value="' + rad + '" placeholder="1" style="width:70px;padding:3px 6px;border:1px solid #ccd3db;border-radius:4px;font-size:0.82rem;" onchange="saveRestrictedAreaRow(\'' + r.id + '\',this.closest(\'tr\'))"></td>' +
+      '<td style="padding:4px 6px;"><input type="text" value="' + lbl + '" placeholder="Label" style="width:100px;padding:3px 6px;border:1px solid #ccd3db;border-radius:4px;font-size:0.82rem;" onchange="saveRestrictedAreaRow(\'' + r.id + '\',this.closest(\'tr\'))"></td>' +
+      '<td style="padding:4px 6px;"><button onclick="deleteRestrictedArea(\'' + r.id + '\')" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:1rem;" title="Delete">&#128465;</button></td></tr>';
   }).join('');
   el.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:0.82rem;"><thead><tr style="color:#888;text-align:left;"><th style="padding:4px 6px;">Postcode</th><th style="padding:4px 6px;">Radius (mi)</th><th style="padding:4px 6px;">Label</th><th></th></tr></thead><tbody>' + tbody + '</tbody></table>';
 }
