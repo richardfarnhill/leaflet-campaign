@@ -39,7 +39,7 @@ None.
 
 ### Blockers/Concerns
 
-- [Phase 3]: Summary stats (`sumDelivered`) still reads from `session_log`, not from area `deliveries` table — these are two separate tracking systems
+None.
 
 ## Active Tasks
 
