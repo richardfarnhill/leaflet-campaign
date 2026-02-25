@@ -96,6 +96,24 @@ h2{font-size:1rem;color:#1a3a5c;margin-bottom:12px;margin-top:24px;}
 .campaign-selector{display:flex;align-items:center;gap:12px;margin-top:8px;}
 .campaign-selector label{font-size:0.8rem;color:rgba(255,255,255,0.8);}
 .campaign-selector select{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;padding:6px 12px;border-radius:6px;font-size:0.9rem;}
+
+/* Modal */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;display:none;}
+.modal-overlay.active{display:flex;}
+.modal{background:white;border-radius:12px;padding:24px;max-width:400px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,0.2);}
+.modal h3{color:#1a3a5c;margin:0 0 16px 0;font-size:1.2rem;}
+.modal-field{margin-bottom:16px;}
+.modal-field label{display:block;font-size:0.8rem;color:#666;margin-bottom:6px;font-weight:600;}
+.modal-field select,.modal-field input{width:100%;padding:10px;border:1px solid #ccd3db;border-radius:6px;font-size:0.95rem;}
+.modal-actions{display:flex;gap:10px;margin-top:20px;}
+.modal-btn{flex:1;padding:10px;border:none;border-radius:6px;font-size:0.95rem;cursor:pointer;transition:background 0.2s;}
+.modal-btn.confirm{background:#27ae60;color:white;}
+.modal-btn.confirm:hover{background:#219a52;}
+.modal-btn.cancel{background:#eee;color:#333;}
+.modal-btn.cancel:hover{background:#ddd;}
+.modal-btn:disabled{background:#ccc;cursor:not-allowed;}
+.modal-error{color:#c0392b;font-size:0.85rem;margin-top:10px;display:none;}
+.modal-error.show{display:block;}
 .briefing{background:#f7faff;border:1px solid #d0e4f5;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:0.82rem;line-height:1.6;color:#333;}
 .briefing strong{color:#1a3a5c;}
 .went-out-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:0.85rem;color:#444;padding:6px 10px;background:#f7f9fc;border-radius:6px;border:1px solid #e0e6ed;}
@@ -183,6 +201,82 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
   </div>
 </div>
 <footer>Live data &middot; Supabase &middot; WillSolicitor Leaflet Campaign</footer>
+
+<!-- Reserve Modal -->
+<div id="reserveModal" class="modal-overlay">
+  <div class="modal">
+    <h3>Reserve Area</h3>
+    <div class="modal-field">
+      <label>Area</label>
+      <input type="text" id="reserveAreaName" readonly>
+    </div>
+    <div class="modal-field">
+      <label>Team Member</label>
+      <select id="reserveTeamMember">
+        <option value="">Select team member...</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label>Delivery Date</label>
+      <input type="date" id="reserveDate">
+    </div>
+    <div class="modal-error" id="reserveError"></div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeReserveModal()">Cancel</button>
+      <button class="modal-btn confirm" id="reserveConfirmBtn" onclick="confirmReservation()">Reserve</button>
+    </div>
+  </div>
+</div>
+
+<!-- Complete Modal -->
+<div id="completeModal" class="modal-overlay">
+  <div class="modal">
+    <h3>Complete Delivery</h3>
+    <div class="modal-field">
+      <label>Area</label>
+      <input type="text" id="completeAreaName" readonly>
+    </div>
+    <div class="modal-field">
+      <label>Leaflets Delivered</label>
+      <input type="number" id="completeLeaflets" min="0" placeholder="Enter leaflet count">
+    </div>
+    <div class="modal-field">
+      <label>Notes (optional)</label>
+      <input type="text" id="completeNotes" placeholder="Any notes...">
+    </div>
+    <div class="modal-error" id="completeError"></div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeCompleteModal()">Cancel</button>
+      <button class="modal-btn confirm" id="completeConfirmBtn" onclick="confirmCompletion()">Mark Complete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reassign Modal -->
+<div id="reassignModal" class="modal-overlay">
+  <div class="modal">
+    <h3>Reassign Area</h3>
+    <div class="modal-field">
+      <label>Area</label>
+      <input type="text" id="reassignAreaName" readonly>
+    </div>
+    <div class="modal-field">
+      <label>Current Team Member</label>
+      <input type="text" id="reassignCurrentMember" readonly>
+    </div>
+    <div class="modal-field">
+      <label>New Team Member</label>
+      <select id="reassignNewMember">
+        <option value="">Select new team member...</option>
+      </select>
+    </div>
+    <div class="modal-error" id="reassignError"></div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeReassignModal()">Cancel</button>
+      <button class="modal-btn confirm" id="reassignConfirmBtn" onclick="confirmReassignment()">Reassign</button>
+    </div>
+  </div>
+</div>
 
 <script>
 const SB_URL=typeof CONFIG!=='undefined'?CONFIG.SUPABASE_URL:'https://tjebidvgvbpnxgnphcrg.supabase.co';
@@ -340,15 +434,234 @@ function renderAreaCards(){
   container.innerHTML=html;
 }
 
-// Placeholder functions for reservation workflow
+// ============================================================
+// MODAL FUNCTIONS - Phase 2 Task 3 & 5
+// ============================================================
+
+let currentReserveAreaId=null;
+let currentCompleteAreaId=null;
+let currentReassignAreaId=null;
+
+// Reserve Modal
 function openReserveModal(areaId){
-  alert('Reserve modal: '+areaId+'\\nThis will open a dialog to select team member and date. (Phase 2 Task 3)');
+  const area=targetAreas.find(a=>a.id===areaId);
+  if(!area)return;
+  currentReserveAreaId=areaId;
+  document.getElementById('reserveAreaName').value=area.area_name;
+  document.getElementById('reserveError').className='modal-error';
+  document.getElementById('reserveError').textContent='';
+  
+  // Populate team member dropdown
+  const select=document.getElementById('reserveTeamMember');
+  select.innerHTML='<option value="">Select team member...</option>';
+  teamMembers.forEach(tm=>{
+    const opt=document.createElement('option');
+    opt.value=tm.id;
+    opt.textContent=tm.name;
+    select.appendChild(opt);
+  });
+  
+  // Set min date to tomorrow
+  const tomorrow=new Date();
+  tomorrow.setDate(tomorrow.getDate()+1);
+  document.getElementById('reserveDate').value=tomorrow.toISOString().split('T')[0];
+  document.getElementById('reserveDate').min=tomorrow.toISOString().split('T')[0];
+  
+  document.getElementById('reserveModal').classList.add('active');
+  select.focus();
 }
+
+function closeReserveModal(){
+  document.getElementById('reserveModal').classList.remove('active');
+  currentReserveAreaId=null;
+}
+
+async function confirmReservation(){
+  const teamMemberId=document.getElementById('reserveTeamMember').value;
+  const deliveryDate=document.getElementById('reserveDate').value;
+  const errorEl=document.getElementById('reserveError');
+  const btn=document.getElementById('reserveConfirmBtn');
+  
+  if(!teamMemberId){
+    errorEl.textContent='Please select a team member';
+    errorEl.classList.add('show');
+    return;
+  }
+  if(!deliveryDate){
+    errorEl.textContent='Please select a delivery date';
+    errorEl.classList.add('show');
+    return;
+  }
+  
+  btn.disabled=true;
+  btn.textContent='Reserving...';
+  errorEl.classList.remove('show');
+  
+  try{
+    // Call reserve_area function via RPC
+    const result=await sbFetch('/rest/v1/rpc/reserve_area',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        p_target_area_id:currentReserveAreaId,
+        p_team_member_1_id:teamMemberId,
+        p_delivery_date:deliveryDate
+      })
+    });
+    
+    if(result&&result.success){
+      closeReserveModal();
+      await loadAreaCards();
+      renderAreaCards();
+      setSyncStatus('ok','Area reserved!');
+    }else{
+      errorEl.textContent=result.error||'Failed to reserve area';
+      errorEl.classList.add('show');
+    }
+  }catch(e){
+    errorEl.textContent='Error: '+e.message;
+    errorEl.classList.add('show');
+  }
+  btn.disabled=false;
+  btn.textContent='Reserve';
+}
+
+// Complete Modal
 function openCompleteModal(areaId){
-  alert('Complete modal: '+areaId+'\\nThis will record delivery completion. (Phase 3)');
+  const area=targetAreas.find(a=>a.id===areaId);
+  if(!area)return;
+  currentCompleteAreaId=areaId;
+  document.getElementById('completeAreaName').value=area.area_name;
+  document.getElementById('completeLeaflets').value=area.house_count||'';
+  document.getElementById('completeNotes').value='';
+  document.getElementById('completeError').className='modal-error';
+  document.getElementById('completeError').textContent='';
+  document.getElementById('completeModal').classList.add('active');
+  document.getElementById('completeLeaflets').focus();
 }
+
+function closeCompleteModal(){
+  document.getElementById('completeModal').classList.remove('active');
+  currentCompleteAreaId=null;
+}
+
+async function confirmCompletion(){
+  const leaflets=parseInt(document.getElementById('completeLeaflets').value);
+  const notes=document.getElementById('completeNotes').value;
+  const errorEl=document.getElementById('completeError');
+  const btn=document.getElementById('completeConfirmBtn');
+  
+  if(!leaflets||leaflets<0){
+    errorEl.textContent='Please enter leaflet count';
+    errorEl.classList.add('show');
+    return;
+  }
+  
+  btn.disabled=true;
+  btn.textContent='Completing...';
+  errorEl.classList.remove('show');
+  
+  try{
+    const result=await sbFetch('/rest/v1/rpc/complete_delivery',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        p_target_area_id:currentCompleteAreaId,
+        p_leaflets_delivered:leaflets,
+        p_notes:notes||null
+      })
+    });
+    
+    if(result&&result.success){
+      closeCompleteModal();
+      await loadAreaCards();
+      renderAreaCards();
+      setSyncStatus('ok','Delivery completed!');
+    }else{
+      errorEl.textContent=result.error||'Failed to complete delivery';
+      errorEl.classList.add('show');
+    }
+  }catch(e){
+    errorEl.textContent='Error: '+e.message;
+    errorEl.classList.add('show');
+  }
+  btn.disabled=false;
+  btn.textContent='Mark Complete';
+}
+
+// Reassign Modal
 function openReassignModal(areaId){
-  alert('Reassign modal: '+areaId+'\\nThis allows coordinator to reassign. (Phase 2 Task 5)');
+  const area=targetAreas.find(a=>a.id===areaId);
+  const res=reservations.find(r=>r.target_area_id===areaId);
+  if(!area)return;
+  currentReassignAreaId=areaId;
+  document.getElementById('reassignAreaName').value=area.area_name;
+  document.getElementById('reassignCurrentMember').value=res?getTeamMemberName(res.team_member_1_id):'Unknown';
+  document.getElementById('reassignError').className='modal-error';
+  document.getElementById('reassignError').textContent='';
+  
+  // Populate team member dropdown (exclude current)
+  const select=document.getElementById('reassignNewMember');
+  select.innerHTML='<option value="">Select new team member...</option>';
+  const currentMemberId=res?res.team_member_1_id:null;
+  teamMembers.forEach(tm=>{
+    if(tm.id!==currentMemberId){
+      const opt=document.createElement('option');
+      opt.value=tm.id;
+      opt.textContent=tm.name;
+      select.appendChild(opt);
+    }
+  });
+  
+  document.getElementById('reassignModal').classList.add('active');
+  select.focus();
+}
+
+function closeReassignModal(){
+  document.getElementById('reassignModal').classList.remove('active');
+  currentReassignAreaId=null;
+}
+
+async function confirmReassignment(){
+  const newMemberId=document.getElementById('reassignNewMember').value;
+  const errorEl=document.getElementById('reassignError');
+  const btn=document.getElementById('reassignConfirmBtn');
+  
+  if(!newMemberId){
+    errorEl.textContent='Please select a new team member';
+    errorEl.classList.add('show');
+    return;
+  }
+  
+  btn.disabled=true;
+  btn.textContent='Reassigning...';
+  errorEl.classList.remove('show');
+  
+  try{
+    const result=await sbFetch('/rest/v1/rpc/reassign_area',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        p_target_area_id:currentReassignAreaId,
+        p_new_team_member_id:newMemberId
+      })
+    });
+    
+    if(result&&result.success){
+      closeReassignModal();
+      await loadAreaCards();
+      renderAreaCards();
+      setSyncStatus('ok','Area reassigned!');
+    }else{
+      errorEl.textContent=result.error||'Failed to reassign area';
+      errorEl.classList.add('show');
+    }
+  }catch(e){
+    errorEl.textContent='Error: '+e.message;
+    errorEl.classList.add('show');
+  }
+  btn.disabled=false;
+  btn.textContent='Reassign';
 }
 
 async function loadAll(){
