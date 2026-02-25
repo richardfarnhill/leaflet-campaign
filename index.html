@@ -155,6 +155,7 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
     <label>Campaign:</label>
     <select id="campaignSelect"><option value="">Loading...</option></select>
     <button onclick="openCampaignConfig()" style="background:none;border:none;cursor:pointer;font-size:1.1rem;padding:2px 6px;" title="Configure Campaign">&#9881;</button>
+    <button onclick="openNewCampaignModal()" style="background:#27ae60;color:white;padding:4px 10px;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;font-weight:600;">+ New</button>
   </div>
 </header>
 <div class="sync-bar"><div class="sync-dot" id="syncDot"></div><span id="syncMsg">Connecting&hellip;</span></div>
@@ -370,6 +371,34 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
   </div>
 </div>
 
+<!-- New Campaign Modal -->
+<div id="newCampaignModal" class="modal-overlay">
+  <div class="modal">
+    <h3>New Campaign</h3>
+    <div class="modal-field">
+      <label>Campaign Name</label>
+      <input type="text" id="newCampaignName" placeholder="e.g. Wilmslow Spring 2026">
+    </div>
+    <div class="modal-field">
+      <label>Target Leaflets</label>
+      <input type="number" id="newCampaignTarget" placeholder="30000">
+    </div>
+    <div class="modal-field">
+      <label>Start Date</label>
+      <input type="date" id="newCampaignStart">
+    </div>
+    <div class="modal-field">
+      <label>End Date</label>
+      <input type="date" id="newCampaignEnd">
+    </div>
+    <div class="modal-error" id="newCampaignError"></div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeNewCampaignModal()">Cancel</button>
+      <button class="modal-btn confirm" id="newCampaignConfirmBtn" onclick="saveNewCampaign()">Create</button>
+    </div>
+  </div>
+</div>
+
 <!-- Campaign Config Modal -->
 <div id="campaignConfigModal" class="modal-overlay">
   <div class="modal">
@@ -466,7 +495,7 @@ window.onunhandledrejection=function(event){
 Logger.info('App starting...');
 
 const TOTAL=20000,DEFAULT_CV=294.42,DAILY_TARGET=1000;
-const STAFF=['\u2014 Unassigned \u2014','Richard','Josh','Dan','Cahner'];
+// STAFF removed - teamMembers loaded dynamically from team_members table
 
 const BASE=[
 {id:1,dateISO:'2026-02-24',week:'Week 1',area:'Wilmslow \u2014 Dean Row (kickoff)',postcode:'SK9 2BY',target:500,briefing:'<strong>Park:</strong> Summerfields Village, Dean Row Road SK9 2BY.<br><strong>Task:</strong> Post a WillSolicitor leaflet through every letterbox around Summerfields Village.<br><strong>Streets:</strong> Dean Row Road, Adlington Road, Moor Lane and surrounding cul-de-sacs.<br><strong>Target:</strong> 500 leaflets. Half day \u2014 finish by 12:30pm.'},
@@ -1347,6 +1376,53 @@ async function confirmUnassign(){
   }
   btn.disabled=false;
   btn.textContent='Unassign';
+}
+
+// New Campaign Modal (T7)
+function openNewCampaignModal(){
+  document.getElementById('newCampaignName').value='';
+  document.getElementById('newCampaignTarget').value='';
+  document.getElementById('newCampaignStart').value='';
+  document.getElementById('newCampaignEnd').value='';
+  document.getElementById('newCampaignError').textContent='';
+  document.getElementById('newCampaignConfirmBtn').disabled=false;
+  document.getElementById('newCampaignConfirmBtn').textContent='Create';
+  document.getElementById('newCampaignModal').classList.add('active');
+}
+
+function closeNewCampaignModal(){
+  document.getElementById('newCampaignModal').classList.remove('active');
+}
+
+async function saveNewCampaign(){
+  const name=document.getElementById('newCampaignName').value.trim();
+  const target=parseInt(document.getElementById('newCampaignTarget').value)||null;
+  const start=document.getElementById('newCampaignStart').value||null;
+  const end=document.getElementById('newCampaignEnd').value||null;
+  const errorEl=document.getElementById('newCampaignError');
+  const btn=document.getElementById('newCampaignConfirmBtn');
+  if(!name){errorEl.textContent='Campaign name is required.';return;}
+  btn.disabled=true;btn.textContent='Creating...';errorEl.textContent='';
+  try{
+    const result=await sbFetch('/rest/v1/campaigns',{
+      method:'POST',
+      headers:{'Prefer':'return=representation','Content-Type':'application/json'},
+      body:JSON.stringify({name,target_leaflets:target,start_date:start,end_date:end,is_active:true})
+    });
+    closeNewCampaignModal();
+    await loadCampaigns();
+    if(result&&result[0]&&result[0].id){
+      currentCampaignId=result[0].id;
+      document.getElementById('campaignSelect').value=currentCampaignId;
+    }
+    await loadAreaCards();
+    renderAreaCards();
+    await loadSummaryStats();
+    setSyncStatus('ok','Campaign created!');
+  }catch(e){
+    errorEl.textContent='Failed to create campaign: '+e.message;
+    btn.disabled=false;btn.textContent='Create';
+  }
 }
 
 // Campaign Config Modal

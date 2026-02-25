@@ -53,6 +53,7 @@ Progress: [████████░░░░░░░░░░░░] ~40%
      Format: - [AGENT] [scope] — [brief description] — claimed [YYYY-MM-DD HH:MM UTC] -->
 
 None.
+- Claude [05-T7] — New campaign UI — claimed 2026-02-25 UTC
 
 ## Session Continuity
 
@@ -90,6 +91,6 @@ Resume file: None
 | T4: DB-driven summary bar | ✓ Done | Claude |
 | T5: Aggregated stats | ✓ Done | Claude |
 | T6: Response rate config | ○ Pending | - |
-| T7: New campaign UI | ○ Pending | - |
+| T7: New campaign UI | ✓ Done | Claude |
 | T7a: Seed test campaign | ○ Pending | - |
-| T8: Remove hardcoded STAFF | ○ Pending | - |
+| T8: Remove hardcoded STAFF | ✓ Done | OC |

@@ -30,7 +30,36 @@ The git log should read like a changelog of what shipped, not a diary of plannin
 ```
 
 If NO_GIT: Run `git init` silently. GSD projects always get their own repo.
+
 </git_check>
+
+<credential_helper>
+
+## Git Credential Helper Setup (Windows)
+
+If push fails with "credential helper not found" or authentication errors:
+
+**1. Switch remote from SSH to HTTPS:**
+```bash
+git remote set-url origin https://github.com/[owner]/[repo].git
+```
+
+**2. Use gh as credential helper (Windows path):**
+```bash
+git config --local credential.helper '!"/mnt/c/Program Files/GitHub CLI/gh.exe" auth git-credential'
+```
+
+**3. Push:**
+```bash
+git push origin [branch-name]
+```
+
+**Why:** 
+- SSH remote (`git@github.com:...`) requires SSH keys
+- gh CLI is authenticated via HTTPS token in keyring
+- Switching to HTTPS + gh helper uses the existing HTTPS auth
+
+</credential_helper>
 
 <commit_formats>
 
