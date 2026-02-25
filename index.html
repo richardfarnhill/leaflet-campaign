@@ -233,6 +233,15 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
     <div id="journalList"><p style="color:#888;font-size:0.9rem;">Loading...</p></div>
   </div>
 
+  <!-- Phase 6: Enquiries -->
+  <div id="enquiriesSection" style="margin-bottom:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h2 style="margin:0;">Enquiries</h2>
+      <button id="recordEnquiryBtn" onclick="openEnquiryModal()" style="background:#8b5cf6;color:#fff;padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:0.9rem;">+ Record Enquiry</button>
+    </div>
+    <div id="enquiryList"><p style="color:#888;font-size:0.9rem;">Loading...</p></div>
+  </div>
+
   <h2>Financial Projections</h2>
   <div class="finance-section">
     <div class="finance-inputs">
@@ -432,9 +441,14 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
       <input type="number" step="0.01" id="configDefaultCaseValue" placeholder="294.42">
     </div>
     <div class="modal-field">
-      <label>Restricted Postcodes (comma-separated, e.g. WA14, WA15, M33)</label>
-      <input type="text" id="configRestrictedPostcodes" placeholder="WA14, WA15, M33">
-      <small style="color:#888;font-size:0.75rem;">Routes in these areas will be flagged on the map</small>
+      <label>Restricted Areas <small style="font-weight:normal;color:#888;">(global — applies to all campaigns)</small></label>
+      <div id="restrictedAreasList" style="margin-bottom:8px;font-size:0.85rem;"></div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+        <input type="text" id="newRestrictedPostcode" placeholder="Postcode (e.g. WA14)" style="width:130px;padding:6px 8px;border:1px solid #ccd3db;border-radius:6px;font-size:0.85rem;">
+        <input type="number" id="newRestrictedRadius" placeholder="Radius (mi)" step="0.1" min="0" style="width:110px;padding:6px 8px;border:1px solid #ccd3db;border-radius:6px;font-size:0.85rem;">
+        <input type="text" id="newRestrictedLabel" placeholder="Label (optional)" style="width:120px;padding:6px 8px;border:1px solid #ccd3db;border-radius:6px;font-size:0.85rem;">
+        <button onclick="addRestrictedArea()" style="padding:6px 12px;background:#1a3a5c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:0.85rem;">+ Add</button>
+      </div>
     </div>
     <div class="modal-error" id="configError"></div>
     <div class="modal-actions">
@@ -472,6 +486,44 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
     <div class="modal-actions">
       <button class="modal-btn cancel" onclick="closeEditDelivery()">Cancel</button>
       <button class="modal-btn confirm" id="editDeliveryConfirmBtn" onclick="saveEditDelivery()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Enquiry Modal -->
+<div id="enquiryModal" class="modal-overlay">
+  <div class="modal">
+    <h3 id="enquiryModalTitle">Record Enquiry</h3>
+    <div class="modal-field">
+      <label>Client Name</label>
+      <input type="text" id="enquiryClientName" placeholder="Optional">
+    </div>
+    <div class="modal-field">
+      <label>Postcode *</label>
+      <input type="text" id="enquiryPostcode" placeholder="e.g. WA14 2LY" required>
+    </div>
+    <div class="modal-field">
+      <label>Route</label>
+      <select id="enquiryRoute"><option value="">Select...</option></select>
+    </div>
+    <div class="modal-field">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" id="enquiryInstructed" style="width:auto;">
+        Instructed?
+      </label>
+    </div>
+    <div class="modal-field" id="enquiryValueField" style="display:none;">
+      <label>Instruction Value (&pound;)</label>
+      <input type="number" id="enquiryInstructionValue" placeholder="e.g. 2500" min="0">
+    </div>
+    <div class="modal-field">
+      <label>Notes</label>
+      <textarea id="enquiryNotes" rows="2" placeholder="Optional"></textarea>
+    </div>
+    <div class="modal-error" id="enquiryError"></div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeEnquiryModal()">Cancel</button>
+      <button class="modal-btn confirm" id="enquiryConfirmBtn" onclick="saveEnquiry()">Save</button>
     </div>
   </div>
 </div>
@@ -649,14 +701,12 @@ async function loadHeatmap() {
   }
 
   try {
-    const [campaignRow, allAreas, deliveries, enquiries] = await Promise.all([
-      currentCampaignId ? sbFetch('/rest/v1/campaigns?select=restricted_postcodes&id=eq.' + currentCampaignId) : Promise.resolve([]),
+    const [restrictedAreas, allAreas, deliveries, enquiries] = await Promise.all([
+      sbFetch('/rest/v1/restricted_areas?select=id,postcode_prefix,radius_miles,label'),
       sbFetch('/rest/v1/target_areas?select=*&campaign_id=eq.' + currentCampaignId),
       currentCampaignId ? sbFetch('/rest/v1/deliveries?select=*&campaign_id=eq.' + currentCampaignId) : sbFetch('/rest/v1/deliveries?select=*'),
       currentCampaignId ? sbFetch('/rest/v1/enquiries?select=*&campaign_id=eq.' + currentCampaignId) : sbFetch('/rest/v1/enquiries?select=*')
     ]);
-    const restrictedAreas = ((campaignRow && campaignRow[0]?.restricted_postcodes) || [])
-      .map(p => ({ postcode_prefix: p, radius_miles: 2, label: p }));
 
     // Remove existing layers
     if (window.heatLayer) { window.heatLayer.remove(); window.heatLayer = null; }
@@ -1279,6 +1329,174 @@ async function loadDeliveryJournal(){
   }
 }
 
+async function loadEnquiryList(){
+  const section=document.getElementById('enquiriesSection');
+  const btn=document.getElementById('recordEnquiryBtn');
+  if(!currentCampaignId){
+    section.style.display='none';
+    return;
+  }
+  section.style.display='block';
+  btn.style.display='inline-block';
+  
+  try{
+    const campFilter = '&campaign_id=eq.' + currentCampaignId;
+    const rows=await sbFetch('/rest/v1/enquiries?select=*&order=created_at.desc' + campFilter);
+    const el=document.getElementById('enquiryList');
+    if(!rows||rows.length===0){el.innerHTML='<p style="color:#888;font-size:0.9rem;">No enquiries recorded yet.</p>';return;}
+    
+    function fmtDate(iso){
+      if(!iso)return'';
+      const d=new Date(iso);
+      return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    }
+    
+    let html='<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">';
+    html+='<thead><tr style="background:#8b5cf6;color:white;">';
+    html+='<th style="padding:8px;text-align:left;">Date</th>';
+    html+='<th style="padding:8px;text-align:left;">Client</th>';
+    html+='<th style="padding:8px;text-align:left;">Postcode</th>';
+    html+='<th style="padding:8px;text-align:center;">Instructed</th>';
+    html+='<th style="padding:8px;text-align:right;">Value</th>';
+    html+='<th style="padding:8px;text-align:left;">Notes</th>';
+    html+='<th style="padding:8px;text-align:center;">Action</th></tr></thead>';
+    html+='<tbody>';
+    rows.forEach(r=>{
+      const client=r.client_name||'Anonymous';
+      const postcode=r.postcode||'—';
+      const instructed=r.instructed?'<span style="color:#16a34a;font-weight:700;">Yes</span>':'<span style="color:#666;">No</span>';
+      const value=r.instruction_value?'&pound;'+parseFloat(r.instruction_value).toLocaleString():'—';
+      const notes=r.notes||'';
+      const date=fmtDate(r.created_at);
+      html+='<tr style="border-bottom:1px solid #eee;">';
+      html+='<td style="padding:8px;">'+date+'</td>';
+      html+='<td style="padding:8px;"><strong>'+client+'</strong></td>';
+      html+='<td style="padding:8px;">'+postcode+'</td>';
+      html+='<td style="padding:8px;text-align:center;">'+instructed+'</td>';
+      html+='<td style="padding:8px;text-align:right;">'+value+'</td>';
+      html+='<td style="padding:8px;color:#666;">'+notes+'</td>';
+      html+='<td style="padding:8px;text-align:center;"><button onclick="editEnquiry(\''+r.id+'\')" style="padding:4px 8px;background:#8b5cf6;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.75rem;margin-right:4px;">Edit</button><button onclick="deleteEnquiry(\''+r.id+'\')" style="padding:4px 8px;background:#dc2626;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.75rem;">Delete</button></td>';
+      html+='</tr>';
+    });
+    html+='</tbody></table>';
+    el.innerHTML=html;
+  }catch(e){
+    document.getElementById('enquiryList').innerHTML='<p style="color:#888;font-size:0.9rem;">Could not load enquiries.</p>';
+  }
+}
+
+let currentEditEnquiryId=null;
+
+function editEnquiry(id){
+  currentEditEnquiryId=id;
+  openEnquiryModal(id);
+}
+
+async function deleteEnquiry(id){
+  if(!confirm('Delete this enquiry? This cannot be undone.'))return;
+  try{
+    await sbFetch('/rest/v1/enquiries?id=eq.'+id,{method:'DELETE'});
+    await loadEnquiryList();
+    setSyncStatus('ok','Enquiry deleted');
+  }catch(e){
+    alert('Error deleting enquiry: '+e.message);
+  }
+}
+
+function openEnquiryModal(enquiryId){
+  const isEdit=!!enquiryId;
+  document.getElementById('enquiryModalTitle').textContent=isEdit?'Edit Enquiry':'Record Enquiry';
+  document.getElementById('enquiryClientName').value='';
+  document.getElementById('enquiryPostcode').value='';
+  document.getElementById('enquiryInstructed').checked=false;
+  document.getElementById('enquiryInstructionValue').value='';
+  document.getElementById('enquiryNotes').value='';
+  document.getElementById('enquiryError').textContent='';
+  document.getElementById('enquiryValueField').style.display='none';
+  
+  const routeSelect=document.getElementById('enquiryRoute');
+  routeSelect.innerHTML='<option value="">Select...</option>';
+  (targetAreas||[]).forEach(ta=>{
+    routeSelect.innerHTML+='<option value="'+ta.id+'">'+ta.area_name+'</option>';
+  });
+  
+  if(isEdit){
+    sbFetch('/rest/v1/enquiries?id=eq.'+enquiryId).then(rows=>{
+      if(rows&&rows[0]){
+        const r=rows[0];
+        document.getElementById('enquiryClientName').value=r.client_name||'';
+        document.getElementById('enquiryPostcode').value=r.postcode||'';
+        document.getElementById('enquiryInstructed').checked=r.instructed||false;
+        document.getElementById('enquiryInstructionValue').value=r.instruction_value||'';
+        document.getElementById('enquiryNotes').value=r.notes||'';
+        if(r.instructed)document.getElementById('enquiryValueField').style.display='block';
+      }
+    });
+  }
+  
+  document.getElementById('enquiryModal').classList.add('active');
+  
+  document.getElementById('enquiryInstructed').onchange=function(){
+    document.getElementById('enquiryValueField').style.display=this.checked?'block':'none';
+  };
+}
+
+function closeEnquiryModal(){
+  document.getElementById('enquiryModal').classList.remove('active');
+  currentEditEnquiryId=null;
+}
+
+async function saveEnquiry(){
+  const postcode=document.getElementById('enquiryPostcode').value.trim();
+  const errorEl=document.getElementById('enquiryError');
+  const btn=document.getElementById('enquiryConfirmBtn');
+  
+  if(!postcode){
+    errorEl.textContent='Please enter a postcode';
+    errorEl.classList.add('show');
+    return;
+  }
+  
+  btn.disabled=true;
+  btn.textContent='Saving...';
+  errorEl.classList.remove('show');
+  
+  try{
+    let lat=null,lng=null;
+    const geoRes=await fetch('https://api.postcodes.io/postcodes/'+encodeURIComponent(postcode)).then(r=>r.json());
+    if(geoRes.status===200&&geoRes.result){
+      lat=geoRes.result.latitude;
+      lng=geoRes.result.longitude;
+    }
+    
+    const data={
+      campaign_id:currentCampaignId,
+      client_name:document.getElementById('enquiryClientName').value.trim()||null,
+      postcode:postcode,
+      lat:lat,
+      lng:lng,
+      instructed:document.getElementById('enquiryInstructed').checked,
+      instruction_value:document.getElementById('enquiryInstructed').checked?parseFloat(document.getElementById('enquiryInstructionValue').value)||null:null,
+      notes:document.getElementById('enquiryNotes').value.trim()||null
+    };
+    
+    if(currentEditEnquiryId){
+      await sbFetch('/rest/v1/enquiries?id=eq.'+currentEditEnquiryId,{method:'PATCH',body:JSON.stringify(data)});
+    }else{
+      await sbFetch('/rest/v1/enquiries',{method:'POST',body:JSON.stringify(data)});
+    }
+    
+    closeEnquiryModal();
+    await loadEnquiryList();
+    setSyncStatus('ok',currentEditEnquiryId?'Enquiry updated':'Enquiry recorded');
+  }catch(e){
+    errorEl.textContent='Error: '+e.message;
+    errorEl.classList.add('show');
+  }
+  btn.disabled=false;
+  btn.textContent='Save';
+}
+
 let currentEditDeliveryId=null;
 
 async function openEditDelivery(deliveryId){
@@ -1617,6 +1835,49 @@ async function saveNewCampaign(){
   }
 }
 
+// Restricted Areas Management (global - not per campaign)
+async function loadRestrictedAreasList() {
+  const el = document.getElementById('restrictedAreasList');
+  if (!el) return;
+  el.innerHTML = '<em style="color:#aaa;">Loading...</em>';
+  const rows = await sbFetch('/rest/v1/restricted_areas?select=id,postcode_prefix,radius_miles,label&order=postcode_prefix.asc');
+  if (!rows || rows.length === 0) { el.innerHTML = '<em style="color:#aaa;">No restricted areas defined.</em>'; return; }
+  const tbody = rows.map(r => {
+    const rad = r.radius_miles || '';
+    const lbl = (r.label || '').replace(/"/g, '&quot;');
+    return '<tr data-id="' + r.id + '" style="border-top:1px solid #f0f0f0;">' +
+      '<td style="padding:4px 6px;font-weight:600;">' + r.postcode_prefix + '</td>' +
+      '<td style="padding:4px 6px;"><input type="number" step="0.1" min="0" value="' + rad + '" placeholder="1" style="width:70px;padding:3px 6px;border:1px solid #ccd3db;border-radius:4px;font-size:0.82rem;" onchange="saveRestrictedAreaRow('' + r.id + '',this.closest('tr'))"></td>' +
+      '<td style="padding:4px 6px;"><input type="text" value="' + lbl + '" placeholder="Label" style="width:100px;padding:3px 6px;border:1px solid #ccd3db;border-radius:4px;font-size:0.82rem;" onchange="saveRestrictedAreaRow('' + r.id + '',this.closest('tr'))"></td>' +
+      '<td style="padding:4px 6px;"><button onclick="deleteRestrictedArea('' + r.id + '')" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:1rem;" title="Delete">&#128465;</button></td></tr>';
+  }).join('');
+  el.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:0.82rem;"><thead><tr style="color:#888;text-align:left;"><th style="padding:4px 6px;">Postcode</th><th style="padding:4px 6px;">Radius (mi)</th><th style="padding:4px 6px;">Label</th><th></th></tr></thead><tbody>' + tbody + '</tbody></table>';
+}
+async function saveRestrictedAreaRow(id, row) {
+  const radius = parseFloat(row.querySelector('input[type=number]').value) || null;
+  const label = row.querySelector('input[type=text]').value.trim() || null;
+  await sbFetch('/rest/v1/restricted_areas?id=eq.' + id, { method:'PATCH', body:JSON.stringify({radius_miles:radius, label}) });
+  if (window.analyticsMap) loadHeatmap();
+}
+async function deleteRestrictedArea(id) {
+  if (!confirm('Delete this restricted area?')) return;
+  await sbFetch('/rest/v1/restricted_areas?id=eq.' + id, { method:'DELETE' });
+  loadRestrictedAreasList();
+  if (window.analyticsMap) loadHeatmap();
+}
+async function addRestrictedArea() {
+  const postcode = document.getElementById('newRestrictedPostcode').value.trim().toUpperCase();
+  const radius = parseFloat(document.getElementById('newRestrictedRadius').value) || null;
+  const label = document.getElementById('newRestrictedLabel').value.trim() || null;
+  if (!postcode) { alert('Please enter a postcode'); return; }
+  await sbFetch('/rest/v1/restricted_areas', { method:'POST', headers:{'Content-Type':'application/json','Prefer':'return=minimal'}, body:JSON.stringify({postcode_prefix:postcode, radius_miles:radius, label}) });
+  document.getElementById('newRestrictedPostcode').value='';
+  document.getElementById('newRestrictedRadius').value='';
+  document.getElementById('newRestrictedLabel').value='';
+  loadRestrictedAreasList();
+  if (window.analyticsMap) loadHeatmap();
+}
+
 // Campaign Config Modal
 let currentConfigCampaignId=null;
 
@@ -1642,9 +1903,9 @@ function openCampaignConfig(){
       document.getElementById('configRateTarget').value=rows[0].rate_target||'';
       document.getElementById('configRateOptimistic').value=rows[0].rate_optimistic||'';
       document.getElementById('configDefaultCaseValue').value=rows[0].default_case_value||'';
-      document.getElementById('configRestrictedPostcodes').value=rows[0].restricted_postcodes?rows[0].restricted_postcodes.join(', '):'';
     }
   });
+  loadRestrictedAreasList();
 }
 
 function closeCampaignConfig(){
@@ -1679,8 +1940,6 @@ async function saveCampaignConfig(){
   const rateTarget=parseFloat(document.getElementById('configRateTarget').value)||null;
   const rateOptimistic=parseFloat(document.getElementById('configRateOptimistic').value)||null;
   const defaultCaseValue=parseFloat(document.getElementById('configDefaultCaseValue').value)||null;
-  const restrictedRaw=document.getElementById('configRestrictedPostcodes').value||'';
-  const restrictedPostcodes=restrictedRaw?restrictedRaw.split(',').map(p=>p.trim().toUpperCase()).filter(p=>p):[];
 
   try{
     await sbFetch('/rest/v1/campaigns?id=eq.'+currentConfigCampaignId,{
@@ -1693,8 +1952,7 @@ async function saveCampaignConfig(){
         rate_conservative:rateConservative,
         rate_target:rateTarget,
         rate_optimistic:rateOptimistic,
-        default_case_value:defaultCaseValue,
-        restricted_postcodes:restrictedPostcodes
+        default_case_value:defaultCaseValue
       })
     });
     
@@ -1721,6 +1979,7 @@ async function loadAll(){
     renderAreaCards();
     await loadSummaryStats();
     await loadDeliveryJournal();
+    await loadEnquiryList();
     setSyncStatus('ok','Live \u00b7 auto-syncing every 30s');
   }catch(e){
     Logger.error('loadAll failed',e);
