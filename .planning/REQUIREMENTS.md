@@ -101,7 +101,25 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| All v1 requirements | TBD | Not started |
+| TER-01: Area Reservation System | Phase 2 - Territory & Reservation | Pending |
+| TER-02: Real-time Availability | Phase 2 - Territory & Reservation | Pending |
+| TER-03: Manual Override | Phase 2 - Territory & Reservation | Pending |
+| ANL-01: Heat Maps (Deliveries) | Phase 4 - Analytics & Heatmaps | Pending |
+| ANL-02: Heat Maps (Enquiries) | Phase 4 - Analytics & Heatmaps | Pending |
+| ANL-03: Completion Rate by Area | Phase 4 - Analytics & Heatmaps | Pending |
+| ANL-04: Analytics Dashboard | Phase 4 - Analytics & Heatmaps | Pending |
+| CMP-01: Campaign Switching | Phase 5 - Campaign Management | Pending |
+| CMP-02: Aggregated Data View | Phase 5 - Campaign Management | Pending |
+| CFG-01: Campaign Config UI | Phase 5 - Campaign Management | Pending |
+| CFG-02: Response Rate Config | Phase 5 - Campaign Management | Pending |
+| DEM-01: Custom Demographic Rules | Phase 5 - Campaign Management | Pending |
+| ENQ-01: Robust Enquiry Recording | Phase 6 - Enquiry & Team | Pending |
+| ENQ-02: Enquiry Heatmap | Phase 6 - Enquiry & Team | Pending |
+| TEA-01: Progress Broadcasting | Phase 6 - Enquiry & Team | Pending |
+| TEA-02: Leaderboards | Phase 6 - Enquiry & Team | Pending |
+| INT-01: ClickUp Stub | Phase 7 - Integrations | Pending |
+| INT-02: Google Sheets Export | Phase 7 - Integrations | Pending |
+| INT-03: Gmail Notifications | Phase 7 - Integrations | Pending |
 
 ---
 
