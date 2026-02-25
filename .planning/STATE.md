@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Teams can reserve geographic delivery areas (cards), record deliveries, and the system accurately tracks coverage, enquiries, and cases per area.
-**Current focus:** Phase 5 - Campaign Management (in progress)
+**Current focus:** Phase 5 complete - ready for Phase 6
 
 ## Current Position
 
 Phase: 5 of 7 (Campaign Management)
-Plan: 05-01 — All tasks done except T7a (seed test campaign).
-Status: Near complete — only T7a outstanding
-Last activity: 2026-02-25 — T14 done (restricted area polygons on map)
+Plan: 05-01 — All tasks done. Phase 5 complete.
+Status: Complete — ready for Phase 6
+Last activity: 2026-02-25 — Removed campaign_members code (team members are route-level)
 
-Progress: [███████████████████░] ~95%
+Progress: [████████████████████] 100%
 
 ## Performance Metrics
 
@@ -40,43 +40,15 @@ Progress: [███████████████████░] ~95%
 
 ### Pending Todos
 
-- T6: Response rate + case value overrides (CFG-02/04)
-- T7a: Seed second campaign for multi-campaign testing
+- Phase 6: Enquiry recording and analytics (T1-T6)
 
 ### Blockers/Concerns
 
-- **T15 completed:** Code review verified all Phase 2-3 flows (reserve, reassign, unassign, complete) call correct RPCs
-- **DB migrations needed** (run in Supabase SQL editor):
+- **Cleanup needed (optional):** Drop unused `campaign_members` table:
   ```sql
-  -- Create restricted_areas table (postcode prefix + radius in miles)
-  CREATE TABLE IF NOT EXISTS restricted_areas (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    postcode_prefix VARCHAR(10) NOT NULL,
-    radius_miles NUMERIC(5,2) DEFAULT 0,
-    label VARCHAR(100),
-    created_at TIMESTAMPTZ DEFAULT NOW()
-  );
-  
-  -- Seed default restricted areas
-  INSERT INTO restricted_areas (postcode_prefix, radius_miles, label) VALUES
-    ('WA14', 0, 'Altrincham'),
-    ('WA15', 0, 'Timperley'),
-    ('M33', 0, 'Sale'),
-    ('SK9', 0, 'Wilmslow');
-  
-  -- Enable RLS
-  ALTER TABLE restricted_areas ENABLE ROW LEVEL SECURITY;
-  CREATE POLICY "Anyone can read restricted_areas" ON restricted_areas FOR SELECT USING (true);
-  CREATE POLICY "Anyone can insert restricted_areas" ON restricted_areas FOR INSERT WITH CHECK (true);
+  DROP TABLE IF EXISTS campaign_members CASCADE;
   ```
-
-  -- Add columns to campaigns
-  ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS restricted_postcodes text[];
-  ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS rate_conservative numeric;
-  ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS rate_target numeric;
-  ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS rate_optimistic numeric;
-  ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS default_case_value numeric;
-  ```
+- **All Phase 5 migrations complete** - no blockers remaining
 
 ## Active Tasks
 
@@ -123,7 +95,7 @@ Resume file: None
 | T5: Aggregated stats | ✓ Done | Claude |
 | T6: Response rate config | ✓ Done | Claude |
 | T7: New campaign UI | ✓ Done | Claude |
-| T7a: Seed test campaign | ○ Pending | - |
+| T7a: Seed test campaign | ○ Partial (Richard) | - |
 | T8: Remove hardcoded STAFF | ✓ Done | OC |
 | T9: Restricted areas config + overlay | ✓ Done | OC |
 | T10: Add missing DB columns | ✓ Done | - |
@@ -136,9 +108,12 @@ Resume file: None
 
 | Task | Status | Agent |
 |------|--------|-------|
+| T0: DB migration (enquiries lat/lng cols) | ○ Pending | - |
 | T1: Enquiry recording modal | ○ Pending | - |
-| T2: Enquiry list view | ○ Pending | - |
-| T3: Enquiry heatmap overlay | ○ Pending | - |
-| T4: Team progress view | ○ Pending | - |
-| T5: Leaderboards | ○ Pending | - |
-| T6: Add route creation UI | ○ Pending | - |
+| T2: Enquiry list view + edit/delete | ○ Pending | - |
+| T3: Enquiry map markers (fix lat/lng) | ○ Pending | - |
+| T4: Finance projections from DB enquiries | ○ Pending | - |
+| T5: Team progress view | ○ Pending | - |
+| T6: Leaderboards | ○ Pending | - |
+| T7: Route creation UI | ○ Pending | - |
+| T8: Route deletion UI | ○ Pending | - |
