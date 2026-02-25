@@ -405,7 +405,7 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
     <h3>Configure Campaign</h3>
     <div class="modal-field">
       <label>Campaign Name</label>
-      <input type="text" id="configCampaignName" readonly>
+      <input type="text" id="configCampaignName">
     </div>
     <div class="modal-field">
       <label>Target Leaflets</label>
@@ -424,9 +424,16 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
       <div id="configTeamMembers" style="max-height:120px;overflow-y:auto;border:1px solid #ddd;padding:8px;border-radius:4px;"></div>
     </div>
     <div class="modal-field">
-      <label>Restricted Postcodes</label>
-      <input type="text" id="configRestrictedPostcodes" placeholder="WA14, WA15, M33 (comma-separated)">
-      <small style="color:#888;font-size:0.75rem;">These areas won't be targeted</small>
+      <label>Response Rate Overrides (leave blank to use defaults: 0.25% / 0.5% / 1.0%)</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="number" step="0.01" id="configRateConservative" placeholder="0.25" style="width:80px;">%
+        <input type="number" step="0.01" id="configRateTarget" placeholder="0.50" style="width:80px;">%
+        <input type="number" step="0.01" id="configRateOptimistic" placeholder="1.00" style="width:80px;">%
+      </div>
+    </div>
+    <div class="modal-field">
+      <label>Default Case Value Override (£) (leave blank to use £294.42)</label>
+      <input type="number" step="0.01" id="configDefaultCaseValue" placeholder="294.42">
     </div>
     <div class="modal-error" id="configError"></div>
     <div class="modal-actions">
@@ -501,6 +508,8 @@ Logger.info('App starting...');
 
 const TOTAL=20000,DEFAULT_CV=294.42,DAILY_TARGET=1000;
 // STAFF removed - teamMembers loaded dynamically from team_members table
+// Campaign rate/CV overrides (null = use hardcoded fallbacks above)
+let campaignRates={conservative:null,target:null,optimistic:null,defaultCaseValue:null};
 
 const BASE=[
 {id:1,dateISO:'2026-02-24',week:'Week 1',area:'Wilmslow \u2014 Dean Row (kickoff)',postcode:'SK9 2BY',target:500,briefing:'<strong>Park:</strong> Summerfields Village, Dean Row Road SK9 2BY.<br><strong>Task:</strong> Post a WillSolicitor leaflet through every letterbox around Summerfields Village.<br><strong>Streets:</strong> Dean Row Road, Adlington Road, Moor Lane and surrounding cul-de-sacs.<br><strong>Target:</strong> 500 leaflets. Half day \u2014 finish by 12:30pm.'},
@@ -607,8 +616,8 @@ async function loadHeatmap() {
   }
 
   try {
-    const [campaign, allAreas, deliveries, enquiries] = await Promise.all([
-      sbFetch('/rest/v1/campaigns?select=restricted_postcodes&id=eq.' + currentCampaignId),
+    const [restrictedAreas, allAreas, deliveries, enquiries] = await Promise.all([
+      sbFetch('/rest/v1/restricted_areas?select=postcode_prefix,radius_miles,label'),
       sbFetch('/rest/v1/target_areas?select=*&campaign_id=eq.' + currentCampaignId),
       sbFetch('/rest/v1/deliveries?select=*'),
       sbFetch('/rest/v1/enquiries?select=*')
@@ -621,8 +630,8 @@ async function loadHeatmap() {
     window.areaMarkers = [];
 
     const statusColour = { available: '#6b7280', reserved: '#f59e0b', completed: '#16a34a' };
-    const restrictedPostcodes = campaign?.[0]?.restricted_postcodes || [];
-    const isRestricted = (postcode) => restrictedPostcodes.some(rp => postcode?.toUpperCase().startsWith(rp));
+    const restrictedPrefixes = (restrictedAreas || []).map(r => r.postcode_prefix);
+    const isRestricted = (postcode) => restrictedPrefixes.some(rp => postcode?.toUpperCase().startsWith(rp));
 
     // Show all areas as circle markers, colour-coded by status
     (allAreas || []).filter(a => a.lat && a.lng).forEach(a => {
@@ -703,6 +712,21 @@ async function loadAnalyticsDashboard() {
   await loadCompletionRate();
   await loadAnalyticsCharts();
   await loadCampaignBreakdown();
+}
+
+// Phase 5 T6: Load campaign-specific rate/CV overrides into campaignRates
+async function loadCampaignRates(){
+  campaignRates={conservative:null,target:null,optimistic:null,defaultCaseValue:null};
+  if(!currentCampaignId) return; // All Campaigns: use hardcoded fallbacks
+  try{
+    const rows=await sbFetch('/rest/v1/campaigns?select=rate_conservative,rate_target,rate_optimistic,default_case_value&id=eq.'+currentCampaignId);
+    if(rows&&rows[0]){
+      campaignRates.conservative=rows[0].rate_conservative??null;
+      campaignRates.target=rows[0].rate_target??null;
+      campaignRates.optimistic=rows[0].rate_optimistic??null;
+      campaignRates.defaultCaseValue=rows[0].default_case_value??null;
+    }
+  }catch(e){Logger.error('loadCampaignRates failed',e);}
 }
 
 // Phase 5 T5: Campaign breakdown table — shown only in All Campaigns mode
@@ -833,8 +857,10 @@ async function loadCampaigns(){
       select.onchange=async function(){
         currentCampaignId=this.value||null;
         Logger.info('Campaign changed',{campaignId:currentCampaignId});
+        await loadCampaignRates();
         await loadAreaCards();
         renderAreaCards();
+        await loadSummaryStats();
       };
       Logger.success('Campaign loaded',campaigns[0].name);
     } else {
@@ -1445,31 +1471,34 @@ function openCampaignConfig(){
     alert('Please select a campaign first');
     return;
   }
-  const campaign=targetAreas.length>0?{name:document.getElementById('campaignSelect').value}:null;
-  document.getElementById('configCampaignName').value=campaign?campaign.name:'Unknown';
+  document.getElementById('configCampaignName').value='';
   document.getElementById('configTargetLeaflets').value='';
   document.getElementById('configStartDate').value='';
   document.getElementById('configEndDate').value='';
   document.getElementById('configTeamMembers').innerHTML='<em style="color:#888;">Loading...</em>';
-  document.getElementById('configRestrictedPostcodes').value='';
   document.getElementById('campaignConfigModal').classList.add('active');
   currentConfigCampaignId=currentCampaignId;
   
   sbFetch('/rest/v1/campaigns?id=eq.'+currentCampaignId).then(rows=>{
     if(rows&&rows[0]){
+      document.getElementById('configCampaignName').value=rows[0].name||'';
       document.getElementById('configTargetLeaflets').value=rows[0].target_leaflets||'';
       document.getElementById('configStartDate').value=rows[0].start_date||'';
       document.getElementById('configEndDate').value=rows[0].end_date||'';
-      document.getElementById('configRestrictedPostcodes').value=rows[0].restricted_postcodes?rows[0].restricted_postcodes.join(', '):'';
+      document.getElementById('configRateConservative').value=rows[0].rate_conservative||'';
+      document.getElementById('configRateTarget').value=rows[0].rate_target||'';
+      document.getElementById('configRateOptimistic').value=rows[0].rate_optimistic||'';
+      document.getElementById('configDefaultCaseValue').value=rows[0].default_case_value||'';
     }
   });
   
-  sbFetch('/rest/v1/campaign_members?campaign_id=eq.'+currentCampaignId+'&select=team_members(id,name)').then(rows=>{
+  // Load team members - show all for now
+  sbFetch('/rest/v1/team_members?select=id,name&is_active=eq.true&order=name.asc').then(rows=>{
     const container=document.getElementById('configTeamMembers');
     if(!rows||rows.length===0){
-      container.innerHTML='<span style="color:#888;">No team members assigned</span>';
+      container.innerHTML='<span style="color:#888;">No team members</span>';
     }else{
-      container.innerHTML=rows.map(r=>r.team_members?.name).filter(Boolean).join(', ')||'None';
+      container.innerHTML=rows.map(r=>r.name).join(', ')||'None';
     }
   });
 }
@@ -1480,13 +1509,18 @@ function closeCampaignConfig(){
 }
 
 async function saveCampaignConfig(){
+  const campaignName=document.getElementById('configCampaignName').value.trim();
   const targetLeaflets=document.getElementById('configTargetLeaflets').value;
   const startDate=document.getElementById('configStartDate').value;
   const endDate=document.getElementById('configEndDate').value;
-  const restrictedPostcodes=document.getElementById('configRestrictedPostcodes').value;
   const errorEl=document.getElementById('configError');
   const btn=document.getElementById('configConfirmBtn');
   
+  if(!campaignName){
+    errorEl.textContent='Please enter a campaign name';
+    errorEl.classList.add('show');
+    return;
+  }
   if(!targetLeaflets){
     errorEl.textContent='Please enter target leaflets';
     errorEl.classList.add('show');
@@ -1497,20 +1531,27 @@ async function saveCampaignConfig(){
   btn.textContent='Saving...';
   errorEl.classList.remove('show');
   
-  const restrictedArray=restrictedPostcodes?restrictedPostcodes.split(',').map(p=>p.trim().toUpperCase()).filter(p=>p):[];
+  const rateConservative=parseFloat(document.getElementById('configRateConservative').value)||null;
+  const rateTarget=parseFloat(document.getElementById('configRateTarget').value)||null;
+  const rateOptimistic=parseFloat(document.getElementById('configRateOptimistic').value)||null;
+  const defaultCaseValue=parseFloat(document.getElementById('configDefaultCaseValue').value)||null;
   
   try{
     await sbFetch('/rest/v1/campaigns?id=eq.'+currentConfigCampaignId,{
       method:'PATCH',
       body:JSON.stringify({
+        name:campaignName,
         target_leaflets:parseInt(targetLeaflets),
         start_date:startDate||null,
         end_date:endDate||null,
-        restricted_postcodes:restrictedArray
+        rate_conservative:rateConservative,
+        rate_target:rateTarget,
+        rate_optimistic:rateOptimistic,
+        default_case_value:defaultCaseValue
       })
     });
     closeCampaignConfig();
-    loadDeliveredTotal();
+    await loadCampaigns();
     setSyncStatus('ok','Campaign updated!');
   }catch(e){
     errorEl.textContent='Error: '+e.message;
@@ -1525,6 +1566,7 @@ async function loadAll(){
   setSyncStatus('saving','Loading\u2026');
   try{
     await loadCampaigns();
+    await loadCampaignRates();
     await loadTeamMembers();
     await loadAreaCards();
     renderAreaCards();
@@ -1679,7 +1721,9 @@ function updateFinance(td,rem){
   const enq=parseInt(document.getElementById('fi_enquiries').value)||0;
   const cas=parseInt(document.getElementById('fi_cases').value)||0;
   const inv=parseFloat(document.getElementById('fi_instrvalue').value)||0;
-  const avgCV=cas>0&&inv>0?inv/cas:DEFAULT_CV,convR=enq>0&&cas>0?cas/enq:1;
+  // Use campaign overrides if set, else hardcoded fallbacks (CFG-02/04)
+  const effectiveDefaultCV=campaignRates.defaultCaseValue??DEFAULT_CV;
+  const avgCV=cas>0&&inv>0?inv/cas:effectiveDefaultCV,convR=enq>0&&cas>0?cas/enq:1;
   const leafR=td>0&&enq>0?enq/td:null,rev100=td>0&&inv>0?(inv/td)*100:null;
   const revPEnq=enq>0&&inv>0?inv/enq:null,lpc=td>0&&cas>0?Math.round(td/cas):null;
   document.getElementById('dm_avgcase').textContent=inv>0&&cas>0?fmtCurrency(avgCV):'\u2014';
@@ -1706,9 +1750,10 @@ function updateFinance(td,rem){
     document.getElementById('f_ext_total').textContent=ef;
     document.getElementById('f_ext_rev').textContent=fmtCurrency(cf*avgCV);
   }
-  [[0.0025,'f1'],[0.005,'f2'],[0.01,'f3']].forEach(([sr,p])=>{
+  // Use campaign rate overrides if set, else hardcoded fallbacks (CFG-02)
+  [[campaignRates.conservative??0.0025,'f1'],[campaignRates.target??0.005,'f2'],[campaignRates.optimistic??0.01,'f3']].forEach(([sr,p])=>{
     const es=Math.round(td*sr),et=Math.round(rem*sr),te=es+et;
-    const cr=cas>0&&enq>0?convR:1,cv=cas>0&&inv>0?avgCV:DEFAULT_CV;
+    const cr=cas>0&&enq>0?convR:1,cv=cas>0&&inv>0?avgCV:effectiveDefaultCV;
     document.getElementById(p+'_sofar').textContent=td>0?es:'\u2014';
     document.getElementById(p+'_todo').textContent=et;
     document.getElementById(p+'_total').textContent=te;

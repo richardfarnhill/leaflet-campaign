@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 
 ## Current Position
 
-Phase: 4 of 7 (Analytics & Heatmaps)
-Plan: 04-01 — T1-T14 complete. T15 (phase verification) is the only remaining task.
+Phase: 5 of 7 (Campaign Management)
+Plan: 05-01 — T1-T5, T7, T8, T9 done. T6, T7a remaining.
 Status: Near complete
-Last activity: 2026-02-25 — T11 done: removed dead legacy queries, linked delivery to campaign, added CFG-03 to Phase 5.
+Last activity: 2026-02-25 — T9 done (restricted areas config + map overlay)
 
-Progress: [████████░░░░░░░░░░░░] ~40%
+Progress: [████████████████░░░░] ~80%
 
 ## Performance Metrics
 
@@ -38,13 +38,59 @@ Progress: [████████░░░░░░░░░░░░] ~40%
 
 ### Pending Todos
 
-- T15: Verify Phases 1-3 E2E flows before Phase 5 starts
+- T6: Response rate + case value overrides (CFG-02/04)
+- T7a: Seed second campaign for multi-campaign testing
 
 ### Blockers/Concerns
 
-- **T7 error (Claude):** ~~lat/lng inserted as hardcoded approximations~~ — FIXED by T12. All 15 routes now have unique street postcodes geocoded via postcodes.io.
-- 600-leaflet delivery migrated from session_log into deliveries table (Wilmslow Dean Row kickoff, 2026-02-24, Richard & Cahner)
 - **T15 completed:** Code review verified all Phase 2-3 flows (reserve, reassign, unassign, complete) call correct RPCs
+- **DB migrations needed** (run in Supabase SQL editor):
+  ```sql
+  -- Create campaign_members table (missing from Phase 1)
+  CREATE TABLE IF NOT EXISTS campaign_members (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    campaign_id UUID REFERENCES campaigns(id) ON DELETE CASCADE,
+    team_member_id UUID REFERENCES team_members(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(campaign_id, team_member_id)
+  );
+  
+  -- Enable RLS
+  ALTER TABLE campaign_members ENABLE ROW LEVEL SECURITY;
+  CREATE POLICY "Anyone can read campaign_members" ON campaign_members FOR SELECT USING (true);
+  CREATE POLICY "Anyone can insert campaign_members" ON campaign_members FOR INSERT WITH CHECK (true);
+  CREATE POLICY "Anyone can update campaign_members" ON campaign_members FOR UPDATE USING (true);
+  CREATE POLICY "Anyone can delete campaign_members" ON campaign_members FOR DELETE USING (true);
+
+  -- Create restricted_areas table (postcode prefix + radius in miles)
+  CREATE TABLE IF NOT EXISTS restricted_areas (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    postcode_prefix VARCHAR(10) NOT NULL,
+    radius_miles NUMERIC(5,2) DEFAULT 0,
+    label VARCHAR(100),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+  
+  -- Seed default restricted areas
+  INSERT INTO restricted_areas (postcode_prefix, radius_miles, label) VALUES
+    ('WA14', 0, 'Altrincham'),
+    ('WA15', 0, 'Timperley'),
+    ('M33', 0, 'Sale'),
+    ('SK9', 0, 'Wilmslow');
+  
+  -- Enable RLS
+  ALTER TABLE restricted_areas ENABLE ROW LEVEL SECURITY;
+  CREATE POLICY "Anyone can read restricted_areas" ON restricted_areas FOR SELECT USING (true);
+  CREATE POLICY "Anyone can insert restricted_areas" ON restricted_areas FOR INSERT WITH CHECK (true);
+  ```
+
+  -- Add columns to campaigns
+  ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS restricted_postcodes text[];
+  ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS rate_conservative numeric;
+  ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS rate_target numeric;
+  ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS rate_optimistic numeric;
+  ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS default_case_value numeric;
+  ```
 
 ## Active Tasks
 
@@ -52,13 +98,12 @@ Progress: [████████░░░░░░░░░░░░] ~40%
      REQUIRED: Claim here before making ANY code changes. Remove when done.
      Format: - [AGENT] [scope] — [brief description] — claimed [YYYY-MM-DD HH:MM UTC] -->
 
-None.
-- Claude [05-T7] — New campaign UI — claimed 2026-02-25 UTC
+- Claude [05-T6] — Response rate + case value overrides (CFG-02/04) — claimed 2026-02-25 UTC
 
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Phase 5 T2+T3 done (config modal + button). Ready for next task.
+Stopped at: Phase 5 T9 done. T6 and T7a remaining.
 Resume file: None
 
 ## Phase 4 Task Checklist (04-01-PLAN.md)
@@ -90,19 +135,11 @@ Resume file: None
 | T3: Config button | ✓ Done | OC |
 | T4: DB-driven summary bar | ✓ Done | Claude |
 | T5: Aggregated stats | ✓ Done | Claude |
-| T6: Response rate config | ○ Pending | - |
+| T6: Response rate config | ○ Pending | Claude (claimed) |
 | T7: New campaign UI | ✓ Done | Claude |
 | T7a: Seed test campaign | ○ Pending | - |
 | T8: Remove hardcoded STAFF | ✓ Done | OC |
-| T9: Restricted areas config + overlay | ○ Pending | - |
-
-## Active Tasks
-
-<!-- Multi-agent coordination — see .planning/COORDINATION.md for full protocol.
-     REQUIRED: Claim here before making ANY code changes. Remove when done.
-     Format: - [AGENT] [scope] — [brief description] — claimed [YYYY-MM-DD HH:MM UTC] -->
-
-- OpenCode [05-T9] — Restricted areas config + overlay — claimed 2026-02-25 19:30 UTC
+| T9: Restricted areas config + overlay | ✓ Done | OC |
 
 ## Phase 6 Task Checklist (06-01-PLAN.md)
 
