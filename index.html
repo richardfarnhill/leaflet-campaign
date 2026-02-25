@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Leaflet Campaign Tracker</title>
 <script src="config.js"></script>
+<script src="debug-panel.js"></script>
 <script>
 (function(){
   // Use config.js values with fallbacks for development
@@ -279,7 +280,65 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
 </div>
 
 <script>
-const SB_URL=typeof CONFIG!=='undefined'?CONFIG.SUPABASE_URL:'https://tjebidvgvbpnxgnphcrg.supabase.co';
+// ============================================================
+// DEBUG LOGGER - Traffic Light System
+// ============================================================
+const Logger={
+  // Traffic light colors
+  GREEN:'\x1b[32m',  // Success
+  YELLOW:'\x1b[33m',  // Warning  
+  RED:'\x1b[31m',    // Error
+  BLUE:'\x1b[34m',    // Info
+  RESET:'\x1b[0m',
+  
+  // Visual icons
+  SUCCESS:'🟢',
+  WARNING:'🟡',
+  ERROR:'🔴',
+  INFO:'🔵',
+  
+  // Logging methods with visual indicators
+  success(msg,data){
+    console.log(`${this.SUCCESS} SUCCESS: ${msg}`,data||'');
+    this.updateStatusIndicator('ok',msg);
+  },
+  warn(msg,data){
+    console.warn(`${this.WARNING} WARNING: ${msg}`,data||'');
+    this.updateStatusIndicator('saving',msg);
+  },
+  error(msg,data){
+    console.error(`${this.ERROR} ERROR: ${msg}`,data||'');
+    this.updateStatusIndicator('err',msg);
+  },
+  info(msg,data){
+    console.log(`${this.INFO} INFO: ${msg}`,data||'');
+  },
+  
+  // Update the sync status indicator in the UI
+  updateStatusIndicator(status,msg){
+    const dot=document.getElementById('syncDot');
+    const txt=document.getElementById('syncMsg');
+    if(dot){
+      dot.className='sync-dot '+status;
+    }
+    if(txt){
+      txt.textContent=msg||(status==='ok'?'Live':status);
+    }
+  }
+};
+
+// Global error handler
+window.onerror=function(msg,url,line,col,error){
+  Logger.error('Uncaught error',{msg,line,col,error:error?.message});
+  return false;
+};
+
+window.onunhandledrejection=function(event){
+  Logger.error('Unhandled promise rejection',{reason:event.reason});
+};
+
+Logger.info('App starting...');
+</script>
 const SB_KEY=typeof CONFIG!=='undefined'?CONFIG.SUPABASE_KEY:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqZWJpZHZndmJwbnhnbnBoY3JnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0ODkyNDcsImV4cCI6MjA4NzA2NTI0N30.7MyRW330dP1ZkCqOqTykjRo6Y-cM4ow3aJ-6_H82BUY';
 const TOTAL=20000,DEFAULT_CV=294.42,DAILY_TARGET=1000;
 const STAFF=['\u2014 Unassigned \u2014','Richard','Josh','Dan','Cahner'];
@@ -354,6 +413,7 @@ function setSyncStatus(s,msg){document.getElementById('syncDot').className='sync
 async function loadCampaigns(){
   try{
     const campaigns=await sbFetch('/rest/v1/campaigns?select=*&is_active=eq.true&order=created_at.desc');
+    Logger.info('Loaded campaigns',{count:campaigns?.length});
     const select=document.getElementById('campaignSelect');
     select.innerHTML='';
     if(campaigns&&campaigns.length>0){
@@ -365,7 +425,21 @@ async function loadCampaigns(){
       });
       currentCampaignId=campaigns[0].id;
       select.value=currentCampaignId;
+      // Add change handler
+      select.onchange=async function(){
+        currentCampaignId=this.value;
+        Logger.info('Campaign changed',{campaignId:currentCampaignId});
+        await loadAreaCards();
+        renderAreaCards();
+      };
+      Logger.success('Campaign loaded',campaigns[0].name);
     }
+    return campaigns;
+  }catch(e){
+    Logger.error('Failed to load campaigns',e);
+    return [];
+  }
+}
     return campaigns;
   }catch(e){console.error('loadCampaigns error:',e);}
   return[];
@@ -374,16 +448,25 @@ async function loadCampaigns(){
 async function loadTeamMembers(){
   try{
     teamMembers=await sbFetch('/rest/v1/team_members?select=*&is_active=eq.true&order=name.asc');
-  }catch(e){console.error('loadTeamMembers error:',e);teamMembers=[];}
-  return teamMembers;
+    Logger.info('Loaded team members',{count:teamMembers?.length});
+    return teamMembers;
+  }catch(e){
+    Logger.error('Failed to load team members',e);
+    return [];
+  }
 }
 
 async function loadAreaCards(){
-  if(!currentCampaignId){targetAreas=[];reservations=[];return;}
+  if(!currentCampaignId){
+    Logger.warn('No campaign selected');
+    targetAreas=[];reservations=[];return;
+  }
   try{
+    Logger.info('Loading area cards for campaign',{campaignId:currentCampaignId});
     // First get areas for this campaign
     const areas=await sbFetch('/rest/v1/target_areas?select=*&campaign_id=eq.'+currentCampaignId+'&order=created_at.asc');
     const areaIds=areas?areas.map(a=>a.id):[];
+    Logger.info('Loaded target areas',{count:areas?.length,ids:areaIds});
     
     // Then get reservations for those areas
     let resvs=[];
@@ -391,11 +474,16 @@ async function loadAreaCards(){
       // Build an 'in' filter manually
       const areaIdFilter=areaIds.map(id=>'"'+id+'"').join(',');
       resvs=await sbFetch('/rest/v1/reservations?select=*&status=eq.active&target_area_id=in.('+areaIdFilter+')');
+      Logger.info('Loaded reservations',{count:resvs?.length});
     }
     
     targetAreas=areas||[];
     reservations=resvs||[];
-  }catch(e){console.error('loadAreaCards error:',e);targetAreas=[];reservations=[];}
+    Logger.success('Area cards loaded',{areas:targetAreas.length,reservations:reservations.length});
+  }catch(e){
+    Logger.error('Failed to load area cards',e);
+    targetAreas=[];reservations=[];
+  }
 }
 
 function getTeamMemberName(id){
