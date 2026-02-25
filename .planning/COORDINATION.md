@@ -45,6 +45,22 @@ notify the user** rather than proceeding. Do not overwrite another agent's claim
 
 ---
 
+## Rule: Pick the Next Unblocked Task
+
+When starting a session (e.g., running `/gsd-execute-phase`), follow this process:
+
+1. **Check for existing claims** — Read `## Active Tasks` in STATE.md
+2. **If your intended work is already claimed** — Stop and tell the user
+3. **If no claim exists** — Claim it before starting work
+4. **Find unclaimed work** — Look for:
+   - Plans without SUMMARY.md (incomplete)
+   - The `.continue-here.md` file for current phase context
+   - Any ad-hoc tasks not yet started
+
+**Before executing any phase or plan, you MUST verify no other agent has claimed it.**
+
+---
+
 ## Rule: Update STATE.md After Every Session
 
 When you finish a session (whether or not it was a formal GSD plan), update STATE.md:
@@ -81,3 +97,9 @@ or via the instructions given by the user at session start.
 OpenCode's `execute-plan` workflow includes `claim_task` and `release_task` steps that
 implement this protocol automatically for GSD plan execution. For ad-hoc work outside
 GSD plans, OpenCode must follow this protocol manually.
+
+**Critical:** At the START of every session, before executing any phase:
+1. Read STATE.md `## Active Tasks`
+2. Check if your intended work is already claimed
+3. If claimed by Claude, do NOT proceed — tell the user
+4. If unclaimed, add your claim BEFORE making any code changes
