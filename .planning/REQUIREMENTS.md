@@ -50,6 +50,7 @@
 |----|-------------|-------------|
 | CMP-01 | Campaign Switching | Switch between different campaigns |
 | CMP-02 | Aggregated Data View | View combined data across all campaigns |
+| CMP-03 | Campaign Data Isolation | Chinese wall between campaigns - data from one campaign must NOT appear in another campaign's analytics, reports, or views unless "All Campaigns" is explicitly selected. Each campaign's dashboard, leaderboard, enquiries, deliveries, and stats show only that campaign's data. |
 
 ### CFG-06: Campaign Config
 
@@ -117,18 +118,19 @@
 | ANL-03: Completion Rate by Area | Phase 4 | ✅ Done | T4 dashboard, T14 cards |
 | ANL-04: Analytics Dashboard | Phase 4 | ✅ Done | T6 charts |
 | GEO-01: Accurate Route Geocoding | Phase 4 | ✅ Done | T12 postcodes.io |
-| CMP-01: Campaign Switching | Phase 5 | 🔄 In Progress | T1 done |
-| CMP-02: Aggregated Data View | Phase 5 | 🔄 In Progress | T5 done |
-| CFG-01: Campaign Config UI | Phase 5 | 🔄 In Progress | T2+T3 done |
-| CFG-02: Response Rate Config | Phase 5 | 🔄 In Progress | T6 pending |
-| CFG-04: Configurable Default Case Value | Phase 5 | 🔄 In Progress | T6 pending |
-| CFG-03: DB-driven Summary Bar | Phase 5 | 🔄 In Progress | T4 done |
-| CFG-05: Restricted Areas Config | Phase 5 | 🔄 In Progress | T9 added |
+| CMP-01: Campaign Switching | Phase 5 | ✅ Done | T1 done |
+| CMP-02: Aggregated Data View | Phase 5 | ✅ Done | T5 done |
+| CMP-03: Campaign Data Isolation | Phase 6 | ✅ Done | Fixed queries to filter by campaign |
+| CFG-01: Campaign Config UI | Phase 5 | ✅ Done | T2+T3 done |
+| CFG-02: Response Rate Config | Phase 5 | ✅ Done | T6 |
+| CFG-04: Configurable Default Case Value | Phase 5 | ✅ Done | T6 |
+| CFG-03: DB-driven Summary Bar | Phase 5 | ✅ Done | T4 done |
+| CFG-05: Restricted Areas Config | Phase 5 | ✅ Done | T9 added |
 | DEM-01: Custom Demographic Rules | Phase 5 | 📋 Planned | Deferred from v1? |
-| ENQ-01: Robust Enquiry Recording | Phase 6 | 📋 Planned | T1 |
-| ENQ-02: Enquiry Heatmap | Phase 6 | 📋 Planned | T3 |
-| TEA-01: Progress Broadcasting | Phase 6 | 📋 Planned | T4 |
-| TEA-02: Leaderboards | Phase 6 | 📋 Planned | T5 |
+| ENQ-01: Robust Enquiry Recording | Phase 6 | ✅ Done | T2 |
+| ENQ-02: Enquiry Heatmap | Phase 6 | ✅ Done | T4 |
+| TEA-01: Progress Broadcasting | Phase 6 | ✅ Done | T6 |
+| TEA-02: Leaderboards | Phase 6 | ✅ Done | T6+T7 |
 | INT-01: ClickUp Stub | Phase 7 | 📋 Planned | - |
 | INT-02: Google Sheets Export | Phase 7 | 📋 Planned | - |
 | INT-03: Gmail Notifications | Phase 7 | 📋 Planned | - |

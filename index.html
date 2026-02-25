@@ -708,9 +708,12 @@ async function loadHeatmap() {
   }
 
   try {
+    const areasUrl = currentCampaignId 
+      ? '/rest/v1/target_areas?select=*&campaign_id=eq.' + currentCampaignId 
+      : '/rest/v1/target_areas?select=*';
     const [restrictedAreas, allAreas, deliveries, enquiries] = await Promise.all([
       sbFetch('/rest/v1/restricted_areas?select=id,postcode_prefix,radius_miles,label'),
-      sbFetch('/rest/v1/target_areas?select=*&campaign_id=eq.' + currentCampaignId),
+      sbFetch(areasUrl),
       currentCampaignId ? sbFetch('/rest/v1/deliveries?select=*&campaign_id=eq.' + currentCampaignId) : sbFetch('/rest/v1/deliveries?select=*'),
       currentCampaignId ? sbFetch('/rest/v1/enquiries?select=*&campaign_id=eq.' + currentCampaignId) : sbFetch('/rest/v1/enquiries?select=*')
     ]);
@@ -985,22 +988,28 @@ async function loadCampaigns(){
         opt.textContent=c.name;
         select.appendChild(opt);
       });
-      currentCampaignId=campaigns[0].id;
-      select.value=currentCampaignId;
+      // Only set initial campaign if none selected yet
+      if(!currentCampaignId){
+        currentCampaignId=campaigns[0].id;
+      }
+      select.value=currentCampaignId||'';
       Logger.info('Set currentCampaignId',{campaignId:currentCampaignId});
-      // Add change handler
-      select.onchange=async function(){
-        currentCampaignId=this.value||null;
-        Logger.info('Campaign changed',{campaignId:currentCampaignId});
-        await loadCampaignRates();
-        await loadAreaCards();
-        renderAreaCards();
-        await loadSummaryStats();
-        await loadTeamProgress();
-        await loadDeliveryJournal();
-        await loadEnquiryList();
-        await loadFinanceFromDB();updateSummary();
-      };
+      // Add change handler only once
+      if(!select._onchangeSet){
+        select._onchangeSet=true;
+        select.onchange=async function(){
+          currentCampaignId=this.value||null;
+          Logger.info('Campaign changed',{campaignId:currentCampaignId});
+          await loadCampaignRates();
+          await loadAreaCards();
+          renderAreaCards();
+          await loadSummaryStats();
+          await loadTeamProgress();
+          await loadDeliveryJournal();
+          await loadEnquiryList();
+          await loadFinanceFromDB();updateSummary();
+        };
+      }
       Logger.success('Campaign loaded',campaigns[0].name);
     } else {
       Logger.error('No campaigns found or campaigns array is empty');
@@ -1360,7 +1369,7 @@ async function loadEnquiryList(){
   btn.style.display='inline-block';
   
   try{
-    const campFilter = '&campaign_id=eq.' + currentCampaignId;
+    const campFilter = currentCampaignId ? '&campaign_id=eq.' + currentCampaignId : '';
     const rows=await sbFetch('/rest/v1/enquiries?select=*&order=created_at.desc' + campFilter);
     const el=document.getElementById('enquiryList');
     if(!rows||rows.length===0){el.innerHTML='<p style="color:#888;font-size:0.9rem;">No enquiries recorded yet.</p>';return;}
@@ -1414,14 +1423,17 @@ async function loadTeamProgress(){
   section.style.display='block';
   
   try{
-    const campFilter='?campaign_id=eq.'+currentCampaignId;
+    const campFilter=currentCampaignId?'?campaign_id=eq.'+currentCampaignId:'';
     
     const [teamMembers, areas, deliveries, enquiries]=await Promise.all([
       sbFetch('/rest/v1/team_members?select=*&is_active=eq.true&order=name.asc'),
       sbFetch('/rest/v1/target_areas'+campFilter),
       sbFetch('/rest/v1/deliveries'+campFilter),
-      sbFetch('/rest/v1/enquiries?select=*,target_areas(team_member_1_id,team_member_2_id)'+campFilter+'&instructed=eq.true&instruction_value=gt.0')
+      sbFetch('/rest/v1/enquiries?select=*'+campFilter+'&instructed=eq.true&instruction_value=gt.0')
     ]);
+    
+    const areaMap={};
+    (areas||[]).forEach(a=>{areaMap[a.id]=a;});
     
     const totalDelivered=(deliveries||[]).reduce((sum,d)=>sum+(d.leaflets_delivered||0),0);
     const totalTarget=areas?.reduce((sum,a)=>sum+(a.house_count||0),0)||0;
@@ -1468,7 +1480,7 @@ async function loadTeamProgress(){
     });
     
     (enquiries||[]).forEach(e=>{
-      const ta=e.target_areas;
+      const ta=e.target_area_id?areaMap[e.target_area_id]:null;
       if(!ta)return;
       const hasMember1=ta.team_member_1_id&&stats[ta.team_member_1_id];
       const hasMember2=ta.team_member_2_id&&stats[ta.team_member_2_id];
@@ -1488,38 +1500,31 @@ async function loadTeamProgress(){
       return;
     }
     
-    let html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;">';
-    list.forEach(tm=>{
-      const pctDelivered=totalDelivered>0?Math.round(tm.delivered/totalDelivered*100):0;
-      const pctRevenue=totalRevenue>0?Math.round(tm.revenue/totalRevenue*100):0;
-      html+='<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;">';
-      html+='<div style="font-weight:600;margin-bottom:8px;">'+tm.name+'</div>';
-      html+='<div style="font-size:0.85rem;color:#64748b;">';
-      html+='<div>Routes: '+tm.reserved+' ('+tm.completed+' completed)</div>';
-      html+='</div>';
-      
-      html+='<div style="margin-top:12px;">';
-      html+='<div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px;">';
-      html+='<span>Leaflets: <strong>'+tm.delivered.toLocaleString()+'</strong></span>';
-      html+='<span>'+pctDelivered+'%</span>';
-      html+='</div>';
-      html+='<div style="background:#e2e8f0;border-radius:4px;height:8px;overflow:hidden;">';
-      html+='<div style="background:#16a34a;height:100%;width:'+pctDelivered+'%;"></div>';
-      html+='</div>';
-      html+='</div>';
-      
-      html+='<div style="margin-top:12px;">';
-      html+='<div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px;">';
-      html+='<span>Revenue: <strong>£'+tm.revenue.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0})+'</strong></span>';
-      html+='<span>'+pctRevenue+'%</span>';
-      html+='</div>';
-      html+='<div style="background:#e2e8f0;border-radius:4px;height:8px;overflow:hidden;">';
-      html+='<div style="background:#8b5cf6;height:100%;width:'+pctRevenue+'%;"></div>';
-      html+='</div>';
-      html+='</div>';
-      
-      html+='</div>';
-    });
+    const byLeaflets=[...list].sort((a,b)=>b.delivered-a.delivered);
+    const byRevenue=[...list].sort((a,b)=>b.revenue-a.revenue);
+    
+    const renderRow=(rank, tm, type)=>{
+      const val=type==='leaflets'?tm.delivered:tm.revenue;
+      const pct=type==='leaflets'
+        ?(totalDelivered>0?Math.round(tm.delivered/totalDelivered*100):0)
+        :(totalRevenue>0?Math.round(tm.revenue/totalRevenue*100):0);
+      const medal=rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank+'.';
+      return '<tr><td style="padding:8px;font-weight:600;">'+medal+'</td><td style="padding:8px;">'+tm.name+'</td><td style="padding:8px;text-align:right;">'+(type==='revenue'?'£':'')+val.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0})+(type==='leaflets'?'':'%')+'</td><td style="padding:8px;text-align:right;color:#64748b;">'+pct+'%</td></tr>';
+    };
+    
+    let html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">';
+    html+='<div><h4 style="margin:0 0 12px 0;font-size:0.9rem;color:#16a34a;">📬 Leaflets Delivered</h4>';
+    html+='<table style="width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">';
+    html+='<thead style="background:#f1f5f9;"><tr><th style="padding:8px;text-align:left;font-size:0.75rem;">Rank</th><th style="padding:8px;text-align:left;font-size:0.75rem;">Team Member</th><th style="padding:8px;text-align:right;font-size:0.75rem;">Leaflets</th><th style="padding:8px;text-align:right;font-size:0.75rem;">%</th></tr></thead><tbody>';
+    byLeaflets.forEach((tm,i)=>{html+=renderRow(i+1,tm,'leaflets');});
+    html+='</tbody></table></div>';
+    
+    html+='<div><h4 style="margin:0 0 12px 0;font-size:0.9rem;color:#8b5cf6;">💰 Revenue Generated</h4>';
+    html+='<table style="width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">';
+    html+='<thead style="background:#f1f5f9;"><tr><th style="padding:8px;text-align:left;font-size:0.75rem;">Rank</th><th style="padding:8px;text-align:left;font-size:0.75rem;">Team Member</th><th style="padding:8px;text-align:right;font-size:0.75rem;">Revenue</th><th style="padding:8px;text-align:right;font-size:0.75rem;">%</th></tr></thead><tbody>';
+    byRevenue.forEach((tm,i)=>{html+=renderRow(i+1,tm,'revenue');});
+    html+='</tbody></table></div>';
+    
     html+='</div>';
     el.innerHTML=html;
   }catch(e){

@@ -150,25 +150,70 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 1. User can record enquiry with: client name, postcode, instructed (yes/no), instruction value (£)
 2. User can view all enquiries listed with filtering by campaign, date range, instructed status
 3. User can see real-time progress of all team members across all reserved areas
-4. User can view leaderboard ranking teams/individuals by doors delivered
+4. User can view leaderboard ranking individuals by leaflets delivered (split if 2 members) AND revenue from instructed enquiries (credited to route members)
 
 ---
 
-### Phase 7: Integrations
+### Phase 7: Core Enhancements
 
-**Goal:** External tool connections for data export and notifications
+**Goal:** Critical improvements to route cards, completion, security
 
 **Requirements:**
-- INT-01: ClickUp Stub
-- INT-02: Google Sheets Export
-- INT-03: Gmail Notifications
+- Route card details (street names, map boundary)
+- Route completion with explicit leaflet count + rolling adjustment
+- Security: move credentials to config.js (URGENT)
 
-**Dependencies:** Phase 4 (requires delivery data)
+**Dependencies:** Phase 6 (requires route creation)
 
-**Success Criteria (3):**
-1. Developer can access API endpoint structure for ClickUp integration (stub implementation)
-2. User can export campaign data to Google Sheets with one click
-3. User can configure and receive daily/weekly report emails via Gmail
+**Success Criteria:**
+1. Route cards show street names and map boundary link
+2. Route completion requires explicit leaflet count
+3. Credentials moved to config.js
+
+---
+
+### Phase 8: Auto-assignment & API
+
+**Goal:** Auto-assign enquiries, API endpoints, demographics
+
+**Requirements:**
+- Auto-assign enquiries to routes based on postcode
+- API endpoints via Supabase
+- Demographic feedback capture
+- Prompt new route when 500 houses short
+- Create campaign enhanced questions
+- Global exclusion areas review
+
+**Success Criteria:**
+1. Enquiries auto-assigned to routes based on postcode
+2. API endpoints available
+3. Demographic data captured from enquiries
+
+---
+
+### Phase 9: UI/UX
+
+**Goal:** User experience improvements
+
+**Requirements:**
+- Dark mode (system default)
+
+**Success Criteria:**
+1. Dark mode toggle works with system default
+
+---
+
+### Phase 10: Backlog
+
+**Goals:** Future enhancements
+
+**Requirements:**
+- CSV/Sheets export
+- Gmail notifications
+- Full ClickUp integration
+- Planning screen v2
+- Campaign duplication
+- Bulk route creation
 
 ---
 
@@ -178,14 +223,18 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 |-------|--------|--------------|
 | 1 - Database Foundation | ✅ Complete | Implicit |
 | 2 - Territory & Reservation | ✅ Complete | 3 |
-| 3 - Delivery Recording | 🔄 In Progress | Implicit |
-| 4 - Analytics & Heatmaps | 📋 Ready to execute | 4 |
-| 5 - Campaign Management | ⏳ Pending | 5 |
-| 6 - Enquiry & Team | ⏳ Pending | 4 |
+| 3 - Delivery Recording | ✅ Complete | Implicit |
+| 4 - Analytics & Heatmaps | ✅ Complete | 4 |
+| 5 - Campaign Management | ✅ Complete | 5 |
+| 6 - Enquiry & Team | 🔄 In Progress | 4 |
+| 7 - Core Enhancements | ⏳ Pending | 3 |
+| 8 - Auto-assignment & API | ⏳ Pending | 5 |
+| 9 - UI/UX | ⏳ Pending | 1 |
+| 10 - Backlog | ⏳ Pending | 6 |
 | 7 - Integrations | ⏳ Pending | 3 |
 
 **Total: 7 phases, 19 v1 requirements mapped ✓**
 
 ---
 
-*Last updated: 2026-02-25*
+*Last updated: 2026-02-25 - Phase 6 in progress, Phase 7-10 restructured*

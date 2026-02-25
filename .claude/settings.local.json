@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:www.nomisweb.co.uk)",
+      "WebFetch(domain:api.postcodes.io)",
+      "WebFetch(domain:api.os.uk)",
+      "mcp__claude_ai_Hugging_Face__hub_repo_search",
+      "WebFetch(domain:findthatpostcode.uk)",
+      "Bash(curl -s -I \"https://www.nomisweb.co.uk/api/v01/dataset/NM_2072_1.data.json?geography=629202434&measures=20301&select=geography_code,c2021_tenure_6_name,obs_value\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://api.os.uk/search/names/v1/find?query=Wilmslow&output_format=geojson\")"
+    ]
+  }
+}

@@ -55,20 +55,22 @@ A **commercial** leaflet delivery tracking application that enables teams to res
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Card-based reservation system | Date-decoupled workflow allows teams to pick areas flexibly | — Pending |
-| Multi-campaign support | Add campaign_id to all data tables, enable switching + aggregated views | — Pending |
-| Campaign config UI | Allow updating campaign specifics (leaflets, team) from frontend | — Pending |
-| Enquiry recording upgrade | Capture: client name, postcode, instructed (y/n), value | — Pending |
-| Heatmap (deliveries + enquiries) | Visualize both completed areas AND enquiry locations | — Pending |
-| OS Names API integration | Get accurate street names and counts for chunking | — Pending |
-| Census 2021 demographic filtering | Target 60-80% owner-occupied areas | — Pending |
-| **libpostal + demography integration** | **CRITICAL - chunking and area selection from criteria** | — Pending |
-| **Planning Screen** | Define criteria → generate target areas → create campaign in DB | — Pending (v2) |
+| Card-based reservation system | Date-decoupled workflow allows teams to pick areas flexibly | ✅ Done |
+| Multi-campaign support | Add campaign_id to all data tables, enable switching + aggregated views | ✅ Done |
+| Campaign config UI | Allow updating campaign specifics (leaflets, team) from frontend | ✅ Done |
+| Enquiry recording upgrade | Capture: client name, postcode, instructed (y/n), value | ✅ Done |
+| Heatmap (deliveries + enquiries) | Visualize both completed areas AND enquiry locations | ✅ Done |
+| Team progress + leaderboards | Track leaflets delivered (split if 2 members) + revenue from enquiries | ✅ Done |
+| OS Names API integration | Get accurate street names and counts for chunking | ⚠️ Requires API key — replaced by postcodes.io + NOMIS |
+| Census 2021 demographic filtering | Target 60-80% owner-occupied areas | ✅ Designed — NOMIS NM_2072_1 (TS054 Tenure) |
+| **Route Planning Engine** | **Resolve area → postcodes → demographic filter → exclusion check → chunked routes → DB** | **🔧 Phase 6 T8 — see [ROUTE-PLANNING-ENGINE.md](ROUTE-PLANNING-ENGINE.md)** |
+| **libpostal + demography integration** | **CRITICAL - chunking and area selection from criteria** | Superseded by postcodes.io + NOMIS approach |
+| **Planning Screen** | Define criteria → generate areas → create campaign in DB | 🔧 Phase 6 T8 — implemented as `/leaflet-plan-routes` skill |
 | **ClickUp integration stub** | Create API structure for ClickUp, full implementation v2 | — Pending |
-| Supabase for backend | Already in use, provides auth and database | — Pending |
+| Supabase for backend | Already in use, provides auth and database | ✅ Done |
 | Chunking strategy: keep streets together | Never split a street across delivery chunks | — Pending |
 | **Composio integration** | Use free toolkits - Google Sheets, ClickUp, Gmail, etc. | — Pending |
-| No FOSS alternatives used | Existing FOSS options (Fleetbase, LOBSTA) are overkill for our needs | — Pending |
+| No FOSS alternatives used | Existing FOSS options (Fleetbase, LOBSTA) are overkill for our needs | ✅ Done |
 
 ## External Tools Research
 
@@ -146,21 +148,23 @@ This is a brownfield project. Codebase analysis completed:
 
 ### Active Requirements (new)
 
-- [ ] Card-based area reservation system
-- [ ] **Multi-campaign support** with campaign_id in all tables
-- [ ] **Campaign switching** - Ability to switch between campaigns
-- [ ] **Aggregated data view** - See data across all campaigns
+- [x] Card-based area reservation system
+- [x] **Multi-campaign support** with campaign_id in all tables
+- [x] **Campaign switching** - Ability to switch between campaigns
+- [x] **Aggregated data view** - See data across all campaigns
 - [ ] OS Names API integration for street data
 - [ ] Census 2021 demographic filtering (60-80% owner-occupied)
 - [ ] **libpostal + demography integration** - Critical for chunking/area selection
 - [ ] Chunking algorithm (800-1200 doors per chunk)
-- [ ] Analytics dashboard with charts
-- [ ] **Heatmap visualization** - Show completed areas AND enquiries on map
-- [ ] Team member management
-- [ ] Response rate scenarios (0.25%, 0.5%, 0.75%)
-- [ ] **Campaign config UI** - Frontend ability to update total leaflets, team members
-- [ ] **Robust enquiry recording** - Client name, postcode, if instructed (yes/no), instruction value (£)
-- [ ] **Enquiry heatmap** - Visualize enquiries on same map as delivery coverage
+- [x] Analytics dashboard with charts
+- [x] **Heatmap visualization** - Show completed areas AND enquiries on map
+- [x] Team member management (route-level)
+- [x] Response rate scenarios (0.25%, 0.5%, 0.75%)
+- [x] **Campaign config UI** - Frontend ability to update total leaflets, team members
+- [x] **Robust enquiry recording** - Client name, postcode, if instructed (yes/no), instruction value (£)
+- [x] **Enquiry heatmap** - Visualize enquiries on same map as delivery coverage
+- [x] **Team progress tracking** - Real-time progress of team members
+- [x] **Leaderboards** - Rank by leaflets delivered (split if 2 members) AND revenue from instructed enquiries
 - [ ] **ClickUp integration stub** - API endpoints for ClickUp (full implementation v2)
 - [ ] **Planning Screen** - Define criteria → generate areas → create campaign (v2)
 
@@ -181,4 +185,4 @@ This is a brownfield project. Codebase analysis completed:
 
 ---
 
-*Last updated: 2026-02-25 after initialization*
+*Last updated: 2026-02-25 after Phase 6 progress (enquiry recording, team progress, leaderboards)*

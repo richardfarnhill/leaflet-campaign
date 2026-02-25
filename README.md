@@ -91,13 +91,16 @@ See `.planning/ROADMAP.md` for development phases.
 
 ### Phases
 
-1. **Database Foundation** - Supabase schema with RLS and PostGIS
-2. **Territory & Reservation** - Area cards and reservation workflow
-3. **Delivery Recording** - Completion tracking
-4. **Analytics & Heatmaps** - Visualizations
-5. **Campaign Management** - Multi-campaign support
-6. **Enquiry & Team** - Robust enquiry recording
-7. **Integrations** - ClickUp, Google Sheets, Gmail
+1. **Database Foundation** - ✅ Complete
+2. **Territory & Reservation** - ✅ Complete
+3. **Delivery Recording** - ✅ Complete
+4. **Analytics & Heatmaps** - ✅ Complete
+5. **Campaign Management** - ✅ Complete
+6. **Enquiry & Team** - 🔄 In Progress (Route creation)
+7. **Core Enhancements** - ⏳ Pending (Route cards, completion, security)
+8. **Auto-assignment & API** - ⏳ Pending (Enquiry auto-assign, demographics)
+9. **UI/UX** - ⏳ Pending (Dark mode)
+10. **Backlog** - CSV/Sheets, Gmail, ClickUp, Planning
 
 ## Security
 

@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Teams can reserve geographic delivery areas (cards), record deliveries, and the system accurately tracks coverage, enquiries, and cases per area.
-**Current focus:** Phase 5 complete - ready for Phase 6
+**Current focus:** Phase 6 in progress - route creation. Phase 7 next (OpenCode).
 
 ## Current Position
 
-Phase: 5 of 7 (Campaign Management)
-Plan: 05-01 — All tasks done. Phase 5 complete.
-Status: Complete — ready for Phase 6
-Last activity: 2026-02-25 — Removed campaign_members code (team members are route-level)
+Phase: 6 of 9 (Enquiry & Team)
+Plan: 06-01 — In progress
+Status: In Progress — T08 (Route creation) by Claude, T07 ready for OpenCode
+Last activity: 2026-02-25 — Campaign data isolation, leaderboards, enquiry fixes
 
-Progress: [████████████████████] 100%
+Progress: [████████████░░░░░░░░░░] ~50% (6 of 10 phases)
 
 ## Performance Metrics
 
@@ -57,6 +57,8 @@ Progress: [████████████████████] 100%
      Format: - [AGENT] [scope] — [brief description] — claimed [YYYY-MM-DD HH:MM UTC] -->
 
 None.
+
+- Claude [06-T08] — Route creation UI — claimed 2026-02-25 22:XX UTC
 
 ## Session Continuity
 
@@ -119,7 +121,44 @@ Resume file: None
 | T6: Team progress view | ✓ Done | OC |
 | T6b: Enquiry date not-null fix | ✓ Done | OC |
 | T6c: Load team progress on page init | ✓ Done | OC |
+| T6d: Campaign data isolation (Chinese wall) | ✓ Done | OC |
 | T7: Leaderboards | ✓ Done (merged with T6) | OC |
-| T8: Route creation UI | ○ Pending | - |
+| T8: Route creation UI | ○ In Progress - Claude | Claude |
 | T9: Route deletion UI | ○ Pending | - |
 | T10: Phase review + gap identification | ○ Pending | - |
+
+## Phase 7 Task Checklist
+
+| Task | Status | Agent |
+|------|--------|-------|
+| T1: Route card details - street names, map boundary | ○ Pending | - |
+| T2: Route deletion UI | ○ Pending | - |
+| T3: RLS policies verification | ○ Pending | - |
+| T4: Route completion - explicit leaflet count + rolling adjustment | ○ Pending | - |
+| T5: Security - move credentials to config.js | ○ Pending | Urgent |
+| T6: Phase review | ○ Pending | - |
+
+## Phase 8 Task Checklist
+
+| Task | Status | Notes |
+|------|--------|-------|
+| T1: Create campaign - enhance with route creation questions | ○ Pending | Review after P7 |
+| T2: Global exclusion areas review | ○ Pending | Clarify DB state |
+| T3: Prompt new route when 500 houses short | ○ Pending | |
+| T4: Auto-assign enquiries to routes | ○ Pending | Critical for leaderboard |
+| T5: API endpoints (Supabase) | ○ Pending | |
+| T6: Demographic feedback table from enquiries | ○ Pending | |
+
+## Phase 9 Task Checklist
+
+| Task | Status | Notes |
+|------|--------|-------|
+| T1: Dark mode toggle (system default) | ○ Pending | |
+
+## Backlog (Consider Later)
+
+- ClickUp webhook DB table + API stub
+- CSV/Sheets export
+- Gmail notifications  
+- Full ClickUp integration
+- Planning screen v2
