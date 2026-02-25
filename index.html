@@ -170,17 +170,17 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
 <div class="main">
   <!-- Phase 4: View Toggle -->
   <div style="display:flex;gap:8px;margin-bottom:16px;">
-    <button onclick="showView('cards')" class="area-card-btn" id="viewBtnCards">Cards</button>
+    <button onclick="showView('cards')" class="area-card-btn" id="viewBtnCards">Routes</button>
     <button onclick="showView('map')" class="area-card-btn" id="viewBtnMap">Map</button>
     <button onclick="showView('analytics')" class="area-card-btn" id="viewBtnAnalytics">Analytics</button>
   </div>
 
   <!-- Phase 2: Area Cards -->
   <div id="cardsView">
-    <h2 style="margin-top:0;">Delivery Areas</h2>
-    <p style="font-size:0.85rem;color:#666;margin-bottom:16px;">Click "Reserve" to claim an area for delivery. Completed areas show delivery stats.</p>
+    <h2 style="margin-top:0;">Delivery Routes</h2>
+    <p style="font-size:0.85rem;color:#666;margin-bottom:16px;">Click "Reserve" to claim a route for delivery. Completed routes show delivery stats.</p>
     <div id="areaCards" class="area-cards-grid">
-      <div style="grid-column:1/-1;text-align:center;padding:40px;color:#888;">Loading areas...</div>
+      <div style="grid-column:1/-1;text-align:center;padding:40px;color:#888;">Loading routes...</div>
     </div>
   </div>
 
@@ -524,7 +524,7 @@ async function loadHeatmap() {
         weight: 2,
         opacity: 1,
         fillOpacity: 0.85
-      }).bindPopup(`<strong>${a.area_name}</strong><br>${a.postcode}<br>Status: ${a.status}${delivered > 0 ? `<br>Delivered: ${delivered.toLocaleString()} (${pct}%)` : ''}`);
+      }).bindPopup(`<strong>${a.area_name}</strong><br>${a.postcode}<br>Status: ${a.status}${delivered > 0 ? `<br>Delivered: ${delivered.toLocaleString()} (${pct}%)` : '<br><em>No deliveries yet</em>'}`);
       marker.addTo(window.analyticsMap);
       window.areaMarkers.push(marker);
     });
@@ -764,7 +764,7 @@ function renderAreaCards(){
   Logger.info('renderAreaCards called',{targetAreasLength:targetAreas.length});
   if(targetAreas.length===0){
     Logger.info('No target areas to render');
-    container.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:#888;">No areas defined for this campaign</div>';
+    container.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:#888;">No routes defined for this campaign</div>';
     return;
   }
   let html='';
@@ -1258,7 +1258,9 @@ async function saveFinance(){
 }
 
 function render(){
-  const container=document.getElementById('schedule');container.innerHTML='';
+  const container=document.getElementById('schedule');
+  if(!container) return; // Section removed - legacy
+  container.innerHTML='';
   const today=new Date();today.setHours(0,0,0,0);
   let currentWeek='',weekDiv;
   sessions.forEach(s=>{
