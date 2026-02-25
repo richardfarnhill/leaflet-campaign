@@ -420,10 +420,6 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
       <input type="date" id="configEndDate">
     </div>
     <div class="modal-field">
-      <label>Team Members</label>
-      <div id="configTeamMembers" style="max-height:120px;overflow-y:auto;border:1px solid #ddd;padding:8px;border-radius:4px;"></div>
-    </div>
-    <div class="modal-field">
       <label>Response Rate Overrides (leave blank to use defaults: 0.25% / 0.5% / 1.0%)</label>
       <div style="display:flex;gap:8px;align-items:center;">
         <input type="number" step="0.01" id="configRateConservative" placeholder="0.25" style="width:80px;">%
@@ -653,12 +649,14 @@ async function loadHeatmap() {
   }
 
   try {
-    const [restrictedAreas, allAreas, deliveries, enquiries] = await Promise.all([
-      sbFetch('/rest/v1/restricted_areas?select=postcode_prefix,radius_miles,label'),
+    const [campaignRow, allAreas, deliveries, enquiries] = await Promise.all([
+      currentCampaignId ? sbFetch('/rest/v1/campaigns?select=restricted_postcodes&id=eq.' + currentCampaignId) : Promise.resolve([]),
       sbFetch('/rest/v1/target_areas?select=*&campaign_id=eq.' + currentCampaignId),
       sbFetch('/rest/v1/deliveries?select=*'),
       sbFetch('/rest/v1/enquiries?select=*')
     ]);
+    const restrictedAreas = ((campaignRow && campaignRow[0]?.restricted_postcodes) || [])
+      .map(p => ({ postcode_prefix: p, radius_miles: 2, label: p }));
 
     // Remove existing layers
     if (window.heatLayer) { window.heatLayer.remove(); window.heatLayer = null; }
@@ -709,6 +707,39 @@ async function loadHeatmap() {
           .addTo(window.analyticsMap);
       }
     });
+
+    // Restricted area polygons (circles with radius)
+    const restrictedCircles = [];
+    for (const ra of (restrictedAreas || [])) {
+      try {
+        const outcode = ra.postcode_prefix.trim().toUpperCase();
+        let lat, lng;
+        // Route to correct endpoint without causing a 404: outcodes have no space and match e.g. M33, WA14
+        const isOutcode = /^[A-Z]{1,2}\d[A-Z\d]?$/.test(outcode);
+        const geoUrl = isOutcode
+          ? `https://api.postcodes.io/outcodes/${encodeURIComponent(outcode)}`
+          : `https://api.postcodes.io/postcodes/${encodeURIComponent(outcode)}`;
+        const geoRes = await fetch(geoUrl).then(r => r.json());
+        lat = geoRes.result?.latitude;
+        lng = geoRes.result?.longitude;
+        if (!lat || !lng) continue;
+        const radiusMeters = (ra.radius_miles || 2) * 1609.34;
+        const circle = L.circle([lat, lng], {
+          radius: radiusMeters,
+          color: '#dc2626',
+          weight: 2,
+          opacity: 0.8,
+          fillColor: '#dc2626',
+          fillOpacity: 0.15,
+          dashArray: '6,4'
+        }).bindPopup(`<strong>Restricted: ${ra.label || ra.postcode_prefix}</strong><br>${ra.postcode_prefix}${ra.radius_miles ? ` · ${ra.radius_miles} mile radius` : ''}`);
+        circle.addTo(window.analyticsMap);
+        restrictedCircles.push(circle);
+      } catch (err) {
+        Logger.error('Failed to draw restricted area polygon for ' + ra.postcode_prefix, err);
+      }
+    }
+    window.restrictedOverlay = L.layerGroup(restrictedCircles);
 
     // Fit map to markers if any
     if (window.areaMarkers.length > 0) {
@@ -1246,6 +1277,88 @@ async function loadDeliveryJournal(){
   }
 }
 
+let currentEditDeliveryId=null;
+
+async function openEditDelivery(deliveryId){
+  currentEditDeliveryId=deliveryId;
+  document.getElementById('editDeliveryDate').value='';
+  document.getElementById('editLeafletsDelivered').value='';
+  document.getElementById('editDeliveryNotes').value='';
+  document.getElementById('editDeliveryError').textContent='';
+  document.getElementById('editDeliveryModal').classList.add('active');
+  
+  // Load delivery data
+  const rows=await sbFetch('/rest/v1/deliveries?id=eq.'+deliveryId);
+  if(rows&&rows[0]){
+    const d=rows[0];
+    document.getElementById('editDeliveryDate').value=d.delivery_date||'';
+    document.getElementById('editLeafletsDelivered').value=d.leaflets_delivered||'';
+    document.getElementById('editDeliveryNotes').value=d.notes||'';
+  }
+  
+  // Populate team member dropdowns
+  const tmSelect1=document.getElementById('editTeamMember1');
+  const tmSelect2=document.getElementById('editTeamMember2');
+  tmSelect1.innerHTML='<option value="">Select...</option>';
+  tmSelect2.innerHTML='<option value="">Select...</option>';
+  teamMembers.forEach(tm=>{
+    tmSelect1.innerHTML+='<option value="'+tm.id+'">'+tm.name+'</option>';
+    tmSelect2.innerHTML+='<option value="'+tm.id+'">'+tm.name+'</option>';
+  });
+  
+  // Set current values
+  if(rows&&rows[0]){
+    tmSelect1.value=rows[0].team_member_1_id||'';
+    tmSelect2.value=rows[0].team_member_2_id||'';
+  }
+}
+
+function closeEditDelivery(){
+  document.getElementById('editDeliveryModal').classList.remove('active');
+  currentEditDeliveryId=null;
+}
+
+async function saveEditDelivery(){
+  const date=document.getElementById('editDeliveryDate').value;
+  const leaflets=document.getElementById('editLeafletsDelivered').value;
+  const tm1=document.getElementById('editTeamMember1').value;
+  const tm2=document.getElementById('editTeamMember2').value;
+  const notes=document.getElementById('editDeliveryNotes').value;
+  const errorEl=document.getElementById('editDeliveryError');
+  const btn=document.getElementById('editDeliveryConfirmBtn');
+  
+  if(!leaflets||leaflets<0){
+    errorEl.textContent='Please enter leaflet count';
+    errorEl.classList.add('show');
+    return;
+  }
+  
+  btn.disabled=true;
+  btn.textContent='Saving...';
+  
+  try{
+    await sbFetch('/rest/v1/deliveries?id=eq.'+currentEditDeliveryId,{
+      method:'PATCH',
+      body:JSON.stringify({
+        delivery_date:date||null,
+        leaflets_delivered:parseInt(leaflets),
+        team_member_1_id:tm1||null,
+        team_member_2_id:tm2||null,
+        notes:notes||null
+      })
+    });
+    closeEditDelivery();
+    await loadDeliveryJournal();
+    await loadDeliveredTotal();
+    setSyncStatus('ok','Delivery updated!');
+  }catch(e){
+    errorEl.textContent='Error: '+e.message;
+    errorEl.classList.add('show');
+  }
+  btn.disabled=false;
+  btn.textContent='Save';
+}
+
 async function confirmCompletion(){
   const leaflets=parseInt(document.getElementById('completeLeaflets').value);
   const notes=document.getElementById('completeNotes').value;
@@ -1514,7 +1627,8 @@ function openCampaignConfig(){
   document.getElementById('configTargetLeaflets').value='';
   document.getElementById('configStartDate').value='';
   document.getElementById('configEndDate').value='';
-  document.getElementById('configTeamMembers').innerHTML='<em style="color:#888;">Loading...</em>';
+  document.getElementById('configTeamMember1').innerHTML='<option value="">Select...</option>';
+  document.getElementById('configTeamMember2').innerHTML='<option value="">Select...</option>';
   document.getElementById('campaignConfigModal').classList.add('active');
   currentConfigCampaignId=currentCampaignId;
   
@@ -1532,13 +1646,23 @@ function openCampaignConfig(){
     }
   });
   
-  // Load team members - show all for now
-  sbFetch('/rest/v1/team_members?select=id,name&is_active=eq.true&order=name.asc').then(rows=>{
-    const container=document.getElementById('configTeamMembers');
-    if(!rows||rows.length===0){
-      container.innerHTML='<span style="color:#888;">No team members</span>';
-    }else{
-      container.innerHTML=rows.map(r=>r.name).join(', ')||'None';
+  // Load team members into dropdowns
+  Promise.all([
+    sbFetch('/rest/v1/team_members?select=id,name&is_active=eq.true&order=name.asc'),
+    sbFetch('/rest/v1/campaign_members?campaign_id=eq.'+currentCampaignId+'&select=team_member_id')
+  ]).then(([allMembers, assigned]) => {
+    const tm1=document.getElementById('configTeamMember1');
+    const tm2=document.getElementById('configTeamMember2');
+    const assignedIds = (assigned || []).map(a => a.team_member_id);
+    
+    if(allMembers&&allMembers.length>0){
+      const opts=allMembers.map(tm => '<option value="'+tm.id+'">'+tm.name+'</option>').join('');
+      tm1.innerHTML='<option value="">Select...</option>'+opts;
+      tm2.innerHTML='<option value="">Select...</option>'+opts;
+      
+      // Set current values
+      if(assignedIds.length>0) tm1.value=assignedIds[0]||'';
+      if(assignedIds.length>1) tm2.value=assignedIds[1]||'';
     }
   });
 }
@@ -1593,8 +1717,31 @@ async function saveCampaignConfig(){
         restricted_postcodes:restrictedPostcodes
       })
     });
+    
+    // Save team members from dropdowns
+    const tm1=document.getElementById('configTeamMember1').value;
+    const tm2=document.getElementById('configTeamMember2').value;
+    const selectedTeamIds=[tm1,tm2].filter(t=>t);
+    
+    // Get current assignments
+    const currentAssign=await sbFetch('/rest/v1/campaign_members?campaign_id=eq.'+currentConfigCampaignId+'&select=team_member_id');
+    const currentIds=(currentAssign||[]).map(c=>c.team_member_id);
+    
+    // Clear and re-add
+    for(const existingId of currentIds){
+      await sbFetch('/rest/v1/campaign_members?campaign_id=eq.'+currentConfigCampaignId+'&team_member_id=eq.'+existingId,{method:'DELETE'});
+    }
+    
+    for(const tmId of selectedTeamIds){
+      await sbFetch('/rest/v1/campaign_members',{
+        method:'POST',
+        body:JSON.stringify({campaign_id:currentConfigCampaignId,team_member_id:tmId})
+      });
+    }
+    
     closeCampaignConfig();
     await loadCampaigns();
+    if (window.analyticsMap) await loadHeatmap();
     setSyncStatus('ok','Campaign updated!');
   }catch(e){
     errorEl.textContent='Error: '+e.message;
