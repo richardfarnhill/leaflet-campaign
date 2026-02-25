@@ -1,0 +1,24 @@
+# Environment files
+.env
+.env.local
+.env.*.local
+config.js
+config.local.js
+
+# Dependencies
+node_modules/
+.opencode/node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build outputs
+dist/
+build/
