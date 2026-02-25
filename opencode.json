@@ -1,0 +1,16 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "gsd-planner": { "model": "opencode/big-pickle" },
+    "gsd-plan-checker": { "model": "opencode/big-pickle" },
+    "gsd-phase-researcher": { "model": "opencode/big-pickle" },
+    "gsd-roadmapper": { "model": "opencode/big-pickle" },
+    "gsd-project-researcher": { "model": "opencode/big-pickle" },
+    "gsd-research-synthesizer": { "model": "opencode/big-pickle" },
+    "gsd-codebase-mapper": { "model": "opencode/big-pickle" },
+    "gsd-executor": { "model": "opencode/minimax-m2.5-free" },
+    "gsd-debugger": { "model": "opencode/minimax-m2.5-free" },
+    "gsd-verifier": { "model": "opencode/big-pickle" },
+    "gsd-integration-checker": { "model": "opencode/big-pickle" }
+  }
+}
