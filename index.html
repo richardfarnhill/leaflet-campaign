@@ -131,8 +131,6 @@ h2{font-size:1rem;color:#1a3a5c;margin-bottom:12px;margin-top:24px;}
 .field input[type=number]{width:110px;}
 .field input[type=text]{width:220px;}
 .field input:focus,.field select:focus{outline:none;border-color:#2e86ab;background:#fff;}
-.reforecast{background:#eaf6ff;border:1px solid #b3d9f5;border-radius:10px;padding:14px 18px;margin-bottom:20px;}
-.reforecast h3{font-size:0.9rem;color:#1a3a5c;margin-bottom:8px;}
 .warn{color:#c0392b;font-weight:600;}
 .good{color:#1e8449;font-weight:600;}
 .finance-section{background:white;border-radius:10px;padding:18px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,0.07);}
@@ -148,6 +146,7 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 <header>
@@ -169,8 +168,6 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
   </div>
 </div>
 <div class="main">
-  <div class="reforecast"><h3>&#128202; Schedule Status</h3><p id="reforecastMsg">Loading&hellip;</p></div>
-  
   <!-- Phase 4: View Toggle -->
   <div style="display:flex;gap:8px;margin-bottom:16px;">
     <button onclick="showView('cards')" class="area-card-btn" id="viewBtnCards">Cards</button>
@@ -532,14 +529,22 @@ async function loadHeatmap() {
 }
 
 // Phase 4: Completion rate for analytics dashboard
+// TODO: When Phase 5/6 implements campaign config, update this to use campaign.target_leaflets
+// Currently stubbed: shows % of areas completed (not leaflets vs target)
 async function loadCompletionRate() {
   try {
+    // Get campaign metadata - TODO: Replace hardcoded 20000 with campaign.target_leaflets after Phase 5/6
+    const CAMPAIGN_TARGET_LEAFLETS = 20000; // STUB - update when CFG-01 is implemented
+    
+    // Get all areas for current campaign
     const areas = await sbFetch('/rest/v1/target_areas?select=id,status,house_count&campaign_id=eq.' + currentCampaignId);
-    const completed = (areas || []).filter(a => a.status === 'completed').length;
-    const total = (areas || []).length;
-    const rate = total > 0 ? Math.round(completed / total * 100) : 0;
+    const deliveries = await sbFetch('/rest/v1/deliveries?select=leaflets_delivered');
+    
+    const totalLeaflets = (deliveries || []).reduce((sum, d) => sum + (d.leaflets_delivered || 0), 0);
+    const rate = CAMPAIGN_TARGET_LEAFLETS > 0 ? Math.round(totalLeaflets / CAMPAIGN_TARGET_LEAFLETS * 100) : 0;
+    
     const el = document.getElementById('overallCompletionRate');
-    if (el) el.textContent = rate + '%';
+    if (el) el.textContent = rate + '% (' + totalLeaflets.toLocaleString() + '/' + CAMPAIGN_TARGET_LEAFLETS.toLocaleString() + ' leaflets)';
   } catch(e) {
     Logger.error('Failed to load completion rate', e);
   }
@@ -1242,7 +1247,7 @@ function updateSummary(){
   document.getElementById('sumProjected').textContent=expComp;
 
   const rfMsg=document.getElementById('reforecastMsg');
-  if(cs===0){
+  if(rfMsg){if(cs===0){
     rfMsg.innerHTML='No sessions logged yet. Tick \u201CWe went out\u201D and enter leaflets delivered after each session.<br><br>&#128197; <strong>Estimated completion: '+expComp+'</strong>';
   } else {
     const avg=Math.round(td/cs),diff=avg-DAILY_TARGET;
@@ -1251,7 +1256,7 @@ function updateSummary(){
     const proj=td+avg*sl,sf=TOTAL-proj;
     const pm=sf<=0?'<span class="good">On course to deliver all 20,000 leaflets!</span>':'<span class="warn">Projected shortfall of ~'+Math.round(sf).toLocaleString()+' at current pace.</span>';
     rfMsg.innerHTML=cs+' session(s) done &nbsp;&middot;&nbsp; Avg: <strong>'+avg.toLocaleString()+'</strong>/session &nbsp;&middot;&nbsp; '+dl+'<br><br>'+pm+'<br><br>&#128197; <strong>Expected completion: '+expComp+'</strong>';
-  }
+  }}
   updateFinance(td,rem);
 }
 
