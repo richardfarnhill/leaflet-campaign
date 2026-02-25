@@ -91,6 +91,8 @@ h2{font-size:1rem;color:#1a3a5c;margin-bottom:12px;margin-top:24px;}
 .area-card-btn.complete:hover{background:#2573a7;}
 .area-card-btn.reassign{background:#f39c12;color:white;}
 .area-card-btn.reassign:hover{background:#e67e22;}
+.area-card-btn.unassign{background:#e74c3c;color:white;}
+.area-card-btn.unassign:hover{background:#c0392b;}
 .area-card-btn:disabled{background:#ccc;cursor:not-allowed;}
 
 /* Campaign Selector */
@@ -275,6 +277,23 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
     <div class="modal-actions">
       <button class="modal-btn cancel" onclick="closeReassignModal()">Cancel</button>
       <button class="modal-btn confirm" id="reassignConfirmBtn" onclick="confirmReassignment()">Reassign</button>
+    </div>
+  </div>
+</div>
+
+<!-- Unassign Modal -->
+<div id="unassignModal" class="modal-overlay">
+  <div class="modal">
+    <h3>Unassign Area</h3>
+    <div class="modal-field">
+      <label>Area</label>
+      <input type="text" id="unassignAreaName" readonly>
+    </div>
+    <p style="font-size:0.85rem;color:#666;margin-bottom:8px;">This will release the reservation and make the area available again.</p>
+    <div class="modal-error" id="unassignError"></div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeUnassignModal()">Cancel</button>
+      <button class="modal-btn confirm" id="unassignConfirmBtn" onclick="confirmUnassign()">Unassign</button>
     </div>
   </div>
 </div>
@@ -512,8 +531,9 @@ function renderAreaCards(){
   }
   let html='';
   targetAreas.forEach(area=>{
-    const res=reservations.find(r=>r.target_area_id===area.id);
     const status=area.status||'available';
+    if(status==='completed')return;
+    const res=reservations.find(r=>r.target_area_id===area.id);
     const reservedBy=res?getTeamMemberName(res.team_member_1_id):null;
     const deliveryDate=res?res.delivery_date:null;
 
@@ -533,8 +553,7 @@ function renderAreaCards(){
     }else if(status==='reserved'){
       html+='<button class="area-card-btn complete" onclick="openCompleteModal(\''+area.id+'\')">Complete</button>';
       html+='<button class="area-card-btn reassign" onclick="openReassignModal(\''+area.id+'\')">Reassign</button>';
-    }else if(status==='completed'){
-      html+='<button class="area-card-btn" disabled style="background:#27ae60;opacity:0.7;">&#10003; Done</button>';
+      html+='<button class="area-card-btn unassign" onclick="openUnassignModal(\''+area.id+'\')">Unassign</button>';
     }
     html+='</div></div>';
   });
@@ -680,13 +699,16 @@ async function confirmCompletion(){
       })
     });
     
-    if(result&&result.success){
+    if(result&&result.success&&result.delivery!==null){
       closeCompleteModal();
       await loadAreaCards();
       renderAreaCards();
       setSyncStatus('ok','Delivery completed!');
+    }else if(result&&result.success&&result.delivery===null){
+      errorEl.textContent='Area was not in reserved state — please refresh and try again';
+      errorEl.classList.add('show');
     }else{
-      errorEl.textContent=result.error||'Failed to complete delivery';
+      errorEl.textContent=result?.error||'Failed to complete delivery';
       errorEl.classList.add('show');
     }
   }catch(e){
@@ -770,6 +792,53 @@ async function confirmReassignment(){
   }
   btn.disabled=false;
   btn.textContent='Reassign';
+}
+
+// Unassign Modal
+let currentUnassignAreaId=null;
+
+function openUnassignModal(areaId){
+  const area=targetAreas.find(a=>a.id===areaId);
+  if(!area)return;
+  currentUnassignAreaId=areaId;
+  document.getElementById('unassignAreaName').value=area.area_name;
+  document.getElementById('unassignError').className='modal-error';
+  document.getElementById('unassignError').textContent='';
+  document.getElementById('unassignModal').classList.add('active');
+}
+
+function closeUnassignModal(){
+  document.getElementById('unassignModal').classList.remove('active');
+  currentUnassignAreaId=null;
+}
+
+async function confirmUnassign(){
+  const errorEl=document.getElementById('unassignError');
+  const btn=document.getElementById('unassignConfirmBtn');
+  btn.disabled=true;
+  btn.textContent='Unassigning...';
+  errorEl.classList.remove('show');
+  try{
+    const result=await sbFetch('/rest/v1/rpc/unassign_area',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({p_target_area_id:currentUnassignAreaId})
+    });
+    if(result&&result.success){
+      closeUnassignModal();
+      await loadAreaCards();
+      renderAreaCards();
+      setSyncStatus('ok','Area unassigned');
+    }else{
+      errorEl.textContent=result.error||'Failed to unassign area';
+      errorEl.classList.add('show');
+    }
+  }catch(e){
+    errorEl.textContent='Error: '+e.message;
+    errorEl.classList.add('show');
+  }
+  btn.disabled=false;
+  btn.textContent='Unassign';
 }
 
 async function loadAll(){
