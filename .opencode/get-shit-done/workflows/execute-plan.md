@@ -140,6 +140,27 @@ Wait for confirmation before proceeding.
 </if>
 </step>
 
+<step name="claim_task">
+Before executing, claim the plan in STATE.md to prevent concurrent work by another AI agent.
+
+**Check for existing claim:**
+```bash
+grep -A1 "## Active Tasks" .planning/STATE.md
+```
+
+If another agent has already claimed this plan, STOP and notify the user. Do not proceed.
+
+**Write your claim** by editing `.planning/STATE.md` — replace the `None.` under `## Active Tasks` (or append) with:
+```
+- OpenCode [phase-plan-id] — [brief plan description] — claimed [YYYY-MM-DD HH:MM UTC]
+```
+
+Example:
+```
+- OpenCode 03-01 — Delivery recording UI — claimed 2026-02-25 14:30 UTC
+```
+</step>
+
 <step name="record_start_time">
 Record execution start time for performance tracking:
 
@@ -1465,6 +1486,16 @@ Progress: ███████░░░ 50%
 - [ ] Last activity shows today's date and the plan just completed
 - [ ] Progress bar calculated correctly from total completed plans
       </step>
+
+<step name="release_task">
+Release the task claim in STATE.md now that this plan is complete.
+
+Edit `.planning/STATE.md` → `## Active Tasks` section:
+- Remove the line for this plan
+- If no other claims remain, replace with `None.`
+
+This signals to any concurrent AI agent that the plan is no longer in progress.
+</step>
 
 <step name="extract_decisions_and_issues">
 Extract decisions, issues, and concerns from SUMMARY.md into STATE.md accumulated context.

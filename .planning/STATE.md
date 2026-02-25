@@ -40,6 +40,15 @@ None.
 - [Phase 3]: `unassign_area` Supabase RPC not yet created — SQL in ROADMAP notes, must be run manually in Supabase SQL editor before Unassign button will work
 - [Phase 3]: Summary stats (`sumDelivered`) still reads from `session_log`, not from area `deliveries` table — these are two separate tracking systems
 
+## Active Tasks
+
+<!-- TASK CLAIMING: Before starting a plan, add an entry here. Remove it when done.
+     Format: - [AGENT] [plan-id] — [brief description] — claimed [YYYY-MM-DD HH:MM]
+     AGENT = "Claude" or "OpenCode"
+     Purpose: Prevent both AIs from working the same plan simultaneously. -->
+
+None.
+
 ## Session Continuity
 
 Last session: 2026-02-25

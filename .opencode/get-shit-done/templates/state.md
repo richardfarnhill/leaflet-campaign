@@ -66,6 +66,15 @@ None yet.
 
 None yet.
 
+## Active Tasks
+
+<!-- TASK CLAIMING: Before starting a plan, add an entry here. Remove it when done.
+     Format: - [AGENT] [plan-id] — [brief description] — claimed [YYYY-MM-DD HH:MM]
+     AGENT = "Claude" or "OpenCode"
+     Purpose: Prevent both AIs from working the same plan simultaneously. -->
+
+None.
+
 ## Session Continuity
 
 Last session: [YYYY-MM-DD HH:MM]
