@@ -693,6 +693,11 @@ async function loadCampaigns(){
     select.innerHTML='';
     if(campaigns&&campaigns.length>0){
       Logger.success(`Loaded ${campaigns.length} campaigns`);
+      // Add "All Campaigns" option first
+      const allOpt=document.createElement('option');
+      allOpt.value='';
+      allOpt.textContent='All Campaigns';
+      select.appendChild(allOpt);
       campaigns.forEach(c=>{
         const opt=document.createElement('option');
         opt.value=c.id;
@@ -704,7 +709,7 @@ async function loadCampaigns(){
       Logger.info('Set currentCampaignId',{campaignId:currentCampaignId});
       // Add change handler
       select.onchange=async function(){
-        currentCampaignId=this.value;
+        currentCampaignId=this.value||null;
         Logger.info('Campaign changed',{campaignId:currentCampaignId});
         await loadAreaCards();
         renderAreaCards();
@@ -734,15 +739,14 @@ async function loadTeamMembers(){
 }
 
 async function loadAreaCards(){
-  if(!currentCampaignId){
-    Logger.error('Cannot load area cards - currentCampaignId is null');
-    Logger.error('This means campaigns were not loaded successfully');
-    targetAreas=[];reservations=[];return;
-  }
   try{
-    Logger.info('Loading area cards for campaign',{campaignId:currentCampaignId});
+    // null currentCampaignId = "All Campaigns" view
+    const areasUrl=currentCampaignId
+      ?'/rest/v1/target_areas?select=*&campaign_id=eq.'+currentCampaignId+'&order=created_at.asc'
+      :'/rest/v1/target_areas?select=*&order=created_at.asc';
+    Logger.info('Loading area cards',{campaignId:currentCampaignId||'all'});
     // First get areas for this campaign
-    const areas=await sbFetch('/rest/v1/target_areas?select=*&campaign_id=eq.'+currentCampaignId+'&order=created_at.asc');
+    const areas=await sbFetch(areasUrl);
     const areaIds=areas?areas.map(a=>a.id):[];
     Logger.info('Loaded target areas',{count:areas?.length,ids:areaIds});
     

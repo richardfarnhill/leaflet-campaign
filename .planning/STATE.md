@@ -52,7 +52,7 @@ Progress: [████████░░░░░░░░░░░░] ~40%
      REQUIRED: Claim here before making ANY code changes. Remove when done.
      Format: - [AGENT] [scope] — [brief description] — claimed [YYYY-MM-DD HH:MM UTC] -->
 
-None.
+- OpenCode [05-T2] — Create campaign config modal — claimed 2026-02-25 19:00 UTC
 
 ## Session Continuity
 
