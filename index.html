@@ -84,7 +84,9 @@ h2{font-size:1rem;color:#1a3a5c;margin-bottom:12px;margin-top:24px;}
 .area-card-team strong{color:#1a3a5c;}
 .area-card-date{font-size:0.8rem;color:#888;}
 .area-card-actions{margin-top:12px;display:flex;gap:8px;}
-.area-card-btn{flex:1;padding:8px 12px;border:none;border-radius:6px;font-size:0.85rem;cursor:pointer;transition:background 0.2s;}
+.area-card-btn{flex:1;padding:8px 12px;border:1px solid #ccd3db;border-radius:6px;font-size:0.85rem;cursor:pointer;transition:background 0.2s;background:#f0f4f8;color:#1a3a5c;}
+.area-card-btn:hover{background:#dde4ed;}
+.area-card-btn.view-active{background:#1a3a5c;color:white;border-color:#1a3a5c;}
 .area-card-btn.reserve{background:#27ae60;color:white;}
 .area-card-btn.reserve:hover{background:#219a52;}
 .area-card-btn.complete{background:#2e86ab;color:white;}
@@ -149,8 +151,7 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
 </head>
 <body>
 <header>
-  <h1>&#128202; WillSolicitor &mdash; Leaflet Drop Campaign Tracker</h1>
-  <p>20,000 leaflets &middot; Richard, Josh, Dan &amp; Cahner &middot; Tue&ndash;Fri</p>
+  <h1>&#128202; WillSolicitor &mdash; Leaflet Campaign Tracker</h1>
   <div class="campaign-selector">
     <label>Campaign:</label>
     <select id="campaignSelect"><option value="">Loading...</option></select>
@@ -219,8 +220,6 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
     <div id="journalList"><p style="color:#888;font-size:0.9rem;">Loading...</p></div>
   </div>
 
-  <h2>Campaign Schedule</h2>
-  <div id="schedule"></div>
   <h2>Financial Projections</h2>
   <div class="finance-section">
     <div class="finance-inputs">
@@ -485,7 +484,7 @@ function showView(view) {
   document.getElementById('analyticsView').style.display = view === 'analytics' ? '' : 'none';
   ['cards','map','analytics'].forEach(v => {
     const btn = document.getElementById('viewBtn' + v.charAt(0).toUpperCase() + v.slice(1));
-    if (btn) btn.style.fontWeight = v === view ? '700' : '';
+    if (btn) btn.classList.toggle('view-active', v === view);
   });
   if (view === 'map' && typeof loadHeatmap === 'function') loadHeatmap();
   if (view === 'analytics' && typeof loadAnalyticsDashboard === 'function') loadAnalyticsDashboard();
@@ -1301,6 +1300,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   ['fi_enquiries','fi_cases','fi_instrvalue'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.addEventListener('input',scheduleFinanceSave);
   });
+  showView('cards');
   loadAll();setInterval(loadAll,30000);
 });
 </script>
