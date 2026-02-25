@@ -136,6 +136,10 @@ h2{font-size:1rem;color:#1a3a5c;margin-bottom:12px;margin-top:24px;}
 .good{color:#1e8449;font-weight:600;}
 .finance-section{background:white;border-radius:10px;padding:18px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,0.07);}
 .finance-inputs{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #eee;}
+.finance-metric-cards{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px;}
+.finance-metric-card{flex:1 1 160px;background:#f7faff;border:1px solid #d0e4f5;border-radius:8px;padding:12px 14px;}
+.finance-metric-card .fmc-label{font-size:0.75rem;color:#888;margin-bottom:4px;}
+.finance-metric-card .fmc-value{font-size:1.2rem;font-weight:700;color:#1a3a5c;}
 .finance-table{width:100%;border-collapse:collapse;font-size:0.85rem;}
 .finance-table th{background:#1a3a5c;color:white;padding:8px 10px;text-align:left;}
 .finance-table td{padding:8px 10px;border-bottom:1px solid #eee;}
@@ -229,7 +233,7 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
 
     <!-- Phase 6: Team Progress -->
     <div id="teamProgressSection" style="background:#fff;padding:16px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);margin-bottom:24px;">
-      <h3 style="margin:0 0 12px 0;font-size:1rem;">Team Progress</h3>
+      <h3 style="margin:0 0 12px 0;font-size:1rem;">Team Progress & Leaderboard</h3>
       <div id="teamProgressList"><p style="color:#888;font-size:0.9rem;">Loading...</p></div>
     </div>
   </div>
@@ -251,17 +255,11 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
 
   <h2>Financial Projections</h2>
   <div class="finance-section">
-    <div class="finance-inputs">
-      <div class="field"><label>Enquiries Received</label><input type="number" id="fi_enquiries" min="0" placeholder="0" style="width:140px"></div>
-      <div class="field"><label>Cases Instructed</label><input type="number" id="fi_cases" min="0" placeholder="0" style="width:140px"></div>
-      <div class="field"><label>Total Instruction Value (&pound;)</label><input type="number" id="fi_instrvalue" min="0" placeholder="0" style="width:160px"></div>
-    </div>
-    <div style="display:flex;flex-wrap:wrap;gap:16px;background:#f7faff;border:1px solid #d0e4f5;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:0.82rem;">
-      <div><span style="color:#888">Avg case value:</span> <strong id="dm_avgcase">&mdash;</strong></div>
-      <div><span style="color:#888">Enquiry&rarr;instruction rate:</span> <strong id="dm_convrate">&mdash;</strong></div>
-      <div><span style="color:#888">Revenue per 100 leaflets:</span> <strong id="dm_per100">&mdash;</strong></div>
-      <div><span style="color:#888">Revenue per enquiry:</span> <strong id="dm_perenquiry">&mdash;</strong></div>
-      <div><span style="color:#888">Leaflets per case:</span> <strong id="dm_percase">&mdash;</strong></div>
+    <div class="finance-metric-cards">
+      <div class="finance-metric-card"><div class="fmc-label">Avg case value</div><div class="fmc-value" id="dm_avgcase">&mdash;</div></div>
+      <div class="finance-metric-card"><div class="fmc-label">Enquiry &rarr; instruction rate</div><div class="fmc-value" id="dm_convrate">&mdash;</div></div>
+      <div class="finance-metric-card"><div class="fmc-label">Revenue per 100 leaflets</div><div class="fmc-value" id="dm_per100">&mdash;</div></div>
+      <div class="finance-metric-card"><div class="fmc-label">Revenue per enquiry</div><div class="fmc-value" id="dm_perenquiry">&mdash;</div></div>
     </div>
     <table class="finance-table">
       <thead><tr><th>Scenario</th><th>Response Rate</th><th>Enquiries so far</th><th>Enquiries remaining</th><th>Total proj. enquiries</th><th>Total proj. revenue</th></tr></thead>
@@ -273,7 +271,7 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
         <tr><td>Optimistic</td><td>1.0%</td><td id="f3_sofar">&mdash;</td><td id="f3_todo">&mdash;</td><td id="f3_total">&mdash;</td><td id="f3_rev" class="highlight">&mdash;</td></tr>
       </tbody>
     </table>
-    <p style="font-size:0.72rem;color:#999;margin-top:8px">Default case value &pound;294.42 until real data is entered.</p>
+    <p style="font-size:0.72rem;color:#999;margin-top:8px">Actuals from recorded enquiries. Projections use configured case value &pound;<span id="fi_acv_display">294.42</span>.</p>
   </div>
 </div>
 <footer>Live data &middot; Supabase &middot; WillSolicitor Leaflet Campaign</footer>
@@ -1415,14 +1413,16 @@ async function loadTeamProgress(){
   try{
     const campFilter='?campaign_id=eq.'+currentCampaignId;
     
-    const [teamMembers, areas, deliveries]=await Promise.all([
+    const [teamMembers, areas, deliveries, enquiries]=await Promise.all([
       sbFetch('/rest/v1/team_members?select=*&is_active=eq.true&order=name.asc'),
       sbFetch('/rest/v1/target_areas'+campFilter),
-      sbFetch('/rest/v1/deliveries'+campFilter)
+      sbFetch('/rest/v1/deliveries'+campFilter),
+      sbFetch('/rest/v1/enquiries?select=*,target_areas(team_member_1_id,team_member_2_id)'+campFilter+'&instructed=eq.true&instruction_value=gt.0')
     ]);
     
     const totalDelivered=(deliveries||[]).reduce((sum,d)=>sum+(d.leaflets_delivered||0),0);
     const totalTarget=areas?.reduce((sum,a)=>sum+(a.house_count||0),0)||0;
+    const totalRevenue=(enquiries||[]).reduce((sum,e)=>sum+(parseFloat(e.instruction_value)||0),0);
     
     const stats={};
     (teamMembers||[]).forEach(tm=>{
@@ -1430,31 +1430,54 @@ async function loadTeamProgress(){
         name:tm.name,
         reserved:0,
         completed:0,
-        delivered:0
+        delivered:0,
+        revenue:0
       };
     });
     
     (areas||[]).forEach(a=>{
-      if(a.team_member_1_id&&stats[a.team_member_1_id]){
+      const hasMember1=a.team_member_1_id&&stats[a.team_member_1_id];
+      const hasMember2=a.team_member_2_id&&stats[a.team_member_2_id];
+      const memberCount=(hasMember1?1:0)+(hasMember2?1:0);
+      
+      if(hasMember1){
         stats[a.team_member_1_id].reserved++;
         if(a.status==='completed')stats[a.team_member_1_id].completed++;
       }
-      if(a.team_member_2_id&&stats[a.team_member_2_id]){
+      if(hasMember2){
         stats[a.team_member_2_id].reserved++;
         if(a.status==='completed')stats[a.team_member_2_id].completed++;
       }
     });
     
     (deliveries||[]).forEach(d=>{
-      if(d.team_member_1_id&&stats[d.team_member_1_id]){
-        stats[d.team_member_1_id].delivered+=d.leaflets_delivered||0;
+      const hasMember1=d.team_member_1_id&&stats[d.team_member_1_id];
+      const hasMember2=d.team_member_2_id&&stats[d.team_member_2_id];
+      const memberCount=(hasMember1?1:0)+(hasMember2?1:0);
+      const splitCount=memberCount>0?memberCount:1;
+      
+      if(hasMember1){
+        stats[d.team_member_1_id].delivered+=Math.round((d.leaflets_delivered||0)/splitCount);
       }
-      if(d.team_member_2_id&&stats[d.team_member_2_id]){
-        stats[d.team_member_2_id].delivered+=d.leaflets_delivered||0;
+      if(hasMember2){
+        stats[d.team_member_2_id].delivered+=Math.round((d.leaflets_delivered||0)/splitCount);
       }
     });
     
-    const list=Object.values(stats).sort((a,b)=>b.delivered-a.delivered);
+    (enquiries||[]).forEach(e=>{
+      const ta=e.target_areas;
+      if(!ta)return;
+      const hasMember1=ta.team_member_1_id&&stats[ta.team_member_1_id];
+      const hasMember2=ta.team_member_2_id&&stats[ta.team_member_2_id];
+      const memberCount=(hasMember1?1:0)+(hasMember2?1:0);
+      if(memberCount===0)return;
+      
+      const splitRevenue=(parseFloat(e.instruction_value)||0)/memberCount;
+      if(hasMember1)stats[ta.team_member_1_id].revenue+=splitRevenue;
+      if(hasMember2)stats[ta.team_member_2_id].revenue+=splitRevenue;
+    });
+    
+    const list=Object.values(stats).sort((a,b)=>b.revenue-a.revenue);
     const el=document.getElementById('teamProgressList');
     
     if(list.length===0){
@@ -1462,25 +1485,43 @@ async function loadTeamProgress(){
       return;
     }
     
-    let html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;">';
+    let html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;">';
     list.forEach(tm=>{
-      const pct=totalDelivered>0?Math.round(tm.delivered/totalDelivered*100):0;
+      const pctDelivered=totalDelivered>0?Math.round(tm.delivered/totalDelivered*100):0;
+      const pctRevenue=totalRevenue>0?Math.round(tm.revenue/totalRevenue*100):0;
       html+='<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;">';
       html+='<div style="font-weight:600;margin-bottom:8px;">'+tm.name+'</div>';
       html+='<div style="font-size:0.85rem;color:#64748b;">';
       html+='<div>Routes: '+tm.reserved+' ('+tm.completed+' completed)</div>';
-      html+='<div>Delivered: '+tm.delivered.toLocaleString()+'</div>';
       html+='</div>';
-      html+='<div style="margin-top:8px;background:#e2e8f0;border-radius:4px;height:8px;overflow:hidden;">';
-      html+='<div style="background:#16a34a;height:100%;width:'+pct+'%;"></div>';
+      
+      html+='<div style="margin-top:12px;">';
+      html+='<div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px;">';
+      html+='<span>Leaflets: <strong>'+tm.delivered.toLocaleString()+'</strong></span>';
+      html+='<span>'+pctDelivered+'%</span>';
       html+='</div>';
-      html+='<div style="font-size:0.75rem;color:#64748b;margin-top:4px;">'+pct+'% of campaign</div>';
+      html+='<div style="background:#e2e8f0;border-radius:4px;height:8px;overflow:hidden;">';
+      html+='<div style="background:#16a34a;height:100%;width:'+pctDelivered+'%;"></div>';
+      html+='</div>';
+      html+='</div>';
+      
+      html+='<div style="margin-top:12px;">';
+      html+='<div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px;">';
+      html+='<span>Revenue: <strong>£'+tm.revenue.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0})+'</strong></span>';
+      html+='<span>'+pctRevenue+'%</span>';
+      html+='</div>';
+      html+='<div style="background:#e2e8f0;border-radius:4px;height:8px;overflow:hidden;">';
+      html+='<div style="background:#8b5cf6;height:100%;width:'+pctRevenue+'%;"></div>';
+      html+='</div>';
+      html+='</div>';
+      
       html+='</div>';
     });
     html+='</div>';
     el.innerHTML=html;
   }catch(e){
     document.getElementById('teamProgressList').innerHTML='<p style="color:#888;font-size:0.9rem;">Could not load team progress.</p>';
+    console.error('Team progress error:',e);
   }
 }
 
@@ -1496,6 +1537,7 @@ async function deleteEnquiry(id){
   try{
     await sbFetch('/rest/v1/enquiries?id=eq.'+id,{method:'DELETE'});
     await loadEnquiryList();
+    await loadFinanceFromDB();updateSummary();
     setSyncStatus('ok','Enquiry deleted');
   }catch(e){
     alert('Error deleting enquiry: '+e.message);
@@ -1575,7 +1617,8 @@ async function saveEnquiry(){
       target_area_id:routeVal,
       instructed:document.getElementById('enquiryInstructed').checked,
       instruction_value:document.getElementById('enquiryInstructed').checked?parseFloat(document.getElementById('enquiryInstructionValue').value)||null:null,
-      notes:document.getElementById('enquiryNotes').value.trim()||null
+      notes:document.getElementById('enquiryNotes').value.trim()||null,
+      enquiry_date:new Date().toISOString().split('T')[0]
     };
     
     if(currentEditEnquiryId){
@@ -1586,6 +1629,7 @@ async function saveEnquiry(){
     
     closeEnquiryModal();
     await loadEnquiryList();
+    await loadFinanceFromDB();updateSummary();
     setSyncStatus('ok',currentEditEnquiryId?'Enquiry updated':'Enquiry recorded');
   }catch(e){
     errorEl.textContent='Error: '+e.message;
@@ -2078,6 +2122,7 @@ async function loadAll(){
     await loadSummaryStats();
     await loadDeliveryJournal();
     await loadEnquiryList();
+    await loadFinanceFromDB();
     setSyncStatus('ok','Live \u00b7 auto-syncing every 30s');
   }catch(e){
     Logger.error('loadAll failed',e);
@@ -2223,20 +2268,41 @@ function updateSummary(){
   updateFinance(td,rem);
 }
 
+// Actuals loaded from DB by loadFinanceFromDB()
+let financeActuals={enq:0,cas:0,inv:0};
+
+async function loadFinanceFromDB(){
+  if(!currentCampaignId) return;
+  try{
+    const rows=await sbFetch('/rest/v1/enquiries?select=instructed,instruction_value&campaign_id=eq.'+currentCampaignId);
+    const enq=(rows||[]).length;
+    const cas=(rows||[]).filter(r=>r.instructed).length;
+    const inv=(rows||[]).filter(r=>r.instructed).reduce((s,r)=>s+(parseFloat(r.instruction_value)||0),0);
+    financeActuals={enq,cas,inv};
+  }catch(e){
+    Logger.error('loadFinanceFromDB failed',e);
+  }
+}
+
 function updateFinance(td,rem){
-  const enq=parseInt(document.getElementById('fi_enquiries').value)||0;
-  const cas=parseInt(document.getElementById('fi_cases').value)||0;
-  const inv=parseFloat(document.getElementById('fi_instrvalue').value)||0;
-  // Use campaign overrides if set, else hardcoded fallbacks (CFG-02/04)
-  const effectiveDefaultCV=campaignRates.defaultCaseValue??DEFAULT_CV;
-  const avgCV=cas>0&&inv>0?inv/cas:effectiveDefaultCV,convR=enq>0&&cas>0?cas/enq:1;
-  const leafR=td>0&&enq>0?enq/td:null,rev100=td>0&&inv>0?(inv/td)*100:null;
-  const revPEnq=enq>0&&inv>0?inv/enq:null,lpc=td>0&&cas>0?Math.round(td/cas):null;
-  document.getElementById('dm_avgcase').textContent=inv>0&&cas>0?fmtCurrency(avgCV):'\u2014';
-  document.getElementById('dm_convrate').textContent=enq>0&&cas>0?Math.round(convR*100)+'%':'\u2014';
-  document.getElementById('dm_per100').textContent=rev100!==null?fmtCurrency(rev100):'\u2014';
+  const {enq,cas,inv}=financeActuals;
+  // ACV is always the campaign-configured constant (or DEFAULT_CV)
+  const acv=campaignRates.defaultCaseValue??DEFAULT_CV;
+  // Update ACV display in footer note
+  const acvEl=document.getElementById('fi_acv_display');if(acvEl)acvEl.textContent=acv.toFixed(2);
+
+  // Metric cards — only meaningful once we have real data
+  const convR=enq>0&&cas>0?cas/enq:null;
+  const leafR=td>0&&enq>0?enq/td:null;
+  const rev100=leafR!==null?leafR*acv*cas/enq*100:null; // per 100 leaflets based on actual rate × ACV × conv rate
+  const revPEnq=enq>0&&cas>0?inv/enq:null;
+  document.getElementById('dm_avgcase').textContent=fmtCurrency(acv);
+  document.getElementById('dm_convrate').textContent=convR!==null?Math.round(convR*100)+'%':'\u2014';
+  // Revenue per 100 leaflets: actual revenue ÷ delivered × 100
+  document.getElementById('dm_per100').textContent=td>0&&inv>0?fmtCurrency((inv/td)*100):'\u2014';
   document.getElementById('dm_perenquiry').textContent=revPEnq!==null?fmtCurrency(revPEnq):'\u2014';
-  document.getElementById('dm_percase').textContent=lpc!==null?lpc.toLocaleString():'\u2014';
+
+  // Actual to date row
   if(enq>0){
     document.getElementById('fa_rate').textContent=leafR!==null?(leafR*100).toFixed(2)+'%':'\u2014';
     document.getElementById('fa_enquiries').textContent=enq+' enquiries';
@@ -2244,33 +2310,45 @@ function updateFinance(td,rem){
     document.getElementById('fa_revenue').textContent=inv>0?fmtCurrency(inv):'\u2014';
   }else{
     ['fa_rate','fa_cases','fa_revenue'].forEach(id=>document.getElementById(id).textContent='\u2014');
-    document.getElementById('fa_enquiries').textContent='Enter data above';
+    document.getElementById('fa_enquiries').textContent='No enquiries recorded yet';
   }
-  const hasA=leafR!==null&&cas>0&&inv>0;
-  document.getElementById('f_extrap_row').style.display=hasA?'':'none';
-  if(hasA){
-    const ef=Math.round(TOTAL*leafR),cf=Math.round(ef*convR);
+
+  // Extrapolated row (actual rate projected over full campaign)
+  const hasActualRate=leafR!==null&&convR!==null;
+  document.getElementById('f_extrap_row').style.display=hasActualRate?'':'none';
+  if(hasActualRate){
+    const enqTodo=Math.round(rem*leafR);
+    const enqTotal=enq+enqTodo;
+    const casTodo=Math.round(enqTodo*convR);
+    const casTotal=cas+casTodo;
     document.getElementById('f_ext_rate').textContent=(leafR*100).toFixed(2)+'%';
     document.getElementById('f_ext_sofar').textContent=enq;
-    document.getElementById('f_ext_todo').textContent=Math.round(rem*leafR);
-    document.getElementById('f_ext_total').textContent=ef;
-    document.getElementById('f_ext_rev').textContent=fmtCurrency(cf*avgCV);
+    document.getElementById('f_ext_todo').textContent=enqTodo;
+    document.getElementById('f_ext_total').textContent=enqTotal;
+    document.getElementById('f_ext_rev').textContent=fmtCurrency(casTotal*acv);
   }
-  // Use campaign rate overrides if set, else hardcoded fallbacks (CFG-02)
+
+  // Scenario rows — blended model:
+  // Revenue = (actual cases × ACV) + (remaining leaflets × scenario_rate × conv_rate × ACV)
+  // Conv rate: use actual if available, else assume 1:1 (every enquiry instructs — conservative)
+  const effectiveConvR=convR??1;
   [[campaignRates.conservative??0.0025,'f1'],[campaignRates.target??0.005,'f2'],[campaignRates.optimistic??0.01,'f3']].forEach(([sr,p])=>{
-    const es=Math.round(td*sr),et=Math.round(rem*sr),te=es+et;
-    const cr=cas>0&&enq>0?convR:1,cv=cas>0&&inv>0?avgCV:effectiveDefaultCV;
-    document.getElementById(p+'_sofar').textContent=td>0?es:'\u2014';
-    document.getElementById(p+'_todo').textContent=et;
-    document.getElementById(p+'_total').textContent=te;
-    document.getElementById(p+'_rev').textContent=fmtCurrency(Math.round(te*cr)*cv);
+    // Enquiries so far: use actual count (not scenario estimate for delivered portion)
+    const esSofar=enq>0?enq:Math.round(td*sr);
+    const esTodo=Math.round(rem*sr);
+    const esTotal=esSofar+esTodo;
+    // Revenue: actual known revenue + projected remaining at scenario rate × conv rate × ACV
+    const revSofar=inv>0?inv:Math.round(td*sr)*effectiveConvR*acv;
+    const revTodo=Math.round(rem*sr)*effectiveConvR*acv;
+    const revTotal=revSofar+revTodo;
+    document.getElementById(p+'_sofar').textContent=td>0?esSofar:'\u2014';
+    document.getElementById(p+'_todo').textContent=esTodo;
+    document.getElementById(p+'_total').textContent=esTotal;
+    document.getElementById(p+'_rev').textContent=fmtCurrency(revTotal);
   });
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
-  ['fi_enquiries','fi_cases','fi_instrvalue'].forEach(id=>{
-    const el=document.getElementById(id);if(el)el.addEventListener('input',scheduleFinanceSave);
-  });
   showView('cards');
   loadAll();setInterval(loadAll,30000);
 });

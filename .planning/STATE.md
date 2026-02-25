@@ -58,12 +58,10 @@ Progress: [████████████████████] 100%
 
 None.
 
-- OpenCode [06-T06] — Team progress view — claimed 2026-02-25 22:20 UTC
-
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: T13 done. T14 (map polygons) is next — start new chat.
+Stopped at: T06 (Team progress view) complete + enquiry_date bug fix
 Resume file: None
 
 ## Phase 4 Task Checklist (04-01-PLAN.md)
@@ -116,9 +114,10 @@ Resume file: None
 | T2: Enquiry recording modal | ✓ Done | OC |
 | T3: Enquiry list view + edit/delete | ✓ Done | OC |
 | T4: Enquiry map markers (fix lat/lng) | ✓ Done | Claude |
-| T5: Finance projections from DB enquiries | ○ Pending | - |
-| T6: Team progress view | ○ In Progress | OC |
-| T7: Leaderboards | ○ Pending | - |
+| T5: Finance projections from DB enquiries | ✓ Done | Claude |
+| T6: Team progress view | ✓ Done | OC |
+| T6b: Enquiry date not-null fix | ✓ Done | OC |
+| T7: Leaderboards | ✓ Done (merged with T6) | OC |
 | T8: Route creation UI | ○ Pending | - |
 | T9: Route deletion UI | ○ Pending | - |
 | T10: Phase review + gap identification | ○ Pending | - |
