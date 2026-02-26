@@ -1628,16 +1628,6 @@ async function loadTeamProgress(){
       if(hasMember2)stats[ta.team_member_2_id].revenue+=splitRevenue;
     });
 
-    // Count all enquiries (and instructed subset) per team member via route → team member
-    (allEnquiries||[]).forEach(e=>{
-      const ta=e.target_area_id?areaMap[e.target_area_id]:null;
-      if(!ta)return;
-      const hasMember1=ta.team_member_1_id&&stats[ta.team_member_1_id];
-      const hasMember2=ta.team_member_2_id&&stats[ta.team_member_2_id];
-      if(hasMember1){stats[ta.team_member_1_id].enquiries++;if(e.instructed)stats[ta.team_member_1_id].instructed++;}
-      if(hasMember2){stats[ta.team_member_2_id].enquiries++;if(e.instructed)stats[ta.team_member_2_id].instructed++;}
-    });
-
     const list=Object.values(stats).sort((a,b)=>b.revenue-a.revenue);
     const el=document.getElementById('teamProgressList');
     
