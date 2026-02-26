@@ -197,6 +197,8 @@ CREATE INDEX IF NOT EXISTS idx_cases_campaign ON cases(campaign_id);
 -- RPC: Delivery Stats API (Phase 8 T5)
 -- Supports date filtering for monthly/quarterly reports
 -- ============================================================
+
+-- Function with all parameters
 CREATE OR REPLACE FUNCTION get_delivery_stats(
   p_campaign_id UUID DEFAULT NULL,
   p_start_date DATE DEFAULT NULL,
