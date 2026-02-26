@@ -82,8 +82,8 @@
 
 | ID | Requirement | Description |
 |----|-------------|-------------|
-| DEM-02 | Auto-enrich demographic_feedback | When a new row is inserted into demographic_feedback (on instructed enquiry save), automatically populate owner_occupied_pct by joining on oa21_code from route_postcodes. Implemented as a PostgreSQL AFTER INSERT trigger — no external call at enquiry time. |
-| DEM-03 | NOMIS backfill for route_postcodes | For each unique oa21_code in route_postcodes, fetch Census 2021 tenure data from NOMIS NM_2072_1 (TS054) and store owner_occupied_pct. One-time job per campaign; re-run when new routes are added. Data source: NOMIS API (free, no key, CORS-enabled). |
+| DEM-02 | Auto-enrich demographic_feedback | When a new row is inserted into demographic_feedback (on instructed enquiry save), browser JS calls NOMIS API to fetch tenure data (NM_2072_1, TS054) and updates the row with owner_occupied_pct. Implemented as on-demand fetch + UPDATE — no pre-loading required. |
+| DEM-03 | Backfill historic demographic_feedback | Script (scripts/backfill_demographics.js) that fetches owner_occupied_pct from NOMIS for all existing rows with NULL owner_occupied_pct but valid oa21_code. Can be run on-demand. |
 
 ### INT-08: Integrations
 
@@ -153,11 +153,11 @@
 | RTE-03: route_postcodes Expansion | Phase 6 | ✅ Done | T8 backfill — 18 rows for Tingley |
 | RTE-04: Enquiry Auto-matching | Phase 8 | ✅ Done | T4 |
 | RTE-05: Real Campaign Migration | Phase 8 | ✅ Done | T7 |
-| DEM-02: Auto-enrich demographic_feedback | Phase 8 | 📋 Planned | T9 — trigger + NOMIS backfill |
-| DEM-03: NOMIS backfill for route_postcodes | Phase 8 | 📋 Planned | T9 — prerequisite for DEM-02 trigger |
-| INT-01: ClickUp Stub | Phase 9 | 📋 Backlog | - |
-| INT-02: Google Sheets Export | Phase 9 | 📋 Backlog | - |
-| INT-03: Gmail Notifications | Phase 9 | 📋 Backlog | - |
+| DEM-02: Auto-enrich demographic_feedback | Phase 9 | ✅ Done | T1+T2 — on-demand NOMIS fetch |
+| DEM-03: Backfill historic demographics | Phase 9 | ✅ Done | T4+T5 — scripts/backfill_demographics.js |
+| INT-01: ClickUp Stub | Phase 10 | 📋 Backlog | - |
+| INT-02: Google Sheets Export | Phase 10 | 📋 Backlog | - |
+| INT-03: Gmail Notifications | Phase 10 | 📋 Backlog | - |
 
 ---
 

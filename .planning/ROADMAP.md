@@ -197,18 +197,24 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 
 ---
 
-### Phase 9: Demographic Enrichment (Option B)
+### Phase 9: Demographic Enrichment (Option B) — ✅ COMPLETE
 
 **Goal:** On-demand NOMIS enrichment for demographic feedback - replaces failed CSV loading approach
 
+**Implementation:**
+- Browser JS function `fetchOwnerOccupiedFromNOMIS(oa21Code)` calls NOMIS NM_2072_1 API
+- `enrichDemographicFeedback(demographicId, oa21Code)` updates demographic_feedback row
+- Hooked into enquiry save flow - auto-enriches new instructed enquiries
+- Backfill script: `scripts/backfill_demographics.js` for historic data
+
 **Requirements:**
-- DEM-02: Auto-enrich demographic_feedback via on-demand NOMIS call
-- DEM-03: Backfill historic data via script
+- DEM-02: Auto-enrich demographic_feedback via on-demand NOMIS call ✅
+- DEM-03: Backfill historic data via script ✅
 
 **Success Criteria:**
-1. New enquiries automatically get owner_occupied_pct from NOMIS
-2. Historic enquiries backfilled via script
-3. All documentation updated
+1. New enquiries automatically get owner_occupied_pct from NOMIS ✅
+2. Historic enquiries backfilled via script ✅ (script ready, no data to backfill)
+3. All documentation updated ✅
 
 ---
 

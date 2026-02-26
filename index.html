@@ -1914,6 +1914,12 @@ async function saveEnquiry(){
           instruction_value:data.instruction_value
         })
       });
+      // Get the inserted demographic_feedback row ID and enrich from NOMIS
+      const newDemo=await sbFetch('/rest/v1/demographic_feedback?enquiry_id=eq.'+enquiryId+'&order=created_at.desc&limit=1&select=id,oa21_code');
+      if(newDemo&&newDemo[0]&&newDemo[0].oa21_code){
+        // Fire-and-forget enrichment - don't await, let it happen in background
+        enrichDemographicFeedback(newDemo[0].id,newDemo[0].oa21_code);
+      }
     }
 
     closeEnquiryModal();
@@ -1925,6 +1931,48 @@ async function saveEnquiry(){
     errorEl.classList.add('show');
   }
   btn.disabled=false;btn.textContent='Save Enquiry';
+}
+
+// ============================================================
+// DEMOGRAPHIC ENRICHMENT (Phase 9 - On-Demand NOMIS)
+// ============================================================
+// Fetch tenure data from NOMIS NM_2072_1 (TS054 Tenure)
+// Returns owner-occupied percentage for a given oa21_code
+async function fetchOwnerOccupiedFromNOMIS(oa21Code){
+  if(!oa21Code) return null;
+  try{
+    // NM_2072_1 = TS054 Tenure dataset
+    // c2021_tenure_9=1001 = "Owned" (owner-occupied)
+    // measures=20301 = Percentage
+    const url='https://www.nomisweb.co.uk/api/v01/dataset/NM_2072_1.data.json'+
+      '?geography='+encodeURIComponent(oa21Code)+
+      '&c2021_tenure_9=1001'+
+      '&measures=20301'+
+      '&select=geography_code,obs_value';
+    const res=await fetch(url);
+    if(!res.ok) return null;
+    const data=await res.json();
+    if(data.obs&&data.obs[0]&&data.obs[0].obs_value){
+      return parseFloat(data.obs[0].obs_value.value);
+    }
+    return null;
+  }catch(e){
+    console.warn('NOMIS fetch failed for '+oa21Code+':',e);
+    return null;
+  }
+}
+
+// Enrich a demographic_feedback row with owner_occupied_pct from NOMIS
+async function enrichDemographicFeedback(demographicId, oa21Code){
+  if(!demographicId||!oa21Code) return;
+  const pct=await fetchOwnerOccupiedFromNOMIS(oa21Code);
+  if(pct!==null){
+    await sbFetch('/rest/v1/demographic_feedback?id=eq.'+demographicId,{
+      method:'PATCH',
+      body:JSON.stringify({owner_occupied_pct:pct})
+    });
+    console.log('Enriched demographic_feedback '+demographicId+': '+pct+'% owner-occupied');
+  }
 }
 
 let currentEditDeliveryId=null;
