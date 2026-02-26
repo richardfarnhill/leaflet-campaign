@@ -227,18 +227,9 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
       <p style="font-size:2rem;font-weight:700;color:#2563eb;margin:0;" id="overallCompletionRate">—</p>
     </div>
     <!-- T5: Campaign breakdown — only visible in All Campaigns mode -->
-    <div id="campaignBreakdown" style="display:none;background:#fff;padding:16px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);margin-bottom:24px;">
-      <h3 style="margin:0 0 12px 0;font-size:1rem;">Campaign Breakdown</h3>
-      <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
-        <thead><tr style="border-bottom:2px solid #e5e7eb;">
-          <th style="text-align:left;padding:6px 8px;">Campaign</th>
-          <th style="text-align:right;padding:6px 8px;">Target</th>
-          <th style="text-align:right;padding:6px 8px;">Delivered</th>
-          <th style="text-align:right;padding:6px 8px;">Remaining</th>
-          <th style="text-align:right;padding:6px 8px;">Progress</th>
-        </tr></thead>
-        <tbody id="campaignBreakdownBody"></tbody>
-      </table>
+    <div id="campaignBreakdown" style="display:none;margin-bottom:24px;">
+      <h3 style="margin:0 0 12px 0;font-size:1rem;color:#1a3a5c;">Campaign Breakdown</h3>
+      <div id="campaignBreakdownBody" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;"></div>
     </div>
 
     <!-- Phase 6: Team Progress -->
@@ -993,20 +984,27 @@ async function loadCampaignBreakdown() {
     (deliveries||[]).forEach(d=>{
       if(d.campaign_id) delivBycamp[d.campaign_id]=(delivBycamp[d.campaign_id]||0)+(d.leaflets_delivered||0);
     });
-    const tbody=document.getElementById('campaignBreakdownBody');
-    if(!tbody) return;
-    tbody.innerHTML=(campaigns||[]).map(c=>{
+    const container=document.getElementById('campaignBreakdownBody');
+    if(!container) return;
+    container.innerHTML=(campaigns||[]).map(c=>{
       const delivered=delivBycamp[c.id]||0;
       const target=c.target_leaflets||0;
       const remaining=Math.max(0,target-delivered);
       const pct=target>0?Math.min(100,Math.round(delivered/target*100)):0;
-      return '<tr style="border-bottom:1px solid #f3f4f6;">'+
-        '<td style="padding:6px 8px;">'+c.name+'</td>'+
-        '<td style="text-align:right;padding:6px 8px;">'+target.toLocaleString()+'</td>'+
-        '<td style="text-align:right;padding:6px 8px;">'+delivered.toLocaleString()+'</td>'+
-        '<td style="text-align:right;padding:6px 8px;">'+remaining.toLocaleString()+'</td>'+
-        '<td style="text-align:right;padding:6px 8px;">'+pct+'%</td>'+
-        '</tr>';
+      const barColor=pct>=100?'#27ae60':pct>=50?'#f39c12':'#1a3a5c';
+      return '<div class="finance-metric-card" style="min-width:0;">'+
+        '<div class="fmc-label" style="font-weight:700;font-size:0.85rem;color:#1a3a5c;margin-bottom:8px;">'+c.name+'</div>'+
+        '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'+
+          '<span class="fmc-label">Delivered</span><span style="font-size:0.85rem;font-weight:600;">'+delivered.toLocaleString()+'</span>'+
+        '</div>'+
+        '<div style="display:flex;justify-content:space-between;margin-bottom:8px;">'+
+          '<span class="fmc-label">Remaining</span><span style="font-size:0.85rem;">'+remaining.toLocaleString()+'</span>'+
+        '</div>'+
+        '<div style="background:#e5e7eb;border-radius:4px;height:6px;margin-bottom:4px;">'+
+          '<div style="background:'+barColor+';width:'+pct+'%;height:6px;border-radius:4px;transition:width 0.3s;"></div>'+
+        '</div>'+
+        '<div class="fmc-value" style="font-size:1rem;text-align:right;">'+pct+'%</div>'+
+      '</div>';
     }).join('');
   }catch(e){Logger.error('loadCampaignBreakdown failed',e);}
 }
@@ -1457,28 +1455,32 @@ function closeCompleteModal(){
 async function loadSummaryStats(){
   try{
     let targetLeaflets=0;
+    let campIdFilter=''; // PostgREST filter string for active campaign IDs (All Campaigns mode)
     if(currentCampaignId){
       const camps=await sbFetch('/rest/v1/campaigns?select=target_leaflets&id=eq.'+currentCampaignId);
       if(camps&&camps[0]&&camps[0].target_leaflets) targetLeaflets=camps[0].target_leaflets;
     } else {
-      const camps=await sbFetch('/rest/v1/campaigns?select=target_leaflets&is_active=eq.true');
-      if(camps&&camps.length>0) targetLeaflets=camps.reduce((s,c)=>s+(c.target_leaflets||0),0);
+      const camps=await sbFetch('/rest/v1/campaigns?select=id,target_leaflets&is_active=eq.true');
+      if(camps&&camps.length>0){
+        targetLeaflets=camps.reduce((s,c)=>s+(c.target_leaflets||0),0);
+        campIdFilter='&campaign_id=in.('+camps.map(c=>c.id).join(',')+')';
+      }
     }
 
     // Fetch deliveries from DB (filtered by campaign)
     const delivUrl=currentCampaignId
       ?'/rest/v1/deliveries?select=leaflets_delivered,delivery_date&campaign_id=eq.'+currentCampaignId
-      :'/rest/v1/deliveries?select=leaflets_delivered,delivery_date';
+      :'/rest/v1/deliveries?select=leaflets_delivered,delivery_date'+campIdFilter;
     const deliveries=await sbFetch(delivUrl);
     const totalDelivered=(deliveries||[]).reduce((s,d)=>s+(d.leaflets_delivered||0),0);
     const now=new Date();
     const thisMonth=now.getFullYear()+'-'+(String(now.getMonth()+1).padStart(2,'0'));
     const thisMonthLeaflets=(deliveries||[]).filter(d=>(d.delivery_date||'').startsWith(thisMonth)).reduce((s,d)=>s+(d.leaflets_delivered||0),0);
 
-    // Fetch completed routes count from DB
+    // Fetch routes count — in All Campaigns mode, restrict to active campaigns only
     const areasUrl=currentCampaignId
       ?'/rest/v1/target_areas?select=status&campaign_id=eq.'+currentCampaignId
-      :'/rest/v1/target_areas?select=status';
+      :'/rest/v1/target_areas?select=status'+campIdFilter;
     const areas=await sbFetch(areasUrl);
     const totalAreas=(areas||[]).length;
     const completedAreas=(areas||[]).filter(a=>a.status==='completed').length;
