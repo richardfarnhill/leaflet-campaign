@@ -1411,9 +1411,36 @@ function closeCompleteModal(){
   currentCompleteAreaId=null;
 }
 
+async function loadStatsFromAPI(){
+  try{
+    const campaignParam = currentCampaignId ? '&p_campaign_id=' + currentCampaignId : '';
+    const stats = await sbFetch('/rest/v1/rpc/get_delivery_stats' + campaignParam);
+    if(stats && typeof stats === 'object'){
+      return stats;
+    }
+  }catch(e){
+    Logger.warn('loadStatsFromAPI failed, using fallback', e.message);
+  }
+  return null;
+}
+
 async function loadSummaryStats(){
   try{
-    // Fetch campaign target from DB
+    // Try to get stats from RPC API first (P8 T5)
+    const apiStats = await loadStatsFromAPI();
+    if(apiStats && apiStats.total_leaflets_all_time !== undefined){
+      document.getElementById('sumDelivered').textContent = (apiStats.total_leaflets_all_time || 0).toLocaleString();
+      document.getElementById('sumRemaining').textContent = Math.max(0, (apiStats.campaign_target || 0) - (apiStats.delivered_so_far || 0)).toLocaleString();
+      document.getElementById('sumSessions').textContent = (apiStats.routes_completed_count || 0) + ' / ' + ((apiStats.routes_completed_count || 0) + (apiStats.active_routes_count || 0)) + ' routes';
+      const pct = apiStats.campaign_target > 0 ? Math.min(100, Math.round((apiStats.delivered_so_far || 0) / apiStats.campaign_target * 100)) : 0;
+      document.getElementById('progressFill').style.width = pct + '%';
+      document.getElementById('progressPct').textContent = pct + '%';
+      const revPer100 = apiStats.revenue_per_100_leaflets || 0;
+      document.getElementById('sumProjected').textContent = revPer100 > 0 ? '£' + revPer100.toFixed(2) + '/100' : '—';
+      return;
+    }
+
+    // Fallback: original implementation
     let targetLeaflets=0;
     if(currentCampaignId){
       const camps=await sbFetch('/rest/v1/campaigns?select=target_leaflets&id=eq.'+currentCampaignId);
