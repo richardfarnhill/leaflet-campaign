@@ -348,20 +348,32 @@ $$;
 -- ============================================================
 -- DEMOGRAPHIC ENRICHMENT TRIGGER (Phase 8 T9 — DEM-02)
 -- ============================================================
--- Automatically populates owner_occupied_pct on demographic_feedback
--- by joining route_postcodes on oa21_code at INSERT time.
--- Prerequisite: route_postcodes.owner_occupied_pct must be backfilled
--- from NOMIS NM_2072_1 (TS054 Tenure) per unique oa21_code.
+-- On INSERT to demographic_feedback:
+-- 1. If oa21_code is NULL but postcode is provided, resolve oa21_code
+--    from route_postcodes (covers historic data inserts by postcode)
+-- 2. Populate owner_occupied_pct from route_postcodes via oa21_code
+-- Prerequisite: route_postcodes.owner_occupied_pct backfilled from NOMIS.
 
 CREATE OR REPLACE FUNCTION enrich_demographic_feedback()
 RETURNS TRIGGER AS $$
 BEGIN
-  SELECT owner_occupied_pct
-  INTO NEW.owner_occupied_pct
-  FROM route_postcodes
-  WHERE oa21_code = NEW.oa21_code
-    AND owner_occupied_pct IS NOT NULL
-  LIMIT 1;
+  -- Resolve oa21_code from postcode if not provided directly
+  IF NEW.oa21_code IS NULL AND NEW.postcode IS NOT NULL THEN
+    SELECT oa21_code INTO NEW.oa21_code
+    FROM route_postcodes
+    WHERE postcode = NEW.postcode
+      AND oa21_code IS NOT NULL
+    LIMIT 1;
+  END IF;
+
+  -- Populate owner_occupied_pct via oa21_code
+  IF NEW.oa21_code IS NOT NULL THEN
+    SELECT owner_occupied_pct INTO NEW.owner_occupied_pct
+    FROM route_postcodes
+    WHERE oa21_code = NEW.oa21_code
+      AND owner_occupied_pct IS NOT NULL
+    LIMIT 1;
+  END IF;
 
   RETURN NEW;
 END;
