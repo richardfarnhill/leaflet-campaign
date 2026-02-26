@@ -167,19 +167,16 @@ CREATE TABLE IF NOT EXISTS cases (
 -- ============================================================
 -- RLS POLICIES 
 -- ============================================================
--- CURRENT STATUS: RLS is NOT enabled on any tables
--- This is a SECURITY CONCERN for production use
--- 
--- To enable RLS, run these commands in Supabase SQL Editor:
+-- STATUS: RLS ENABLED on all tables (2026-02-26)
+-- Policies: Public read access (no Supabase Auth in use)
 -- ALTER TABLE campaigns ENABLE ROW LEVEL SECURITY;
 -- ALTER TABLE team_members ENABLE ROW LEVEL SECURITY;
 -- ALTER TABLE target_areas ENABLE ROW LEVEL SECURITY;
 -- ALTER TABLE reservations ENABLE ROW LEVEL SECURITY;
 -- ALTER TABLE deliveries ENABLE ROW LEVEL SECURITY;
 -- ALTER TABLE enquiries ENABLE ROW LEVEL SECURITY;
--- ALTER TABLE cases ENABLE ROW LEVEL SECURITY;
 --
--- Then create policies, e.g.:
+-- Policies created:
 -- CREATE POLICY "Anyone can read campaigns" ON campaigns FOR SELECT USING (true);
 -- CREATE POLICY "Anyone can read target_areas" ON target_areas FOR SELECT USING (true);
 

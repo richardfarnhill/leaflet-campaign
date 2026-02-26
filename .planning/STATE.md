@@ -9,12 +9,13 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 
 ## Current Position
 
-Phase: 6 of 9 (Enquiry & Team)
-Plan: 06-01 — In progress
-Status: In Progress — T08 (Route creation) by Claude, T07 ready for OpenCode
-Last activity: 2026-02-25 — Campaign data isolation, leaderboards, enquiry fixes
+Phase: 7 of 9 (Core Enhancements)
+Plan: 07-01 — Complete
+Status: Phase 7 done - Route deletion, RLS, security, stats API plan ready for Phase 8
 
-Progress: [████████████░░░░░░░░░░] ~56% (6 of 9 phases)
+Last activity: 2026-02-26 — Route deletion UI, RLS enabled, Phase 8 plan created
+
+Progress: [████████████████░░░░░] ~78% (7 of 9 phases)
 
 ## Performance Metrics
 
@@ -57,9 +58,6 @@ Progress: [████████████░░░░░░░░░░] ~
      Format: - [AGENT] [scope] — [brief description] — claimed [YYYY-MM-DD HH:MM UTC] -->
 
 None.
-
-- OpenCode [07-T03] — RLS policies verification — claimed 2026-02-26 00:XX UTC
-- Claude [06-T08] — Route creation UI — claimed 2026-02-25 22:XX UTC
 
 ## Session Continuity
 
@@ -124,21 +122,37 @@ Resume file: None
 | T6c: Load team progress on page init | ✓ Done | OC |
 | T6d: Campaign data isolation (Chinese wall) | ✓ Done | OC |
 | T7: Leaderboards | ✓ Done (merged with T6) | OC |
-| T8: Route creation UI | ○ In Progress - Claude | Claude |
+| T8: Route creation UI + route_postcodes backfill | ✓ Done | Claude | route_postcodes backfilled (18 rows for Tingley); Add Route button + modal in index.html |
 | T9: Route deletion UI | ○ Pending | - |
 | T10: Phase review + gap identification | ○ Pending | - |
+
+### T8 Handover Note (2026-02-26)
+
+**Two jobs:**
+
+**Job 1 — Backfill `route_postcodes` for "Testing Claude" campaign**
+The table currently has 1 row per OA (representative postcode only). Each route needs full unit postcode expansion.
+- Query DB: get all routes for "Testing Claude" campaign + their current `route_postcodes` rows (need `target_area_id`, `oa21_code`, representative postcode/sector)
+- For each OA, query `https://api.postcodes.io/postcodes?q={sector}&limit=100`, filter results to that `oa21_code`, INSERT all matching unit postcodes into `route_postcodes`
+- Tingley route confirmed OA→postcode mapping is in `.planning/ROUTE-PLANNING-ENGINE.md` — use as verification baseline (should end up with ~18 rows, not 6)
+- Other 4 routes: derive sector from representative postcode already in DB, same expansion process
+
+**Job 2 — Add "Add Route" button + modal to index.html (the actual T8 UI)**
+See 06-01-PLAN.md Task 8 for full spec. Simple modal: Route Name, Postcode, House Count, Notes. On save: geocode via postcodes.io → POST to target_areas. Does NOT need to populate route_postcodes yet (that's T8-F, the full planning engine).
+
+**Supabase MCP:** Tools are `mcp__claude_ai_Supabase__execute_sql` / `mcp__claude_ai_Supabase__apply_migration`. Restart Claude Code first. Full setup in MEMORY.md.
 
 ## Phase 7 Task Checklist
 
 | Task | Status | Agent |
 |------|--------|-------|
 | T1: Route card details - street names, map boundary | ○ Pending | - |
-| T2: Route deletion UI | ○ Pending | - |
-| T3: RLS policies verification | ○ In Progress | OC | Trying to verify but RLS not enabled in Supabase - need to enable and create policies |
-| T4: Route completion - explicit leaflet count + rolling adjustment | ○ Pending | - |
+| T2: Route deletion UI | ✓ Done | OC | Delete button on route cards, confirmation modal, cascades to deliveries/reservations |
+| T3: RLS policies verification | ✓ Done | OC | RLS enabled on all tables, public read policies (2026-02-26) |
+| T4: Route completion - explicit leaflet count + rolling adjustment | ✓ Done | OC | Already implemented: modal requires count, saves to DB, displays remaining |
 | T5: Security - move credentials to config.js | ✓ Done | OC |
 | T6: DB-driven Summary Bar fix (CFG-03) | ✓ Done | OC |
-| T7: Phase review | ○ Pending | - |
+| T7: Phase review | ○ Pending | - | Review after T01 complete |
 
 ## Phase 8 Task Checklist
 

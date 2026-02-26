@@ -188,7 +188,10 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
 
   <!-- Phase 2: Area Cards -->
   <div id="cardsView">
-    <h2 style="margin-top:0;">Delivery Routes</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <h2 style="margin:0;">Delivery Routes</h2>
+      <button id="addRouteBtn" onclick="openAddRouteModal()" class="area-card-btn" style="display:none;">+ Add Route</button>
+    </div>
     <p style="font-size:0.85rem;color:#666;margin-bottom:16px;">Click "Reserve" to claim a route for delivery. Completed routes show delivery stats.</p>
     <div id="areaCards" class="area-cards-grid">
       <div style="grid-column:1/-1;text-align:center;padding:40px;color:#888;">Loading routes...</div>
@@ -385,6 +388,51 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
     <div class="modal-actions">
       <button class="modal-btn cancel" onclick="closeUnassignModal()">Cancel</button>
       <button class="modal-btn confirm" id="unassignConfirmBtn" onclick="confirmUnassign()">Unassign</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Route Modal -->
+<div id="deleteRouteModal" class="modal-overlay">
+  <div class="modal">
+    <h3>Delete Route</h3>
+    <div class="modal-field">
+      <label>Route</label>
+      <input type="text" id="deleteRouteName" readonly>
+    </div>
+    <p style="font-size:0.85rem;color:#dc2626;margin-bottom:8px;">⚠️ This will permanently delete this route and ALL associated delivery records.</p>
+    <div class="modal-error" id="deleteRouteError"></div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeDeleteRouteModal()">Cancel</button>
+      <button class="modal-btn confirm" id="deleteRouteConfirmBtn" onclick="confirmDeleteRoute()" style="background:#dc2626;">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Route Modal -->
+<div id="addRouteModal" class="modal-overlay">
+  <div class="modal">
+    <h3>Add Route</h3>
+    <div class="modal-field">
+      <label>Route Name <span style="color:#dc2626">*</span></label>
+      <input type="text" id="addRouteName" placeholder="e.g. Tingley North">
+    </div>
+    <div class="modal-field">
+      <label>Postcode <span style="color:#dc2626">*</span></label>
+      <input type="text" id="addRoutePostcode" placeholder="e.g. LS27 9AA">
+    </div>
+    <div class="modal-field">
+      <label>House Count <span style="color:#dc2626">*</span></label>
+      <input type="number" id="addRouteHouseCount" placeholder="e.g. 950" min="1">
+    </div>
+    <div class="modal-field">
+      <label>Notes</label>
+      <textarea id="addRouteNotes" rows="2" placeholder="Optional notes"></textarea>
+    </div>
+    <div class="modal-error" id="addRouteError"></div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeAddRouteModal()">Cancel</button>
+      <button class="modal-btn confirm" id="addRouteConfirmBtn" onclick="saveNewRoute()">Add Route</button>
     </div>
   </div>
 </div>
@@ -1097,6 +1145,9 @@ function renderAreaCards(){
     Logger.error('areaCards container not found in DOM');
     return;
   }
+  // Show Add Route button only when a specific campaign is selected
+  const addBtn=document.getElementById('addRouteBtn');
+  if(addBtn) addBtn.style.display=currentCampaignId?'':'none';
   Logger.info('renderAreaCards called',{targetAreasLength:targetAreas.length});
   if(targetAreas.length===0){
     Logger.info('No target areas to render');
@@ -1139,6 +1190,7 @@ function renderAreaCards(){
       html+='<button class="area-card-btn reassign" onclick="openReassignModal(\''+area.id+'\')">Reassign</button>';
       html+='<button class="area-card-btn unassign" onclick="openUnassignModal(\''+area.id+'\')">Unassign</button>';
     }
+    html+='<button class="area-card-btn delete" onclick="openDeleteRouteModal(\''+area.id+'\')" style="color:#dc2626;">Delete</button>';
     html+='</div></div>';
   });
   container.innerHTML=html;
@@ -1946,6 +1998,124 @@ async function confirmUnassign(){
   }
   btn.disabled=false;
   btn.textContent='Unassign';
+}
+
+let currentDeleteRouteId=null;
+
+// TODO: After delete, prompt user to create replacement route (see Phase 8 T3: Prompt new route when 500 houses short)
+function openDeleteRouteModal(areaId){
+  const area=targetAreas.find(a=>a.id===areaId);
+  if(!area)return;
+  currentDeleteRouteId=areaId;
+  document.getElementById('deleteRouteName').value=area.area_name+' ('+area.postcode+')';
+  document.getElementById('deleteRouteError').className='modal-error';
+  document.getElementById('deleteRouteError').textContent='';
+  document.getElementById('deleteRouteModal').classList.add('active');
+}
+
+function closeDeleteRouteModal(){
+  document.getElementById('deleteRouteModal').classList.remove('active');
+  currentDeleteRouteId=null;
+}
+
+async function confirmDeleteRoute(){
+  const errorEl=document.getElementById('deleteRouteError');
+  const btn=document.getElementById('deleteRouteConfirmBtn');
+  btn.disabled=true;
+  btn.textContent='Deleting...';
+  errorEl.classList.remove('show');
+  try{
+    // Delete associated deliveries first
+    await sbFetch('/rest/v1/deliveries?target_area_id=eq.'+currentDeleteRouteId,{
+      method:'DELETE',
+      headers:{'Content-Type':'application/json','Prefer':'return=minimal'}
+    });
+    // Delete associated reservations
+    await sbFetch('/rest/v1/reservations?target_area_id=eq.'+currentDeleteRouteId,{
+      method:'DELETE',
+      headers:{'Content-Type':'application/json','Prefer':'return=minimal'}
+    });
+    // Delete the route
+    await sbFetch('/rest/v1/target_areas?id=eq.'+currentDeleteRouteId,{
+      method:'DELETE',
+      headers:{'Content-Type':'application/json','Prefer':'return=minimal'}
+    });
+    closeDeleteRouteModal();
+    await loadAreaCards();
+    renderAreaCards();
+    await loadSummaryStats();
+    setSyncStatus('ok','Route deleted');
+  }catch(e){
+    errorEl.textContent='Error: '+e.message;
+    errorEl.classList.add('show');
+  }
+  btn.disabled=false;
+  btn.textContent='Delete';
+}
+
+// Add Route Modal (T8)
+function openAddRouteModal(){
+  document.getElementById('addRouteName').value='';
+  document.getElementById('addRoutePostcode').value='';
+  document.getElementById('addRouteHouseCount').value='';
+  document.getElementById('addRouteNotes').value='';
+  const errorEl=document.getElementById('addRouteError');
+  errorEl.className='modal-error';
+  errorEl.textContent='';
+  document.getElementById('addRouteConfirmBtn').disabled=false;
+  document.getElementById('addRouteConfirmBtn').textContent='Add Route';
+  document.getElementById('addRouteModal').classList.add('active');
+}
+
+function closeAddRouteModal(){
+  document.getElementById('addRouteModal').classList.remove('active');
+}
+
+async function saveNewRoute(){
+  const name=document.getElementById('addRouteName').value.trim();
+  const postcode=document.getElementById('addRoutePostcode').value.trim().toUpperCase();
+  const houseCount=parseInt(document.getElementById('addRouteHouseCount').value)||0;
+  const notes=document.getElementById('addRouteNotes').value.trim()||null;
+  const errorEl=document.getElementById('addRouteError');
+  const btn=document.getElementById('addRouteConfirmBtn');
+  errorEl.className='modal-error';
+
+  if(!name){errorEl.textContent='Route Name is required.';errorEl.classList.add('show');return;}
+  if(!postcode){errorEl.textContent='Postcode is required.';errorEl.classList.add('show');return;}
+  if(!houseCount||houseCount<1){errorEl.textContent='House Count must be at least 1.';errorEl.classList.add('show');return;}
+
+  btn.disabled=true;
+  btn.textContent='Saving...';
+  try{
+    let lat=null,lng=null;
+    const geoRes=await fetch('https://api.postcodes.io/postcodes/'+encodeURIComponent(postcode)).then(r=>r.json());
+    if(geoRes.status===200&&geoRes.result){lat=geoRes.result.latitude;lng=geoRes.result.longitude;}
+    else{errorEl.textContent='Postcode not found — please check and try again.';errorEl.classList.add('show');btn.disabled=false;btn.textContent='Add Route';return;}
+
+    await sbFetch('/rest/v1/target_areas',{
+      method:'POST',
+      body:JSON.stringify({
+        campaign_id:currentCampaignId,
+        area_name:name,
+        postcode:postcode,
+        house_count:houseCount,
+        notes:notes,
+        lat:lat,
+        lng:lng,
+        status:'available'
+      })
+    });
+    closeAddRouteModal();
+    await loadAreaCards();
+    renderAreaCards();
+    await loadSummaryStats();
+    setSyncStatus('ok','Route added');
+  }catch(e){
+    errorEl.textContent='Error: '+e.message;
+    errorEl.classList.add('show');
+    btn.disabled=false;
+    btn.textContent='Add Route';
+  }
 }
 
 // New Campaign Modal (T7)
