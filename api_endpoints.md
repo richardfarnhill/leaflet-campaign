@@ -14,39 +14,47 @@
 
 **Endpoint:** `POST /rest/v1/rpc/get_delivery_stats`
 
-**Parameters - MUST provide all three:**
+**Parameters:**
 
 | Parameter | Example | Description |
 |-----------|---------|-------------|
-| `p_campaign_id` | (empty) | UUID of campaign. Empty = all campaigns. |
-| `p_start_date` | `2026-02-01` | Start date (YYYY-MM-DD) |
-| `p_end_date` | `2026-02-28` | End date (YYYY-MM-DD) |
+| `p_campaign_id` | `123e4567-...` | UUID of campaign. Omit entirely for all campaigns. |
+| `p_start_date` | `2026-02-01` | Start date (YYYY-MM-DD). If used alone, defaults to full month. |
+| `p_end_date` | `2026-02-28` | End date (YYYY-MM-DD). |
 
 ---
 
 ## Example Queries
 
-### All time
+### All campaigns, all time
 ```
-https://tjebidvgvbpnxgnphcrg.supabase.co/rest/v1/rpc/get_delivery_stats?p_campaign_id=&p_start_date=&p_end_date=&apikey=YOUR_KEY
+https://tjebidvgvbpnxgnphcrg.supabase.co/rest/v1/rpc/get_delivery_stats?apikey=YOUR_KEY
 ```
 
-### February 2026
+### Specific campaign
 ```
-https://tjebidvgvbpnxgnphcrg.supabase.co/rest/v1/rpc/get_delivery_stats?p_campaign_id=&p_start_date=2026-02-01&p_end_date=2026-02-28&apikey=YOUR_KEY
+https://tjebidvgvbpnxgnphcrg.supabase.co/rest/v1/rpc/get_delivery_stats?p_campaign_id=UUID&apikey=YOUR_KEY
+```
+
+### February 2026 (all campaigns)
+```
+https://tjebidvgvbpnxgnphcrg.supabase.co/rest/v1/rpc/get_delivery_stats?p_start_date=2026-02-01&p_end_date=2026-02-28&apikey=YOUR_KEY
 ```
 
 ### Q1 2026 (Jan-Mar)
 ```
-https://tjebidvgvbpnxgnphcrg.supabase.co/rest/v1/rpc/get_delivery_stats?p_campaign_id=&p_start_date=2026-01-01&p_end_date=2026-03-31&apikey=YOUR_KEY
+https://tjebidvgvbpnxgnphcrg.supabase.co/rest/v1/rpc/get_delivery_stats?p_start_date=2026-01-01&p_end_date=2026-03-31&apikey=YOUR_KEY
 ```
 
 ### December 2025
 ```
-https://tjebidvgvbpnxgnphcrg.supabase.co/rest/v1/rpc/get_delivery_stats?p_campaign_id=&p_start_date=2025-12-01&p_end_date=2025-12-31&apikey=YOUR_KEY
+https://tjebidvgvbpnxgnphcrg.supabase.co/rest/v1/rpc/get_delivery_stats?p_start_date=2025-12-01&p_end_date=2025-12-31&apikey=YOUR_KEY
 ```
 
----
+### Campaign + date range
+```
+https://tjebidvgvbpnxgnphcrg.supabase.co/rest/v1/rpc/get_delivery_stats?p_campaign_id=UUID&p_start_date=2026-01-01&p_end_date=2026-03-31&apikey=YOUR_KEY
+```
 
 ## Response Fields
 
