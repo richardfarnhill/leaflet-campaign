@@ -197,32 +197,22 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 
 ---
 
-### Phase 9: Demographic Enrichment (Option B) — ⚠️ IN PROGRESS (GAPS IDENTIFIED)
+### Phase 9: Demographic Enrichment (Option B) — ✅ Complete
 
 **Goal:** On-demand NOMIS enrichment for demographic feedback - replaces failed CSV loading approach
 
-**Status:** INCOMPLETE — Critical gaps discovered. T2b (server-side trigger) not implemented. T3/T5 not validated with real data.
+**Status:** COMPLETE — All tasks done and validated with real data (2026-02-26).
 
-**Current Implementation (PARTIAL):**
-- ✅ Browser JS function `fetchOwnerOccupiedFromNOMIS(oa21Code)` exists (calls NOMIS NM_2072_1 API)
-- ✅ `enrichDemographicFeedback(demographicId, oa21Code)` hooked into UI enquiry save flow
-- ⚠️ Server-side trigger (T2b) MISSING — no bulk/API enrichment pathway
-- ⚠️ Backfill script exists but not tested with real data
-
-**Critical Gaps:**
-1. **T2b NOT DONE** — Server-side trigger required for bulk/API demographic_feedback inserts
-2. **T3 NOT VALIDATED** — Browser enrichment function exists but never tested with real NOMIS API
-3. **T5 NOT VALIDATED** — Backfill script syntax OK but never ran with real demographic_feedback rows
+**Implementation:**
+- ✅ Browser JS `enrichDemographicFeedback()` hooked into enquiry save (T1+T2)
+- ✅ SQL trigger `trg_enrich_demographic_feedback` deployed — on INSERT auto-resolves `oa21_code` and `owner_occupied_pct` from `route_postcodes` (T2b). Tested with direct SQL INSERT.
+- ✅ Backfill script `scripts/backfill_demographics.js` created and validated (T4+T5)
+- ✅ RLS UPDATE policy added to `demographic_feedback`
+- ✅ 4,692 route_postcodes rows all have `owner_occupied_pct` populated from NOMIS
 
 **Requirements:**
-- DEM-02: Auto-enrich demographic_feedback (UI + bulk pathways) — ⚠️ PARTIAL (UI done, bulk missing)
-- DEM-03: Backfill historic data via script — ⚠️ INCOMPLETE (script ready, not validated)
-
-**Next Steps (BLOCKERS):**
-1. Implement T2b SQL trigger in supabase_schema.sql (CRITICAL)
-2. Re-test T3 with real postcode + NOMIS API (both UI and bulk paths)
-3. Re-run T5 with real demographic_feedback data
-4. Update docs upon completion
+- DEM-02: Auto-enrich demographic_feedback (UI + bulk pathways) ✅
+- DEM-03: Backfill historic data via script ✅
 
 ---
 
@@ -263,11 +253,39 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 | 6 - Enquiry & Team | ✅ Complete | 4 |
 | 7 - Core Enhancements | ✅ Complete | 5 |
 | 8 - Auto-assignment & API | ✅ Complete | 6 |
-| 9 - Demographic Enrichment | 🔧 In Progress | 2 |
+| 9 - Demographic Enrichment | ✅ Complete | 2 |
 | 10 - Backlog | ⏳ Pending | 7 |
 
 **Total: 9 phases core + backlog**
 
 ---
 
-*Last updated: 2026-02-26 - Phase 9 gaps identified and documented. T2b (server-side trigger) is critical blocker.*
+---
+
+### Bug Fix Session (2026-02-26) — post-Phase 9
+
+Multiple UI bugs fixed and improvements made outside the phase plan:
+
+**Bug fixes:**
+- Delivery journal `id` missing from SELECT → `openEditDelivery('undefined')` crash
+- Delivery journal: added Delete button per row
+- Financial projections never rendered (`updateFinance` was dead code — fixed call chain)
+- Revenue attribution used non-existent `target_areas.team_member_1_id` — fixed to use deliveries
+- Team revenue showed `£1,000%` (double-suffix bug) — fixed
+- Postcode not saved to `demographic_feedback` on enquiry insert — fixed
+- NOMIS enrichment silently failing: `order=created_at.desc` should be `recorded_at` — fixed
+- Missing RLS UPDATE policy on `demographic_feedback` — added
+
+**UI improvements:**
+- All Campaigns mode: Delivery journal shows Campaign column as first column
+- All Campaigns mode: Enquiries list now visible (was hidden); Campaign column; read-only (no Edit/Delete)
+- All Campaigns mode: Finance projections hidden; replaced by 4 summary cards (total leaflets, enquiries, conversion rate, avg response rate)
+- All Campaigns mode: Campaign Breakdown replaced HTML table with `.finance-metric-card` grid with mini progress bars
+- All Campaigns mode: Sessions Done / progress % now correctly filters to active campaigns only
+- Finance projections: `updateSummary()` stub replaced with `loadSummaryStats()` — projections now re-render after enquiry save/delete
+- Finance: Avg case value card shows actual (revenue ÷ cases) when real data exists; configured estimate shown as fallback with `*`
+- Banner: "Est. Completion" (always `—`) replaced with "This Month" — leaflets delivered in current calendar month
+- Campaign config modal: Archive (amber) and Delete (red) buttons — archive sets `is_active=false`, delete cascades all child data
+- Enquiries section: split into two separate tables — "Enquiries" (non-instructed, no Value column) and "Instructions" (instructed, green header, Value column bold, grand total row)
+
+*Last updated: 2026-02-26 — Phase 9 complete, all bugs fixed, UI improved.*

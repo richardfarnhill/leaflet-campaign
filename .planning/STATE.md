@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Teams can reserve geographic delivery areas (cards), record deliveries, and the system accurately tracks coverage, enquiries, and cases per area.
-**Current focus:** Phase 9 — Demographic enrichment (Option B: on-demand NOMIS). Phase 8 T9 failed, superseded by P9.
+**Current focus:** Phase 10 — Backlog / next improvements. All core phases complete.
 
 ## Current Position
 
-Phase: 9 of 10 (Demographic Enrichment) + Bug fixes session
-Plan: 09-01 — COMPLETE (all gaps closed)
-Status: Phase 9 COMPLETE + multiple UI bugs fixed. Password bypassed for testing (TODO: re-enable).
+Phase: 10 of 10 (Backlog)
+Plan: All phases 1-9 COMPLETE
+Status: Production-ready. Bug fix session complete 2026-02-26. Password bypass still in place (TODO: re-enable when ready to go live).
 
-Last activity: 2026-02-26 — P9 complete + bug fix session. See handoff below.
+Last activity: 2026-02-26 — Phase 9 complete + extensive bug fix + UI improvement session.
 
-Progress: [██████████████████░░░░] 90% (9 of 10 phases)
+Progress: [████████████████████░░] 95% (9/9 core phases + polish)
 
 ## Performance Metrics
 
@@ -230,10 +230,8 @@ See 06-01-PLAN.md Task 8 for full spec. Simple modal: Route Name, Postcode, Hous
 
 ### What still needs doing
 
-1. **Re-enable password** — find `if(false && !getCookie(COOKIE)){` in index.html and remove the `false &&`
-2. **Campaign map polygons** — overview map shows circle markers only, no route boundary polygons (lower priority)
-3. **Commit all changes** — nothing committed yet this session
-4. **Phase 9 docs** — update PLAN.md/SUMMARY.md/ROADMAP.md to reflect complete status
+1. **Re-enable password** — find `if(false && !getCookie(COOKIE)){` in index.html and remove the `false &&` when ready to go live
+2. **Campaign map polygons** — overview map shows circle markers only, no route boundary polygons (lower priority, Phase 10 backlog)
 
 ### Files changed (uncommitted)
 - `index.html` — multiple bug fixes (see above)

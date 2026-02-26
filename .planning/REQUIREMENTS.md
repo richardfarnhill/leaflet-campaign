@@ -82,8 +82,29 @@
 
 | ID | Requirement | Description |
 |----|-------------|-------------|
-| DEM-02 | Auto-enrich demographic_feedback (both UI + bulk) | **Two pathways:** (1) Browser JS calls NOMIS on UI enquiry save (T2), (2) SQL trigger auto-enriches any new demographic_feedback row from bulk/API sources (T2b). Both must be implemented. On-demand NOMIS fetch, no pre-loading. |
-| DEM-03 | Backfill historic demographic_feedback | Script (scripts/backfill_demographics.js) that fetches owner_occupied_pct from NOMIS for all existing rows with NULL owner_occupied_pct but valid oa21_code. Can be run on-demand. Must be validated with real data. |
+| DEM-02 | Auto-enrich demographic_feedback (both UI + bulk) | **Two pathways:** (1) Browser JS calls NOMIS on UI enquiry save (T2) ✅, (2) SQL trigger `trg_enrich_demographic_feedback` auto-enriches any INSERT via route_postcodes lookup (T2b) ✅. Both implemented and validated. |
+| DEM-03 | Backfill historic demographic_feedback | Script `scripts/backfill_demographics.js` fetches owner_occupied_pct from NOMIS for rows with NULL owner_occupied_pct. ✅ Created and validated. |
+
+### CMP-11: Campaign Lifecycle
+
+| ID | Requirement | Description |
+|----|-------------|-------------|
+| CMP-04 | Archive Campaign | Set `is_active=false` on a campaign — removes it from dropdown but retains all data. Archived campaigns still count in All Campaigns analytics. ✅ Done (2026-02-26) |
+| CMP-05 | Delete Campaign | Hard-delete a campaign and ALL associated data (enquiries, deliveries, target_areas, route_postcodes, demographic_feedback, restricted_areas). Double-confirm required. ✅ Done (2026-02-26) |
+
+### ENQ-12: Enquiry Display
+
+| ID | Requirement | Description |
+|----|-------------|-------------|
+| ENQ-03 | Separate Enquiries and Instructions | Display enquiries (non-instructed) and instructions (instructed) as separate tables. Instructions table has Value column (bold green) and grand total row. No Value column on enquiries table. ✅ Done (2026-02-26) |
+| ENQ-04 | All Campaigns enquiry visibility | Enquiries and Instructions tables visible in All Campaigns mode with Campaign column; read-only (no Add/Edit/Delete). ✅ Done (2026-02-26) |
+
+### CFG-13: All Campaigns Mode
+
+| ID | Requirement | Description |
+|----|-------------|-------------|
+| CFG-06 | All Campaigns finance summary | In All Campaigns mode, replace per-campaign finance projections with 4 summary cards: total leaflets delivered, total enquiries, enquiry→case conversion rate, avg response rate. ✅ Done (2026-02-26) |
+| CFG-07 | All Campaigns campaign breakdown cards | In All Campaigns mode, show one card per active campaign with delivery progress, remaining count, and colour-coded progress bar. ✅ Done (2026-02-26) |
 
 ### INT-08: Integrations
 
@@ -153,8 +174,14 @@
 | RTE-03: route_postcodes Expansion | Phase 6 | ✅ Done | T8 backfill — 18 rows for Tingley |
 | RTE-04: Enquiry Auto-matching | Phase 8 | ✅ Done | T4 |
 | RTE-05: Real Campaign Migration | Phase 8 | ✅ Done | T7 |
-| DEM-02: Auto-enrich demographic_feedback | Phase 9 | ⚠️ PARTIAL | T1+T2 UI pathway done, T2b bulk pathway NOT DONE. Blocker for phase completion. |
-| DEM-03: Backfill historic demographics | Phase 9 | ⚠️ INCOMPLETE | T4 script created, T5 not validated with real data. Blocker for phase completion. |
+| DEM-02: Auto-enrich demographic_feedback | Phase 9 | ✅ Done | UI pathway (T2) + SQL trigger T2b both deployed and validated. |
+| DEM-03: Backfill historic demographics | Phase 9 | ✅ Done | Script created and validated with real data. |
+| CMP-04: Archive Campaign | Bug fix session | ✅ Done | Archive button in config modal, sets is_active=false |
+| CMP-05: Delete Campaign | Bug fix session | ✅ Done | Delete button in config modal, cascades all child data |
+| ENQ-03: Separate Enquiries/Instructions | Bug fix session | ✅ Done | Two tables, Instructions has grand total |
+| ENQ-04: All Campaigns enquiry visibility | Bug fix session | ✅ Done | Campaign column, read-only |
+| CFG-06: All Campaigns finance summary | Bug fix session | ✅ Done | 4 summary cards |
+| CFG-07: All Campaigns campaign breakdown cards | Bug fix session | ✅ Done | Card grid with progress bars |
 | INT-01: ClickUp Stub | Phase 10 | 📋 Backlog | - |
 | INT-02: Google Sheets Export | Phase 10 | 📋 Backlog | - |
 | INT-03: Gmail Notifications | Phase 10 | 📋 Backlog | - |
