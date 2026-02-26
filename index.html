@@ -156,6 +156,7 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -1165,10 +1166,11 @@ function renderAreaCards(){
     const deliveryDate=res?res.delivery_date:null;
 
     html+='<div class="area-card '+status+'" data-area-id="'+area.id+'">';
-    const hasStreets=!!area.streets;
-    html+='<div class="area-card-header"><div>'+(hasStreets?'<div class="area-card-title" style="cursor:pointer;" onclick="toggleCardStreets(\''+area.id+'\')" title="Click to see streets">'+area.area_name+' <span style="font-size:0.7rem;color:#888;">▼</span></div>':'<div class="area-card-title">'+area.area_name+'</div>')+'<div class="area-card-postcode">'+area.postcode+'</div></div>';
+    const streetList=Array.isArray(area.streets)?area.streets.filter(Boolean):(area.streets?[area.streets]:[]);
+    const hasStreets=streetList.length>0;
+    html+='<div class="area-card-header"><div>'+(hasStreets?'<div class="area-card-title" style="cursor:pointer;" onclick="toggleCardStreets(\''+area.id+'\')" title="Click to see streets">'+area.area_name+' <span id="streets-arrow-'+area.id+'" style="font-size:0.7rem;color:#888;">▼</span></div>':'<div class="area-card-title">'+area.area_name+'</div>')+'<div class="area-card-postcode">'+area.postcode+'</div></div>';
     html+='<span class="area-card-badge '+status+'">'+status+'</span></div>';
-    if(area.streets){html+='<div class="area-card-streets" id="streets-'+area.id+'" style="display:none;">'+area.streets+'</div>';}
+    if(hasStreets){html+='<div class="area-card-streets" id="streets-'+area.id+'" style="display:none;">'+streetList.join(', ')+'</div>';}
     const delivered=areaDeliveries[area.id]||0;
     const houseCount=area.house_count||0;
     const pct=houseCount>0?Math.round(delivered/houseCount*100):0;
@@ -1204,52 +1206,66 @@ function renderAreaCards(){
 // P7-T1: Toggle street list on card click
 function toggleCardStreets(areaId){
   const el=document.getElementById('streets-'+areaId);
+  const arrow=document.getElementById('streets-arrow-'+areaId);
   if(!el)return;
-  const titleArrow=el.previousElementSibling?.querySelector('span');
   if(el.style.display==='none'){
     el.style.display='';
-    if(titleArrow) titleArrow.textContent='▲';
+    if(arrow) arrow.textContent='▲';
   }else{
     el.style.display='none';
-    if(titleArrow) titleArrow.textContent='▼';
+    if(arrow) arrow.textContent='▼';
   }
 }
 
-// P7-T1: Switch to map view and highlight a route's postcode boundary
+// P7-T1: Switch to map view and draw a convex hull boundary for a route
 async function viewRouteOnMap(areaId){
-  // Switch to map view and ensure it's initialised
   showView('map');
-  if(window.analyticsMap){
-    // Small delay to allow map to render after view switch
-    await new Promise(r=>setTimeout(r,150));
-  }else{
-    await loadHeatmap();
-  }
+  if(!window.analyticsMap) await loadHeatmap();
+  else await new Promise(r=>setTimeout(r,150));
 
-  // Clear any previous route highlight layer
   if(window.routeHighlightLayer){
     window.routeHighlightLayer.remove();
     window.routeHighlightLayer=null;
   }
 
+  const area=targetAreas.find(a=>a.id===areaId);
+  const areaName=area?area.area_name:'Route';
+
   try{
     const postcodes=await sbFetch('/rest/v1/route_postcodes?select=lat,lng,postcode&target_area_id=eq.'+areaId);
-    if(!postcodes||postcodes.length===0){
-      // Fall back to centre marker if no postcodes
-      const area=targetAreas.find(a=>a.id===areaId);
+    const pts=(postcodes||[]).filter(p=>p.lat&&p.lng);
+
+    if(pts.length===0){
+      // No postcodes — fall back to centre marker
       if(area&&area.lat&&area.lng){
-        window.routeHighlightLayer=L.circleMarker([area.lat,area.lng],{radius:14,color:'#2563eb',fillColor:'#2563eb',fillOpacity:0.3,weight:3}).addTo(window.analyticsMap);
-        window.analyticsMap.setView([area.lat,area.lng],14);
+        window.routeHighlightLayer=L.circleMarker([+area.lat,+area.lng],{radius:14,color:'#2563eb',fillColor:'#2563eb',fillOpacity:0.25,weight:3})
+          .bindPopup(areaName).addTo(window.analyticsMap);
+        window.analyticsMap.setView([+area.lat,+area.lng],14);
       }
       return;
     }
 
-    const markers=postcodes.filter(p=>p.lat&&p.lng).map(p=>
-      L.circleMarker([p.lat,p.lng],{radius:7,color:'#2563eb',fillColor:'#93c5fd',fillOpacity:0.8,weight:2})
-        .bindTooltip(p.postcode,{permanent:false})
-    );
-    window.routeHighlightLayer=L.featureGroup(markers).addTo(window.analyticsMap);
-    window.analyticsMap.fitBounds(window.routeHighlightLayer.getBounds().pad(0.15));
+    // Build convex hull via Turf
+    const turfPoints=turf.featureCollection(pts.map(p=>turf.point([+p.lng,+p.lat])));
+    let polygonLayer;
+    if(pts.length>=3){
+      const hull=turf.convex(turfPoints);
+      if(hull){
+        // Convert Turf [lng,lat] → Leaflet [lat,lng]
+        const latlngs=hull.geometry.coordinates[0].map(c=>[c[1],c[0]]);
+        polygonLayer=L.polygon(latlngs,{color:'#2563eb',fillColor:'#93c5fd',fillOpacity:0.3,weight:2})
+          .bindPopup('<strong>'+areaName+'</strong><br>'+pts.length+' postcodes');
+      }
+    }
+    if(!polygonLayer){
+      // Fewer than 3 points or hull failed — just show dot markers
+      const featureMarkers=pts.map(p=>L.circleMarker([+p.lat,+p.lng],{radius:6,color:'#2563eb',fillColor:'#93c5fd',fillOpacity:0.8,weight:2}).bindTooltip(p.postcode));
+      polygonLayer=L.featureGroup(featureMarkers);
+    }
+
+    window.routeHighlightLayer=polygonLayer.addTo(window.analyticsMap);
+    window.analyticsMap.fitBounds(window.routeHighlightLayer.getBounds().pad(0.2));
+    window.routeHighlightLayer.openPopup&&window.routeHighlightLayer.openPopup();
   }catch(e){
     Logger.error('viewRouteOnMap failed',e);
   }
