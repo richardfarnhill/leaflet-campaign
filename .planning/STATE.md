@@ -14,7 +14,7 @@ Plan: 06-01 — In progress
 Status: In Progress — T08 (Route creation) by Claude, T07 ready for OpenCode
 Last activity: 2026-02-25 — Campaign data isolation, leaderboards, enquiry fixes
 
-Progress: [████████████░░░░░░░░░░] ~50% (6 of 10 phases)
+Progress: [████████████░░░░░░░░░░] ~56% (6 of 9 phases)
 
 ## Performance Metrics
 
@@ -136,7 +136,8 @@ Resume file: None
 | T3: RLS policies verification | ○ Pending | - |
 | T4: Route completion - explicit leaflet count + rolling adjustment | ○ Pending | - |
 | T5: Security - move credentials to config.js | ○ Pending | Urgent |
-| T6: Phase review | ○ Pending | - |
+| T6: DB-driven Summary Bar fix (CFG-03) | ○ Pending | |
+| T7: Phase review | ○ Pending | - |
 
 ## Phase 8 Task Checklist
 
@@ -149,11 +150,15 @@ Resume file: None
 | T5: API endpoints (Supabase) | ○ Pending | |
 | T6: Demographic feedback table from enquiries | ○ Pending | |
 
-## Phase 9 Task Checklist
+## Phase 9 Task Checklist (Backlog)
 
 | Task | Status | Notes |
 |------|--------|-------|
 | T1: Dark mode toggle (system default) | ○ Pending | |
+| T2: CSV/Sheets export | ○ Pending | |
+| T3: Gmail notifications | ○ Pending | |
+| T4: Full ClickUp integration | ○ Pending | |
+| T5: Planning screen v2 | ○ Pending | |
 
 ## Backlog (Consider Later)
 

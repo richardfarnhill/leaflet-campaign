@@ -160,6 +160,8 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 
 **Requirements:**
 - Route card details (street names, map boundary)
+- Route deletion UI
+- RLS policies verification
 - Route completion with explicit leaflet count + rolling adjustment
 - Security: move credentials to config.js (URGENT)
 
@@ -167,8 +169,10 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 
 **Success Criteria:**
 1. Route cards show street names and map boundary link
-2. Route completion requires explicit leaflet count
-3. Credentials moved to config.js
+2. Route deletion UI works
+3. RLS policies verified
+4. Route completion requires explicit leaflet count
+5. Credentials moved to config.js
 
 ---
 
@@ -191,27 +195,20 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 
 ---
 
-### Phase 9: UI/UX
-
-**Goal:** User experience improvements
-
-**Requirements:**
-- Dark mode (system default)
-
-**Success Criteria:**
-1. Dark mode toggle works with system default
-
----
-
-### Phase 10: Backlog
+### Phase 9: Backlog
 
 **Goals:** Future enhancements
 
 **Requirements:**
+- Dark mode (system default)
 - CSV/Sheets export
 - Gmail notifications
 - Full ClickUp integration
 - Planning screen v2
+- Campaign duplication
+- Bulk route creation
+
+---
 - Campaign duplication
 - Bulk route creation
 
@@ -233,11 +230,9 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 | 4 - Analytics & Heatmaps | ✅ Complete | 4 |
 | 5 - Campaign Management | ✅ Complete | 5 |
 | 6 - Enquiry & Team | 🔄 In Progress | 4 |
-| 7 - Core Enhancements | ⏳ Pending | 3 |
-| 8 - Auto-assignment & API | ⏳ Pending | 5 |
-| 9 - UI/UX | ⏳ Pending | 1 |
-| 10 - Backlog | ⏳ Pending | 6 |
-| 7 - Integrations | ⏳ Pending | 3 |
+| 7 - Core Enhancements | ⏳ Pending | 5 |
+| 8 - Auto-assignment & API | ⏳ Pending | 6 |
+| 9 - Backlog | ⏳ Pending | 7 |
 
 **Total: 7 phases, 19 v1 requirements mapped ✓**
 
