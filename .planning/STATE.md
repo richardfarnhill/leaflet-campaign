@@ -62,8 +62,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-25
-Stopped at: T06 (Team progress view) complete + enquiry_date bug fix
+Last session: 2026-02-26
+Stopped at: T05 (security) + T06 (DB-driven summary) done on fix branch
 Resume file: None
 
 ## Phase 4 Task Checklist (04-01-PLAN.md)
@@ -136,7 +136,7 @@ Resume file: None
 | T3: RLS policies verification | ○ Pending | - |
 | T4: Route completion - explicit leaflet count + rolling adjustment | ○ Pending | - |
 | T5: Security - move credentials to config.js | ✓ Done | OC |
-| T6: DB-driven Summary Bar fix (CFG-03) | ○ Pending | |
+| T6: DB-driven Summary Bar fix (CFG-03) | ✓ Done | OC |
 | T7: Phase review | ○ Pending | - |
 
 ## Phase 8 Task Checklist
