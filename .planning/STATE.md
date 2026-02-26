@@ -135,7 +135,7 @@ Resume file: None
 | T2: Route deletion UI | ○ Pending | - |
 | T3: RLS policies verification | ○ Pending | - |
 | T4: Route completion - explicit leaflet count + rolling adjustment | ○ Pending | - |
-| T5: Security - move credentials to config.js | ○ Pending | Urgent |
+| T5: Security - move credentials to config.js | ✓ Done | OC |
 | T6: DB-driven Summary Bar fix (CFG-03) | ○ Pending | |
 | T7: Phase review | ○ Pending | - |
 
