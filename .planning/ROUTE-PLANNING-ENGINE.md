@@ -133,6 +133,19 @@ future model refinement (e.g. "areas with 70-75% owner-occupied convert at 0.8% 
 in 60-65% areas"). A later phase will import Richard's existing client spreadsheet to
 pre-populate this table.
 
+**Auto-enrichment (Phase 8 T9 — DEM-02/DEM-03):**
+`owner_occupied_pct` is populated automatically — no manual steps required:
+
+1. **NOMIS backfill (one-time per campaign):** For each unique `oa21_code` in `route_postcodes`,
+   fetch tenure data from NOMIS `NM_2072_1` (TS054) and UPDATE `route_postcodes.owner_occupied_pct`.
+   Re-run when new routes are added.
+
+2. **DB trigger (permanent):** `AFTER INSERT ON demographic_feedback` — the trigger joins
+   `route_postcodes WHERE oa21_code = NEW.oa21_code LIMIT 1` and sets `owner_occupied_pct`.
+   No external API call at enquiry time. No pg_cron, no Edge Function needed.
+
+**Result:** Every instructed enquiry row automatically carries its OA's tenure % for analytics.
+
 ---
 
 ## Restricted Areas

@@ -1,6 +1,6 @@
 # Leaflet Campaign Tracker
 
-**Last updated:** 2026-02-26 after Phase 8 complete
+**Last updated:** 2026-02-26 — Phase 8 T9 (demographic enrichment) in progress
 
 ---
 
@@ -166,7 +166,8 @@ This is a brownfield project. Codebase analysis completed:
 - [x] **Route deletion UI** - Delete with cascade guard
 - [x] **route_postcodes expansion** - Full unit postcodes per route (enquiry auto-matching)
 - [x] **Security** - Credentials in config.js, RLS enabled
-- [ ] **Enquiry auto-matching** - Auto-assign enquiries to routes via route_postcodes lookup (Phase 8 T4)
+- [x] **Enquiry auto-matching** - Auto-assign enquiries to routes via route_postcodes lookup (Phase 8 T4)
+- [ ] **Demographic enrichment (T9)** - NOMIS backfill of route_postcodes.owner_occupied_pct + DB trigger to auto-populate demographic_feedback on insert (DEM-02, DEM-03)
 - [ ] **Refactor real campaigns** - Migrate existing real campaign data into new model (Phase 8 T7)
 - [ ] OS Names API integration for street data (deferred)
 - [ ] Census 2021 demographic filtering (deferred — NOMIS NM_2072_1 approach designed)
@@ -204,10 +205,16 @@ This is a brownfield project. Codebase analysis completed:
 - `needs_routing` flag on campaigns - prompts when 500+ leaflets short
 - Auto-assign enquiries to routes via postcode lookup
 - Stats API endpoint (get_delivery_stats RPC) for external reporting
-- Demographic feedback table auto-capture from enquiries
+- Demographic feedback table auto-capture from enquiries (oa21_code written inline at save)
 - Testing procedure documented
 
-### Next (Phase 9 Backlog)
+### Next (Phase 8 T9 — in progress)
+- **DEM-02/DEM-03: Demographic enrichment**
+  - Step 1: Backfill `route_postcodes.owner_occupied_pct` from NOMIS NM_2072_1 (TS054 Tenure) per unique oa21_code
+  - Step 2: PostgreSQL AFTER INSERT trigger on `demographic_feedback` — joins `route_postcodes` on `oa21_code`, auto-populates `owner_occupied_pct`
+  - Result: Every instructed enquiry row in `demographic_feedback` automatically gets tenure % — no manual steps, no cron, no Edge Function
+
+### Phase 9 Backlog (after T9)
 - Dark mode toggle
 - CSV/Sheets export
 - Gmail notifications

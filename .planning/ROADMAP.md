@@ -178,20 +178,22 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 
 ### Phase 8: Auto-assignment & API
 
-**Goal:** Auto-assign enquiries, API endpoints, demographics
+**Goal:** Auto-assign enquiries, API endpoints, demographics, enrichment
 
 **Requirements:**
-- Auto-assign enquiries to routes based on postcode
-- API endpoints via Supabase
-- Demographic feedback capture
-- Prompt new route when 500 houses short
-- Create campaign enhanced questions
-- Global exclusion areas review
+- Auto-assign enquiries to routes based on postcode (RTE-04) ✅
+- API endpoints via Supabase (RPC) ✅
+- Demographic feedback capture from instructed enquiries ✅
+- Prompt new route when 500 houses short (needs_routing flag) ✅
+- Create campaign enhanced with route creation flow ✅
+- Global exclusion areas review ✅
+- Demographic enrichment: NOMIS backfill → DB trigger auto-populates owner_occupied_pct (DEM-02, DEM-03) — T9
 
 **Success Criteria:**
-1. Enquiries auto-assigned to routes based on postcode
-2. API endpoints available
-3. Demographic data captured from enquiries
+1. Enquiries auto-assigned to routes based on postcode ✅
+2. API endpoints available ✅
+3. Demographic data captured from enquiries ✅
+4. owner_occupied_pct automatically populated on demographic_feedback insert via DB trigger — T9
 
 ---
 
@@ -231,11 +233,11 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 | 5 - Campaign Management | ✅ Complete | 5 |
 | 6 - Enquiry & Team | ✅ Complete | 4 |
 | 7 - Core Enhancements | ✅ Complete | 5 |
-| 8 - Auto-assignment & API | ✅ Complete | 6 |
+| 8 - Auto-assignment & API | 🔧 In Progress (T9 pending) | 6 |
 | 9 - Backlog | ⏳ Pending | 7 |
 
-**Total: 8 phases, v1 requirements complete ✓**
+**Total: 8 phases core + T9 demographic enrichment in progress**
 
 ---
 
-*Last updated: 2026-02-26 - Phase 8 complete*
+*Last updated: 2026-02-26 - Phase 8 T9 (demographic enrichment) added*

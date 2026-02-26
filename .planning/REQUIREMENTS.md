@@ -78,6 +78,13 @@
 | RTE-04 | Enquiry Auto-matching | When an enquiry's postcode is recorded, auto-assign target_area_id by looking up route_postcodes. Phase 8 T4. |
 | RTE-05 | Real Campaign Migration | Migrate existing real-world campaign data (routes, deliveries, enquiries) into the new data model. Phase 8. |
 
+### DEM-10: Demographic Enrichment
+
+| ID | Requirement | Description |
+|----|-------------|-------------|
+| DEM-02 | Auto-enrich demographic_feedback | When a new row is inserted into demographic_feedback (on instructed enquiry save), automatically populate owner_occupied_pct by joining on oa21_code from route_postcodes. Implemented as a PostgreSQL AFTER INSERT trigger — no external call at enquiry time. |
+| DEM-03 | NOMIS backfill for route_postcodes | For each unique oa21_code in route_postcodes, fetch Census 2021 tenure data from NOMIS NM_2072_1 (TS054) and store owner_occupied_pct. One-time job per campaign; re-run when new routes are added. Data source: NOMIS API (free, no key, CORS-enabled). |
+
 ### INT-08: Integrations
 
 | ID | Requirement | Description |
@@ -144,8 +151,10 @@
 | RTE-01: Route Creation UI | Phase 6 | ✅ Done | T8 Add Route modal |
 | RTE-02: Route Deletion UI | Phase 7 | ✅ Done | T2 OC |
 | RTE-03: route_postcodes Expansion | Phase 6 | ✅ Done | T8 backfill — 18 rows for Tingley |
-| RTE-04: Enquiry Auto-matching | Phase 8 | 📋 Planned | T4 |
-| RTE-05: Real Campaign Migration | Phase 8 | 📋 Planned | T7 (new) |
+| RTE-04: Enquiry Auto-matching | Phase 8 | ✅ Done | T4 |
+| RTE-05: Real Campaign Migration | Phase 8 | ✅ Done | T7 |
+| DEM-02: Auto-enrich demographic_feedback | Phase 8 | 📋 Planned | T9 — trigger + NOMIS backfill |
+| DEM-03: NOMIS backfill for route_postcodes | Phase 8 | 📋 Planned | T9 — prerequisite for DEM-02 trigger |
 | INT-01: ClickUp Stub | Phase 9 | 📋 Backlog | - |
 | INT-02: Google Sheets Export | Phase 9 | 📋 Backlog | - |
 | INT-03: Gmail Notifications | Phase 9 | 📋 Backlog | - |
