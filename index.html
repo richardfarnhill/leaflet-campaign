@@ -1413,8 +1413,11 @@ function closeCompleteModal(){
 
 async function loadStatsFromAPI(){
   try{
-    const campaignParam = currentCampaignId ? '&p_campaign_id=' + currentCampaignId : '';
-    const stats = await sbFetch('/rest/v1/rpc/get_delivery_stats' + campaignParam);
+    let url = '/rest/v1/rpc/get_delivery_stats';
+    if (currentCampaignId) {
+      url += '?p_campaign_id=' + currentCampaignId;
+    }
+    const stats = await sbFetch(url);
     if(stats && typeof stats === 'object'){
       return stats;
     }
