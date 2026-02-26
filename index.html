@@ -993,8 +993,8 @@ async function loadCampaigns(){
         opt.textContent=c.name;
         select.appendChild(opt);
       });
-      // Only set initial campaign if none selected yet
-      if(!currentCampaignId){
+      // Only set initial campaign if none selected yet AND campaigns exist
+      if(!currentCampaignId && campaigns.length > 0){
         currentCampaignId=campaigns[0].id;
       }
       select.value=currentCampaignId||'';
@@ -1015,7 +1015,11 @@ async function loadCampaigns(){
           await loadFinanceFromDB();updateSummary();
         };
       }
-      Logger.success('Campaign loaded',campaigns[0].name);
+      if(campaigns.length > 0){
+        Logger.success('Campaign loaded',campaigns[0].name);
+      } else {
+        Logger.warn('No active campaigns - showing empty state');
+      }
     } else {
       Logger.error('No campaigns found or campaigns array is empty');
       Logger.info('Checking campaigns table directly...');
