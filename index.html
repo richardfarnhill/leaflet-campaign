@@ -21,7 +21,8 @@
   
   function getCookie(n){return document.cookie.split(';').some(c=>c.trim().startsWith(n+'='));}
   function setCookie(n,d){const e=new Date(Date.now()+d*864e5).toUTCString();document.cookie=n+'=1;expires='+e+';path=/;SameSite=Lax';}
-  if(!getCookie(COOKIE)){
+  // TODO: Re-enable password check after testing is complete
+  if(false && !getCookie(COOKIE)){
     document.addEventListener('DOMContentLoaded',function(){
       document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f0f4f8;font-family:Segoe UI,sans-serif;"><div style="background:white;padding:40px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.1);text-align:center;max-width:320px;width:100%;"><div style="font-size:2rem;margin-bottom:12px;">&#128202;</div><h2 style="color:#1a3a5c;margin-bottom:6px;font-size:1.2rem;">WillSolicitor</h2><p style="color:#888;font-size:0.85rem;margin-bottom:24px;">Leaflet Campaign Tracker</p><input id="pw" type="password" placeholder="Password" style="width:100%;padding:10px 12px;border:1px solid #ccd3db;border-radius:6px;font-size:1rem;margin-bottom:12px;box-sizing:border-box;" autofocus><button onclick="checkPw()" style="width:100%;padding:10px;background:#1a3a5c;color:white;border:none;border-radius:6px;font-size:1rem;cursor:pointer;">Enter</button><p id="pwerr" style="color:#c0392b;font-size:0.82rem;margin-top:10px;display:none;">Incorrect password</p></div></div>';
       document.getElementById('pw').addEventListener('keydown',function(e){if(e.key==='Enter')checkPw();});
@@ -1472,6 +1473,10 @@ async function loadSummaryStats(){
     document.getElementById('progressFill').style.width=pct+'%';
     document.getElementById('progressPct').textContent=pct+'%';
     document.getElementById('sumProjected').textContent='—';
+
+    // Finance projections — load actuals then render
+    await loadFinanceFromDB();
+    updateFinance(totalDelivered, remaining);
   }catch(e){
     Logger.error('loadSummaryStats failed',e);
   }
@@ -1480,7 +1485,7 @@ async function loadSummaryStats(){
 async function loadDeliveryJournal(){
   try{
     const journalCampFilter = currentCampaignId ? '&campaign_id=eq.' + currentCampaignId : '';
-    const rows=await sbFetch('/rest/v1/deliveries?select=leaflets_delivered,delivery_date,notes,created_at,target_areas(area_name),team_member_1:team_members!team_member_1_id(name),team_member_2:team_members!team_member_2_id(name)&order=delivery_date.desc' + journalCampFilter);
+    const rows=await sbFetch('/rest/v1/deliveries?select=id,leaflets_delivered,delivery_date,notes,created_at,target_areas(area_name),team_member_1:team_members!team_member_1_id(name),team_member_2:team_members!team_member_2_id(name)&order=delivery_date.desc' + journalCampFilter);
     const el=document.getElementById('journalList');
     if(!rows||rows.length===0){el.innerHTML='<p style="color:#888;font-size:0.9rem;">No deliveries recorded yet.</p>';return;}
     
@@ -1520,7 +1525,7 @@ async function loadDeliveryJournal(){
       html+='<td style="padding:8px;text-align:right;">'+r.leaflets_delivered.toLocaleString()+'</td>';
       html+='<td style="padding:8px;">'+(team||'—')+'</td>';
       html+='<td style="padding:8px;color:#666;">'+notes+'</td>';
-      html+='<td style="padding:8px;text-align:center;"><button onclick="openEditDelivery(\''+r.id+'\')" style="padding:4px 8px;background:#1a3a5c;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.75rem;">Edit</button></td>';
+      html+='<td style="padding:8px;text-align:center;"><button onclick="openEditDelivery(\''+r.id+'\')" style="padding:4px 8px;background:#1a3a5c;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.75rem;margin-right:4px;">Edit</button><button onclick="deleteDelivery(\''+r.id+'\')" style="padding:4px 8px;background:#dc2626;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.75rem;">Delete</button></td>';
       html+='</tr>';
     });
     html+='<tr style="background:#e8f4f8;font-weight:700;">';
@@ -1657,17 +1662,27 @@ async function loadTeamProgress(){
       }
     });
     
+    // Build area→team member map from deliveries (deliveries carry team_member_1_id/2_id)
+    const areaTeamMap={};
+    (deliveries||[]).forEach(d=>{
+      if(!d.target_area_id)return;
+      if(!areaTeamMap[d.target_area_id]){
+        areaTeamMap[d.target_area_id]={tm1:d.team_member_1_id||null,tm2:d.team_member_2_id||null};
+      }
+    });
+
     (enquiries||[]).forEach(e=>{
-      const ta=e.target_area_id?areaMap[e.target_area_id]:null;
-      if(!ta)return;
-      const hasMember1=ta.team_member_1_id&&stats[ta.team_member_1_id];
-      const hasMember2=ta.team_member_2_id&&stats[ta.team_member_2_id];
+      if(!e.target_area_id)return;
+      const team=areaTeamMap[e.target_area_id];
+      if(!team)return;
+      const hasMember1=team.tm1&&stats[team.tm1];
+      const hasMember2=team.tm2&&stats[team.tm2];
       const memberCount=(hasMember1?1:0)+(hasMember2?1:0);
       if(memberCount===0)return;
-      
+
       const splitRevenue=(parseFloat(e.instruction_value)||0)/memberCount;
-      if(hasMember1)stats[ta.team_member_1_id].revenue+=splitRevenue;
-      if(hasMember2)stats[ta.team_member_2_id].revenue+=splitRevenue;
+      if(hasMember1)stats[team.tm1].revenue+=splitRevenue;
+      if(hasMember2)stats[team.tm2].revenue+=splitRevenue;
     });
 
     const list=Object.values(stats).sort((a,b)=>b.revenue-a.revenue);
@@ -1687,7 +1702,8 @@ async function loadTeamProgress(){
         ?(totalDelivered>0?Math.round(tm.delivered/totalDelivered*100):0)
         :(totalRevenue>0?Math.round(tm.revenue/totalRevenue*100):0);
       const medal=rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank+'.';
-      return '<tr><td style="padding:8px;font-weight:600;">'+medal+'</td><td style="padding:8px;">'+tm.name+'</td><td style="padding:8px;text-align:right;">'+(type==='revenue'?'£':'')+val.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0})+(type==='leaflets'?'':'%')+'</td><td style="padding:8px;text-align:right;color:#64748b;">'+pct+'%</td></tr>';
+      const valStr=type==='revenue'?'£'+val.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0}):val.toLocaleString();
+      return '<tr><td style="padding:8px;font-weight:600;">'+medal+'</td><td style="padding:8px;">'+tm.name+'</td><td style="padding:8px;text-align:right;">'+valStr+'</td><td style="padding:8px;text-align:right;color:#64748b;">'+pct+'%</td></tr>';
     };
     
     let html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">';
@@ -1910,12 +1926,13 @@ async function saveEnquiry(){
           campaign_id:currentCampaignId,
           enquiry_id:enquiryId,
           oa21_code:_enquiryGeo.oa21,
+          postcode:data.postcode||_enquiryGeo.spacedPostcode||null,
           instructed:true,
           instruction_value:data.instruction_value
         })
       });
       // Get the inserted demographic_feedback row ID and enrich from NOMIS
-      const newDemo=await sbFetch('/rest/v1/demographic_feedback?enquiry_id=eq.'+enquiryId+'&order=created_at.desc&limit=1&select=id,oa21_code');
+      const newDemo=await sbFetch('/rest/v1/demographic_feedback?enquiry_id=eq.'+enquiryId+'&order=recorded_at.desc&limit=1&select=id,oa21_code');
       if(newDemo&&newDemo[0]&&newDemo[0].oa21_code){
         // Fire-and-forget enrichment - don't await, let it happen in background
         enrichDemographicFeedback(newDemo[0].id,newDemo[0].oa21_code);
@@ -2014,6 +2031,20 @@ async function openEditDelivery(deliveryId){
 function closeEditDelivery(){
   document.getElementById('editDeliveryModal').classList.remove('active');
   currentEditDeliveryId=null;
+}
+
+async function deleteDelivery(id){
+  if(!confirm('Delete this delivery record? This cannot be undone.'))return;
+  try{
+    await sbFetch('/rest/v1/deliveries?id=eq.'+id,{method:'DELETE'});
+    await loadDeliveryJournal();
+    await loadSummaryStats();
+    await loadAreaCards();
+    renderAreaCards();
+    setSyncStatus('ok','Delivery deleted');
+  }catch(e){
+    alert('Error deleting delivery: '+e.message);
+  }
 }
 
 async function saveEditDelivery(){

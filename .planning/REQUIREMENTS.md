@@ -82,8 +82,8 @@
 
 | ID | Requirement | Description |
 |----|-------------|-------------|
-| DEM-02 | Auto-enrich demographic_feedback | When a new row is inserted into demographic_feedback (on instructed enquiry save), browser JS calls NOMIS API to fetch tenure data (NM_2072_1, TS054) and updates the row with owner_occupied_pct. Implemented as on-demand fetch + UPDATE — no pre-loading required. |
-| DEM-03 | Backfill historic demographic_feedback | Script (scripts/backfill_demographics.js) that fetches owner_occupied_pct from NOMIS for all existing rows with NULL owner_occupied_pct but valid oa21_code. Can be run on-demand. |
+| DEM-02 | Auto-enrich demographic_feedback (both UI + bulk) | **Two pathways:** (1) Browser JS calls NOMIS on UI enquiry save (T2), (2) SQL trigger auto-enriches any new demographic_feedback row from bulk/API sources (T2b). Both must be implemented. On-demand NOMIS fetch, no pre-loading. |
+| DEM-03 | Backfill historic demographic_feedback | Script (scripts/backfill_demographics.js) that fetches owner_occupied_pct from NOMIS for all existing rows with NULL owner_occupied_pct but valid oa21_code. Can be run on-demand. Must be validated with real data. |
 
 ### INT-08: Integrations
 
@@ -153,8 +153,8 @@
 | RTE-03: route_postcodes Expansion | Phase 6 | ✅ Done | T8 backfill — 18 rows for Tingley |
 | RTE-04: Enquiry Auto-matching | Phase 8 | ✅ Done | T4 |
 | RTE-05: Real Campaign Migration | Phase 8 | ✅ Done | T7 |
-| DEM-02: Auto-enrich demographic_feedback | Phase 9 | ✅ Done | T1+T2 — on-demand NOMIS fetch |
-| DEM-03: Backfill historic demographics | Phase 9 | ✅ Done | T4+T5 — scripts/backfill_demographics.js |
+| DEM-02: Auto-enrich demographic_feedback | Phase 9 | ⚠️ PARTIAL | T1+T2 UI pathway done, T2b bulk pathway NOT DONE. Blocker for phase completion. |
+| DEM-03: Backfill historic demographics | Phase 9 | ⚠️ INCOMPLETE | T4 script created, T5 not validated with real data. Blocker for phase completion. |
 | INT-01: ClickUp Stub | Phase 10 | 📋 Backlog | - |
 | INT-02: Google Sheets Export | Phase 10 | 📋 Backlog | - |
 | INT-03: Gmail Notifications | Phase 10 | 📋 Backlog | - |

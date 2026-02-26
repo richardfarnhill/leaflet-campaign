@@ -384,3 +384,9 @@ CREATE TRIGGER trg_enrich_demographic_feedback
   BEFORE INSERT ON demographic_feedback
   FOR EACH ROW
   EXECUTE FUNCTION enrich_demographic_feedback();
+
+-- RLS policies for demographic_feedback
+-- (table has RLS enabled; browser uses anon key)
+CREATE POLICY IF NOT EXISTS "Anyone can read demographic_feedback" ON demographic_feedback FOR SELECT USING (true);
+CREATE POLICY IF NOT EXISTS "Anyone can insert demographic_feedback" ON demographic_feedback FOR INSERT WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Anyone can update demographic_feedback" ON demographic_feedback FOR UPDATE USING (true) WITH CHECK (true);

@@ -197,24 +197,32 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 
 ---
 
-### Phase 9: Demographic Enrichment (Option B) — ✅ COMPLETE
+### Phase 9: Demographic Enrichment (Option B) — ⚠️ IN PROGRESS (GAPS IDENTIFIED)
 
 **Goal:** On-demand NOMIS enrichment for demographic feedback - replaces failed CSV loading approach
 
-**Implementation:**
-- Browser JS function `fetchOwnerOccupiedFromNOMIS(oa21Code)` calls NOMIS NM_2072_1 API
-- `enrichDemographicFeedback(demographicId, oa21Code)` updates demographic_feedback row
-- Hooked into enquiry save flow - auto-enriches new instructed enquiries
-- Backfill script: `scripts/backfill_demographics.js` for historic data
+**Status:** INCOMPLETE — Critical gaps discovered. T2b (server-side trigger) not implemented. T3/T5 not validated with real data.
+
+**Current Implementation (PARTIAL):**
+- ✅ Browser JS function `fetchOwnerOccupiedFromNOMIS(oa21Code)` exists (calls NOMIS NM_2072_1 API)
+- ✅ `enrichDemographicFeedback(demographicId, oa21Code)` hooked into UI enquiry save flow
+- ⚠️ Server-side trigger (T2b) MISSING — no bulk/API enrichment pathway
+- ⚠️ Backfill script exists but not tested with real data
+
+**Critical Gaps:**
+1. **T2b NOT DONE** — Server-side trigger required for bulk/API demographic_feedback inserts
+2. **T3 NOT VALIDATED** — Browser enrichment function exists but never tested with real NOMIS API
+3. **T5 NOT VALIDATED** — Backfill script syntax OK but never ran with real demographic_feedback rows
 
 **Requirements:**
-- DEM-02: Auto-enrich demographic_feedback via on-demand NOMIS call ✅
-- DEM-03: Backfill historic data via script ✅
+- DEM-02: Auto-enrich demographic_feedback (UI + bulk pathways) — ⚠️ PARTIAL (UI done, bulk missing)
+- DEM-03: Backfill historic data via script — ⚠️ INCOMPLETE (script ready, not validated)
 
-**Success Criteria:**
-1. New enquiries automatically get owner_occupied_pct from NOMIS ✅
-2. Historic enquiries backfilled via script ✅ (script ready, no data to backfill)
-3. All documentation updated ✅
+**Next Steps (BLOCKERS):**
+1. Implement T2b SQL trigger in supabase_schema.sql (CRITICAL)
+2. Re-test T3 with real postcode + NOMIS API (both UI and bulk paths)
+3. Re-run T5 with real demographic_feedback data
+4. Update docs upon completion
 
 ---
 
@@ -262,4 +270,4 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 
 ---
 
-*Last updated: 2026-02-26 - Phase 9 added (P8 T9 FAILED, superseded by on-demand NOMIS)*
+*Last updated: 2026-02-26 - Phase 9 gaps identified and documented. T2b (server-side trigger) is critical blocker.*

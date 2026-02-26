@@ -76,13 +76,25 @@ tags:
 
 ---
 
-## Deviations from Plan
+## Critical Deviations from Plan
 
-### Auto-fixed Issues
-None - plan executed as written.
+### T2b Was Skipped (INCORRECT DECISION)
+- **What happened:** T2b (server-side enrichment) marked as "not needed"
+- **Why it was wrong:** Browser-side enrichment only works for UI flows. Any bulk/API/direct-insert data cannot be enriched without T2b.
+- **Impact:** Phase is not production-ready for bulk data scenarios
+- **Fix:** T2b MUST be implemented as SQL trigger
 
-### Authentication Gates
-None - NOMIS API is public (no key required).
+### T3 Test Was Incomplete
+- **What happened:** Test marked "done" with "no data to test with"
+- **Why it was wrong:** Function exists but was never validated against real NOMIS data
+- **Impact:** Unknown if NOMIS API calls actually work or if response parsing is correct
+- **Fix:** T3 MUST run with real postcode + real NOMIS API call
+
+### T5 Run Was False Positive
+- **What happened:** Backfill script ran successfully with 0 rows
+- **Why it was wrong:** No failures can be detected when running against empty table
+- **Impact:** Unknown if NOMIS calls or DB updates actually work
+- **Fix:** T5 MUST run with real demographic_feedback data (T2b creates this via trigger test)
 
 ---
 
@@ -92,31 +104,40 @@ None - NOMIS API is public (no key required).
 |------|------|--------|-------|
 | T1 | enrichDemographicFeedback() function | ✅ Done | Added fetchOwnerOccupiedFromNOMIS + enrichDemographicFeedback |
 | T2 | Hook into enquiry save | ✅ Done | Called after demographic_feedback INSERT |
-| T2b | Server-side bulk enrichment | ⏭️ Skipped | Not needed - browser JS approach sufficient |
-| T3 | Test new enquiry enrichment | ✅ Done | Function ready - no data to test with |
+| T2b | Server-side bulk enrichment | ❌ NOT DONE | **CRITICAL** — Requires SQL trigger for bulk/API flows. Skipped in previous execution. |
+| T3 | Test complete enrichment | ⚠️ INCOMPLETE | T2 ready but untested with real NOMIS data. T2b cannot be tested without T2b. |
 | T4 | Backfill script | ✅ Done | scripts/backfill_demographics.js created |
-| T5 | Run backfill | ✅ Done | Script runs - 0 rows (table empty) |
-| T6 | Phase review + docs | ✅ Done | All docs updated |
+| T5 | Validate & run backfill | ⚠️ INCOMPLETE | Script syntax OK but never tested with real data. Needs dry-run validation. |
+| T6 | Phase review + docs | ⏳ IN PROGRESS | Docs being updated to reflect actual gaps. |
 
 ---
 
-## Verification
+## Verification Status
 
-### Manual Test (WF12 7DX)
-Not yet tested - no instructed enquiries in system. When a new enquiry is saved:
-1. postcodes.io returns oa21_code (already implemented in P8 T4c)
-2. demographic_feedback row created with oa21_code
-3. enrichDemographicFeedback() fires (non-blocking)
-4. NOMIS API called with oa21_code
-5. owner_occupied_pct updated in row
+### ❌ NOT VERIFIED — REQUIRES RE-TESTING
 
-### Automated Verification
+**Missing:**
+1. ❌ T2b trigger not deployed — bulk enrichment pathway does not exist
+2. ❌ T2 browser-side never tested with real NOMIS API — only code review, no execution test
+3. ❌ T3 never ran with real postcode/OA data
+4. ❌ T5 never ran with real demographic_feedback rows
+
+**Required verification steps (in T3/T5 retake):**
+
 ```sql
--- After a test enquiry is saved:
-SELECT id, oa21_code, owner_occupied_pct 
-FROM demographic_feedback 
+-- T2b trigger test (bulk pathway):
+INSERT INTO demographic_feedback (campaign_id, postcode, oa21_code, created_at)
+VALUES ('test', 'WF12 7DX', 'E00000001', NOW())
+RETURNING *;
+-- Expected: owner_occupied_pct populated automatically
+
+-- T2 UI flow test (browser pathway):
+-- Manually create enquiry in app UI with postcode WF14 8NJ
+-- Check browser console and DB:
+SELECT * FROM demographic_feedback
+WHERE postcode = 'WF14 8NJ'
 ORDER BY created_at DESC LIMIT 1;
--- Expected: oa21_code populated, owner_occupied_pct populated
+-- Expected: owner_occupied_pct populated
 ```
 
 ---
