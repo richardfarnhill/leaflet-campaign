@@ -263,6 +263,17 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
     <div id="enquiryList"><p style="color:#888;font-size:0.9rem;">Loading...</p></div>
   </div>
 
+  <div id="allCampaignsFinanceSummary" style="display:none;margin-bottom:24px;">
+    <h2>Campaign Summary</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-top:12px;">
+      <div class="stat-card"><div class="stat-value" id="ac_total_leaflets">—</div><div class="stat-label">Total Leaflets Delivered</div></div>
+      <div class="stat-card"><div class="stat-value" id="ac_total_enquiries">—</div><div class="stat-label">Total Enquiries</div></div>
+      <div class="stat-card"><div class="stat-value" id="ac_conversion_rate">—</div><div class="stat-label">Enquiry → Case Rate</div></div>
+      <div class="stat-card"><div class="stat-value" id="ac_response_rate">—</div><div class="stat-label">Avg Response Rate</div></div>
+    </div>
+  </div>
+
+  <div id="financeProjectionsSection">
   <h2>Financial Projections</h2>
   <div class="finance-section">
     <div class="finance-metric-cards">
@@ -283,6 +294,7 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
     </table>
     <p style="font-size:0.72rem;color:#999;margin-top:8px">Actuals from recorded enquiries. Projections use configured case value &pound;<span id="fi_acv_display">294.42</span>.</p>
   </div>
+  </div><!-- /financeProjectionsSection -->
 </div>
 <footer>Live data &middot; Supabase &middot; WillSolicitor Leaflet Campaign</footer>
 
@@ -1474,9 +1486,16 @@ async function loadSummaryStats(){
     document.getElementById('progressPct').textContent=pct+'%';
     document.getElementById('sumProjected').textContent='—';
 
-    // Finance projections — load actuals then render
-    await loadFinanceFromDB();
-    updateFinance(totalDelivered, remaining);
+    // Finance — show summary cards in All Campaigns mode, projections otherwise
+    const isAllCampaigns = !currentCampaignId;
+    document.getElementById('allCampaignsFinanceSummary').style.display = isAllCampaigns ? '' : 'none';
+    document.getElementById('financeProjectionsSection').style.display = isAllCampaigns ? 'none' : '';
+    if(isAllCampaigns){
+      await loadAllCampaignsFinanceSummary();
+    } else {
+      await loadFinanceFromDB();
+      updateFinance(totalDelivered, remaining);
+    }
   }catch(e){
     Logger.error('loadSummaryStats failed',e);
   }
@@ -1485,7 +1504,10 @@ async function loadSummaryStats(){
 async function loadDeliveryJournal(){
   try{
     const journalCampFilter = currentCampaignId ? '&campaign_id=eq.' + currentCampaignId : '';
-    const rows=await sbFetch('/rest/v1/deliveries?select=id,leaflets_delivered,delivery_date,notes,created_at,target_areas(area_name),team_member_1:team_members!team_member_1_id(name),team_member_2:team_members!team_member_2_id(name)&order=delivery_date.desc' + journalCampFilter);
+    const journalSelect = currentCampaignId
+      ? 'id,leaflets_delivered,delivery_date,notes,created_at,target_areas(area_name),team_member_1:team_members!team_member_1_id(name),team_member_2:team_members!team_member_2_id(name)'
+      : 'id,leaflets_delivered,delivery_date,notes,created_at,target_areas(area_name),campaigns(name),team_member_1:team_members!team_member_1_id(name),team_member_2:team_members!team_member_2_id(name)';
+    const rows=await sbFetch('/rest/v1/deliveries?select='+journalSelect+'&order=delivery_date.desc' + journalCampFilter);
     const el=document.getElementById('journalList');
     if(!rows||rows.length===0){el.innerHTML='<p style="color:#888;font-size:0.9rem;">No deliveries recorded yet.</p>';return;}
     
@@ -1503,8 +1525,10 @@ async function loadDeliveryJournal(){
     const totalAreas=rows.length;
     const totalTeamMembers=new Set([...rows.map(r=>r.team_member_1?.name).filter(Boolean),...rows.map(r=>r.team_member_2?.name).filter(Boolean)]).size;
     
+    const showCampaignCol = !currentCampaignId;
     let html='<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">';
     html+='<thead><tr style="background:#1a3a5c;color:white;">';
+    if(showCampaignCol) html+='<th style="padding:8px;text-align:left;">Campaign</th>';
     html+='<th style="padding:8px;text-align:left;">Date</th>';
     html+='<th style="padding:8px;text-align:left;">Route</th>';
     html+='<th style="padding:8px;text-align:right;">Leaflets</th>';
@@ -1520,6 +1544,7 @@ async function loadDeliveryJournal(){
       const date=fmtDate(r.delivery_date||r.created_at?.slice(0,10));
       const notes=r.notes||'';
       html+='<tr style="border-bottom:1px solid #eee;">';
+      if(showCampaignCol) html+='<td style="padding:8px;color:#666;">'+( r.campaigns?.name||'—')+'</td>';
       html+='<td style="padding:8px;">'+date+'</td>';
       html+='<td style="padding:8px;"><strong>'+area+'</strong></td>';
       html+='<td style="padding:8px;text-align:right;">'+r.leaflets_delivered.toLocaleString()+'</td>';
@@ -1529,10 +1554,12 @@ async function loadDeliveryJournal(){
       html+='</tr>';
     });
     html+='<tr style="background:#e8f4f8;font-weight:700;">';
+    if(showCampaignCol) html+='<td style="padding:8px;"></td>';
     html+='<td style="padding:8px;">Total</td>';
     html+='<td style="padding:8px;">'+totalAreas+' routes</td>';
     html+='<td style="padding:8px;text-align:right;">'+totalLeaflets.toLocaleString()+'</td>';
     html+='<td style="padding:8px;">'+totalTeamMembers+' team members</td>';
+    html+='<td style="padding:8px;"></td>';
     html+='<td style="padding:8px;"></td>';
     html+='</tr></tbody></table>';
     el.innerHTML=html;
@@ -1544,34 +1571,34 @@ async function loadDeliveryJournal(){
 async function loadEnquiryList(){
   const section=document.getElementById('enquiriesSection');
   const btn=document.getElementById('recordEnquiryBtn');
-  if(!currentCampaignId){
-    section.style.display='none';
-    return;
-  }
   section.style.display='block';
-  btn.style.display='inline-block';
-  
+  btn.style.display=currentCampaignId?'inline-block':'none';
+
   try{
+    const showCampaignCol = !currentCampaignId;
+    const enqSelect = showCampaignCol ? '*,campaigns(name)' : '*';
     const campFilter = currentCampaignId ? '&campaign_id=eq.' + currentCampaignId : '';
-    const rows=await sbFetch('/rest/v1/enquiries?select=*&order=created_at.desc' + campFilter);
+    const rows=await sbFetch('/rest/v1/enquiries?select='+enqSelect+'&order=created_at.desc' + campFilter);
     const el=document.getElementById('enquiryList');
     if(!rows||rows.length===0){el.innerHTML='<p style="color:#888;font-size:0.9rem;">No enquiries recorded yet.</p>';return;}
-    
+
     function fmtDate(iso){
       if(!iso)return'';
       const d=new Date(iso);
       return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
     }
-    
+
     let html='<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">';
     html+='<thead><tr style="background:#8b5cf6;color:white;">';
+    if(showCampaignCol) html+='<th style="padding:8px;text-align:left;">Campaign</th>';
     html+='<th style="padding:8px;text-align:left;">Date</th>';
     html+='<th style="padding:8px;text-align:left;">Client</th>';
     html+='<th style="padding:8px;text-align:left;">Postcode</th>';
     html+='<th style="padding:8px;text-align:center;">Instructed</th>';
     html+='<th style="padding:8px;text-align:right;">Value</th>';
     html+='<th style="padding:8px;text-align:left;">Notes</th>';
-    html+='<th style="padding:8px;text-align:center;">Action</th></tr></thead>';
+    if(!showCampaignCol) html+='<th style="padding:8px;text-align:center;">Action</th>';
+    html+='</tr></thead>';
     html+='<tbody>';
     rows.forEach(r=>{
       const client=r.client_name||'Anonymous';
@@ -1581,13 +1608,14 @@ async function loadEnquiryList(){
       const notes=r.notes||'';
       const date=fmtDate(r.created_at);
       html+='<tr style="border-bottom:1px solid #eee;">';
+      if(showCampaignCol) html+='<td style="padding:8px;color:#666;">'+(r.campaigns?.name||'—')+'</td>';
       html+='<td style="padding:8px;">'+date+'</td>';
       html+='<td style="padding:8px;"><strong>'+client+'</strong></td>';
       html+='<td style="padding:8px;">'+postcode+'</td>';
       html+='<td style="padding:8px;text-align:center;">'+instructed+'</td>';
       html+='<td style="padding:8px;text-align:right;">'+value+'</td>';
       html+='<td style="padding:8px;color:#666;">'+notes+'</td>';
-      html+='<td style="padding:8px;text-align:center;"><button onclick="editEnquiry(\''+r.id+'\')" style="padding:4px 8px;background:#8b5cf6;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.75rem;margin-right:4px;">Edit</button><button onclick="deleteEnquiry(\''+r.id+'\')" style="padding:4px 8px;background:#dc2626;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.75rem;">Delete</button></td>';
+      if(!showCampaignCol) html+='<td style="padding:8px;text-align:center;"><button onclick="editEnquiry(\''+r.id+'\')" style="padding:4px 8px;background:#8b5cf6;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.75rem;margin-right:4px;">Edit</button><button onclick="deleteEnquiry(\''+r.id+'\')" style="padding:4px 8px;background:#dc2626;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.75rem;">Delete</button></td>';
       html+='</tr>';
     });
     html+='</tbody></table>';
@@ -2817,6 +2845,26 @@ function updateSummary(){
 
 // Actuals loaded from DB by loadFinanceFromDB()
 let financeActuals={enq:0,cas:0,inv:0};
+
+async function loadAllCampaignsFinanceSummary(){
+  try{
+    const [deliveries, enquiries] = await Promise.all([
+      sbFetch('/rest/v1/deliveries?select=leaflets_delivered'),
+      sbFetch('/rest/v1/enquiries?select=instructed,instruction_value')
+    ]);
+    const totalLeaflets=(deliveries||[]).reduce((s,d)=>s+(d.leaflets_delivered||0),0);
+    const totalEnquiries=(enquiries||[]).length;
+    const totalCases=(enquiries||[]).filter(e=>e.instructed).length;
+    const convRate=totalEnquiries>0?(totalCases/totalEnquiries*100).toFixed(1)+'%':'—';
+    const respRate=totalLeaflets>0?(totalEnquiries/totalLeaflets*100).toFixed(2)+'%':'—';
+    document.getElementById('ac_total_leaflets').textContent=totalLeaflets.toLocaleString();
+    document.getElementById('ac_total_enquiries').textContent=totalEnquiries.toLocaleString();
+    document.getElementById('ac_conversion_rate').textContent=convRate;
+    document.getElementById('ac_response_rate').textContent=respRate;
+  }catch(e){
+    Logger.error('loadAllCampaignsFinanceSummary failed',e);
+  }
+}
 
 async function loadFinanceFromDB(){
   if(!currentCampaignId) return;
