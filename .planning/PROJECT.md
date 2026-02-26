@@ -186,7 +186,7 @@ This is a brownfield project. Codebase analysis completed:
 ## Current State (Phase 7 Complete)
 
 **Last activity:** 2026-02-26
-**Status:** Phases 1-7 complete (~78%). Phase 8 next.
+**Status:** Phases 1-7 fully complete. Phase 8 next.
 
 ### What's Been Delivered
 - Card-based area reservation system
@@ -200,6 +200,7 @@ This is a brownfield project. Codebase analysis completed:
 - Per-postcode exclusion radius config
 - Credentials in config.js, RLS enabled
 - route_postcodes table: full unit postcode expansion (enquiry auto-matching ready)
+- Route card street names (click-to-expand) + map boundary polygon (Turf.js convex hull)
 
 ### Next Milestone Goals (Phase 8)
 - Auto-assign enquiries to routes (via route_postcodes lookup)

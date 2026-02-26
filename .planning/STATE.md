@@ -9,11 +9,11 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 
 ## Current Position
 
-Phase: 7 of 9 (Core Enhancements)
-Plan: 07-01 — Complete
-Status: Phase 7 done - Route deletion, RLS, security, stats API plan ready for Phase 8
+Phase: 8 of 9 (Auto-assignment & API)
+Plan: 08-01 — Ready to start
+Status: Phase 8 next — P7 fully closed (T1 route card details done)
 
-Last activity: 2026-02-26 — Route deletion UI, RLS enabled, Phase 8 plan created
+Last activity: 2026-02-26 — Route card street names, map boundary polygon, P7 closed
 
 Progress: [████████████████░░░░░] ~78% (7 of 9 phases)
 
@@ -57,7 +57,7 @@ Progress: [████████████████░░░░░] ~78%
      REQUIRED: Claim here before making ANY code changes. Remove when done.
      Format: - [AGENT] [scope] — [brief description] — claimed [YYYY-MM-DD HH:MM UTC] -->
 
-- OpenCode [06-T10] — Phase review — claimed 2026-02-26 01:42 UTC
+None.
 
 ## Session Continuity
 
@@ -124,7 +124,7 @@ Resume file: None
 | T7: Leaderboards | ✓ Done (merged with T6) | OC |
 | T8: Route creation UI + route_postcodes backfill | ✓ Done | Claude | route_postcodes backfilled (18 rows for Tingley); Add Route button + modal in index.html |
 | T9: Route deletion UI | ✓ Done | OC | Delivered as Phase 7 T2 |
-| T10: Phase review + gap identification | ○ Pending | - |
+| T10: Phase review + gap identification | ✓ Done | OC | All flows verified: enquiry record→list→map→finance, campaign switch updates all views, data isolation working |
 
 ### T8 Handover Note (2026-02-26)
 
@@ -152,7 +152,7 @@ See 06-01-PLAN.md Task 8 for full spec. Simple modal: Route Name, Postcode, Hous
 | T4: Route completion - explicit leaflet count + rolling adjustment | ✓ Done | OC | Already implemented: modal requires count, saves to DB, displays remaining |
 | T5: Security - move credentials to config.js | ✓ Done | OC |
 | T6: DB-driven Summary Bar fix (CFG-03) | ✓ Done | OC |
-| T7: Phase review | ○ Pending | - | Review after T01 complete |
+| T7: Phase review | ✓ Done | Claude | T1 complete — all P7 tasks done. P7 fully closed. |
 
 ## Phase 8 Task Checklist
 
