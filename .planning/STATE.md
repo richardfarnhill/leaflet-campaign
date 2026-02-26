@@ -5,16 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Teams can reserve geographic delivery areas (cards), record deliveries, and the system accurately tracks coverage, enquiries, and cases per area.
-**Current focus:** Phase 6 in progress - route creation. Phase 7 next (OpenCode).
+**Current focus:** Phase 6 T8 done. Phase 7 complete. Phase 8 next.
 
 ## Current Position
 
-Phase: 6 of 9 (Enquiry & Team)
-Plan: 06-01 — In progress
-Status: In Progress — T08 (Route creation) by Claude, T07 ready for OpenCode
-Last activity: 2026-02-25 — Campaign data isolation, leaderboards, enquiry fixes
+Phase: 8 of 9 (Auto-assignment & API)
+Plan: 08-01 — Ready to start
+Status: Phase 8 next — P7 fully closed (T1 route card details done)
 
-Progress: [████████████░░░░░░░░░░] ~56% (6 of 9 phases)
+Last activity: 2026-02-26 — Route card street names, map boundary polygon, P7 closed
+
+Progress: [████████████████░░░░░] ~78% (7 of 9 phases)
 
 ## Performance Metrics
 
@@ -41,6 +42,7 @@ Progress: [████████████░░░░░░░░░░] ~
 ### Pending Todos
 
 - Phase 6: Enquiry recording and analytics (T1-T6)
+- **demographic_feedback oa21_code population:** Set up process to lookup OA codes from postcodes.io for captured postcodes (or add postcode column to table)
 
 ### Blockers/Concerns
 
@@ -56,14 +58,13 @@ Progress: [████████████░░░░░░░░░░] ~
      REQUIRED: Claim here before making ANY code changes. Remove when done.
      Format: - [AGENT] [scope] — [brief description] — claimed [YYYY-MM-DD HH:MM UTC] -->
 
-None.
-
-- Claude [06-T08] — Route creation UI — claimed 2026-02-25 22:XX UTC
+- OpenCode [P8-T05] — API endpoints (Supabase) — claimed 2026-02-26 03:08 UTC
+- Claude [P8 T7] — Backfill route_postcodes for 14k_Feb_2026 campaign — claimed 2026-02-26 09:00 UTC
 
 ## Session Continuity
 
-Last session: 2026-02-25
-Stopped at: T06 (Team progress view) complete + enquiry_date bug fix
+Last session: 2026-02-26
+Stopped at: T03 (RLS) in progress - needs Supabase RLS enablement
 Resume file: None
 
 ## Phase 4 Task Checklist (04-01-PLAN.md)
@@ -123,32 +124,51 @@ Resume file: None
 | T6c: Load team progress on page init | ✓ Done | OC |
 | T6d: Campaign data isolation (Chinese wall) | ✓ Done | OC |
 | T7: Leaderboards | ✓ Done (merged with T6) | OC |
-| T8: Route creation UI | ○ In Progress - Claude | Claude |
-| T9: Route deletion UI | ○ Pending | - |
-| T10: Phase review + gap identification | ○ Pending | - |
+| T8: Route creation UI + route_postcodes backfill | ✓ Done | Claude | route_postcodes backfilled (18 rows for Tingley); Add Route button + modal in index.html |
+| T9: Route deletion UI | ✓ Done | OC | Delivered as Phase 7 T2 |
+| T10: Phase review + gap identification | ✓ Done | OC | All flows verified: enquiry record→list→map→finance, campaign switch updates all views, data isolation working |
+
+### T8 Handover Note (2026-02-26)
+
+**Two jobs:**
+
+**Job 1 — Backfill `route_postcodes` for "Testing Claude" campaign**
+The table currently has 1 row per OA (representative postcode only). Each route needs full unit postcode expansion.
+- Query DB: get all routes for "Testing Claude" campaign + their current `route_postcodes` rows (need `target_area_id`, `oa21_code`, representative postcode/sector)
+- For each OA, query `https://api.postcodes.io/postcodes?q={sector}&limit=100`, filter results to that `oa21_code`, INSERT all matching unit postcodes into `route_postcodes`
+- Tingley route confirmed OA→postcode mapping is in `.planning/ROUTE-PLANNING-ENGINE.md` — use as verification baseline (should end up with ~18 rows, not 6)
+- Other 4 routes: derive sector from representative postcode already in DB, same expansion process
+
+**Job 2 — Add "Add Route" button + modal to index.html (the actual T8 UI)**
+See 06-01-PLAN.md Task 8 for full spec. Simple modal: Route Name, Postcode, House Count, Notes. On save: geocode via postcodes.io → POST to target_areas. Does NOT need to populate route_postcodes yet (that's T8-F, the full planning engine).
+
+**Supabase MCP:** Tools are `mcp__claude_ai_Supabase__execute_sql` / `mcp__claude_ai_Supabase__apply_migration`. Restart Claude Code first. Full setup in MEMORY.md.
 
 ## Phase 7 Task Checklist
 
 | Task | Status | Agent |
 |------|--------|-------|
-| T1: Route card details - street names, map boundary | ○ Pending | - |
-| T2: Route deletion UI | ○ Pending | - |
-| T3: RLS policies verification | ○ Pending | - |
-| T4: Route completion - explicit leaflet count + rolling adjustment | ○ Pending | - |
-| T5: Security - move credentials to config.js | ○ Pending | Urgent |
-| T6: DB-driven Summary Bar fix (CFG-03) | ○ Pending | |
-| T7: Phase review | ○ Pending | - |
+| T1: Route card details - street names, map boundary | ✓ Done | Claude | streets shown on card click (▼ toggle); "Map" button highlights route postcodes on map view |
+| T2: Route deletion UI | ✓ Done | OC | Delete button on route cards, confirmation modal, cascades to deliveries/reservations |
+| T3: RLS policies verification | ✓ Done | OC | RLS enabled on all tables, public read policies (2026-02-26) |
+| T4: Route completion - explicit leaflet count + rolling adjustment | ✓ Done | OC | Already implemented: modal requires count, saves to DB, displays remaining |
+| T5: Security - move credentials to config.js | ✓ Done | OC |
+| T6: DB-driven Summary Bar fix (CFG-03) | ✓ Done | OC |
+| T7: Phase review | ✓ Done | Claude | T1 complete — all P7 tasks done. P7 fully closed. |
 
 ## Phase 8 Task Checklist
 
 | Task | Status | Notes |
 |------|--------|-------|
 | T1: Create campaign - enhance with route creation questions | ○ Pending | Review after P7 |
-| T2: Global exclusion areas review | ○ Pending | Clarify DB state |
+| T2: Global exclusion areas review | ✓ Done | OC | Table exists with postcode_prefix/radius_miles/label; UI CRUD works; map renders circles; data is GLOBAL (not per-campaign) - correct for exclusion areas |
 | T3: Prompt new route when 500 houses short | ○ Pending | |
-| T4: Auto-assign enquiries to routes | ○ Pending | Critical for leaderboard |
+| T4: Auto-assign enquiries to routes | ✓ Done | Claude | Two-step modal: lookup geocodes + auto-matches route, step 2 shows pre-filled route + team member |
+| T4c: oa21_code written to demographic_feedback inline | ✓ Done | Claude | Extracted from postcodes.io geocode response (codes.oa21) at save time |
 | T5: API endpoints (Supabase) | ○ Pending | |
-| T6: Demographic feedback table from enquiries | ○ Pending | |
+| T6: Demographic feedback table from enquiries | ✓ Done | OC | Auto-captures instructed enquiries to demographic_feedback; TODO: populate oa21_code |
+| T7: Migrate real campaigns into new data model | ○ Pending | Richard's existing real campaign data (routes, deliveries, enquiries) needs refactoring into campaigns/target_areas/route_postcodes/enquiries schema. Probably done interactively with Richard. |
+| T8: Testing procedure | ✓ Done | OC | Created tests/test-runner.html; updated QUALITY.md with automated tests |
 
 ## Phase 9 Task Checklist (Backlog)
 

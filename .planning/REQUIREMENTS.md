@@ -27,7 +27,7 @@
 | ID | Requirement | Description |
 |----|-------------|-------------|
 | TEA-01 | Progress Broadcasting | See team progress in real-time across all areas |
-| TEA-02 | Leaderboards | Gamify completion - show rankings by doors delivered |
+| TEA-02 | Leaderboards | Gamify completion - show rankings by doors delivered and revenue from instructed sales (attributed via route → team member, enabled by RTE-04 auto-matching) |
 
 ### GEO-01: Route Geocoding
 
@@ -67,6 +67,16 @@
 |----|-------------|-------------|
 | ENQ-01 | Robust Enquiry Recording | Capture: client name, postcode, instructed (yes/no), instruction value (£) |
 | ENQ-02 | Enquiry Heatmap | Show enquiry locations on delivery coverage map |
+
+### RTE-09: Route Management
+
+| ID | Requirement | Description |
+|----|-------------|-------------|
+| RTE-01 | Route Creation UI | Add Route button + modal (name, postcode, house count, notes). Geocodes via postcodes.io. Only visible when a specific campaign is selected. |
+| RTE-02 | Route Deletion UI | Delete available routes with cascade guard (reserved/completed blocked). Confirmation required. |
+| RTE-03 | route_postcodes Expansion | Each route stores all unit postcodes for its OAs (not just representative). Enables enquiry auto-matching and full heatmap coverage. |
+| RTE-04 | Enquiry Auto-matching | When an enquiry's postcode is recorded, auto-assign target_area_id by looking up route_postcodes. Phase 8 T4. |
+| RTE-05 | Real Campaign Migration | Migrate existing real-world campaign data (routes, deliveries, enquiries) into the new data model. Phase 8. |
 
 ### INT-08: Integrations
 
@@ -131,9 +141,14 @@
 | ENQ-02: Enquiry Heatmap | Phase 6 | ✅ Done | T4 |
 | TEA-01: Progress Broadcasting | Phase 6 | ✅ Done | T6 |
 | TEA-02: Leaderboards | Phase 6 | ✅ Done | T6+T7 |
-| INT-01: ClickUp Stub | Phase 7 | 📋 Planned | - |
-| INT-02: Google Sheets Export | Phase 7 | 📋 Planned | - |
-| INT-03: Gmail Notifications | Phase 7 | 📋 Planned | - |
+| RTE-01: Route Creation UI | Phase 6 | ✅ Done | T8 Add Route modal |
+| RTE-02: Route Deletion UI | Phase 7 | ✅ Done | T2 OC |
+| RTE-03: route_postcodes Expansion | Phase 6 | ✅ Done | T8 backfill — 18 rows for Tingley |
+| RTE-04: Enquiry Auto-matching | Phase 8 | 📋 Planned | T4 |
+| RTE-05: Real Campaign Migration | Phase 8 | 📋 Planned | T7 (new) |
+| INT-01: ClickUp Stub | Phase 9 | 📋 Backlog | - |
+| INT-02: Google Sheets Export | Phase 9 | 📋 Backlog | - |
+| INT-03: Gmail Notifications | Phase 9 | 📋 Backlog | - |
 
 ---
 
@@ -141,7 +156,7 @@
 
 | Item | Phase | Status | Action |
 |------|-------|--------|--------|
-| RLS policies on tables | Phase 1 | ⚠️ Unclear | Verify in Supabase |
+| RLS policies on tables | Phase 1 | ✅ Verified | RLS enabled on all tables, public read policies (2026-02-26) |
 | PostGIS spatial queries | Phase 1 | ⚠️ Unclear | Test distance calcs |
 | Real-time updates | Phase 2 | ⚠️ Unclear | Verify polling/websocket |
 | Delivery flow E2E | Phase 2-3 | ⚠️ Unclear | Test complete flow |
@@ -149,4 +164,4 @@
 
 ---
 
-*Last updated: 2026-02-25*
+*Last updated: 2026-02-26*

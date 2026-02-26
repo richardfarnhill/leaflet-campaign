@@ -141,7 +141,7 @@
 
 | Item | Phase | Status | Action |
 |------|-------|--------|--------|
-| RLS policies on tables | Phase 1 | ⚠️ Unclear | Verify in Supabase |
+| RLS policies on tables | Phase 1 | ✅ Verified | RLS enabled on all tables, public read policies (2026-02-26) |
 | PostGIS spatial queries | Phase 1 | ⚠️ Unclear | Test distance calcs |
 | Real-time updates | Phase 2 | ⚠️ Unclear | Verify polling/websocket |
 | Delivery flow E2E | Phase 2-3 | ⚠️ Unclear | Test complete flow |

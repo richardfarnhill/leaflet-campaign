@@ -4,7 +4,8 @@
   "description": "**Commercial Delivery Management Software**   *All rights reserved. Not for public distribution or open source use.*",
   "main": "config.example.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node tests/runner.js",
+    "test:ui": "open tests/test-runner.html"
   },
   "keywords": [],
   "author": "",
