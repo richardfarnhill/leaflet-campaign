@@ -8,10 +8,14 @@
 <script src="debug-panel.js"></script>
 <script>
 (function(){
-  // Use config.js values with fallbacks for development
-  const PASSWORD=typeof CONFIG!=='undefined'?CONFIG.APP_PASSWORD:'WillsX2025!';
-  const SB_URL=typeof CONFIG!=='undefined'?CONFIG.SUPABASE_URL:'https://tjebidvgvbpnxgnphcrg.supabase.co';
-  const SB_KEY=typeof CONFIG!=='undefined'?CONFIG.SUPABASE_KEY:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqZWJpZHZndmJwbnhnbnBoY3JnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0ODkyNDcsImV4cCI6MjA4NzA2NTI0N30.7MyRW330dP1ZkCqOqTykjRo6Y-cM4ow3aJ-6_H82BUY';
+  // Require config.js - no fallbacks for security
+  if(typeof CONFIG==='undefined'||!CONFIG.SUPABASE_URL||!CONFIG.SUPABASE_KEY){
+    document.head.innerHTML='<title>Configuration Error</title><style>body{font-family:system-ui;padding:40px;background:#f5f5f5;}</style><body><h1>Missing Configuration</h1><p>Please create config.js with SUPABASE_URL and SUPABASE_KEY.</p><pre>const CONFIG={SUPABASE_URL:"your-url",SUPABASE_KEY:"your-key"};</pre></body>';
+    throw new Error('CONFIG not defined - create config.js');
+  }
+  const SB_URL=CONFIG.SUPABASE_URL;
+  const SB_KEY=CONFIG.SUPABASE_KEY;
+  const PASSWORD=CONFIG.APP_PASSWORD||'WillsX2025!';
   const COOKIE='lct_auth',DAYS=14;
   
   function getCookie(n){return document.cookie.split(';').some(c=>c.trim().startsWith(n+'='));}
@@ -533,9 +537,7 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
 </div>
 
 <script>
-// Read Supabase config from CONFIG (loaded by config.js)
-const SB_URL=typeof CONFIG!=='undefined'?CONFIG.SUPABASE_URL:'';
-const SB_KEY=typeof CONFIG!=='undefined'?CONFIG.SUPABASE_KEY:'';
+// Note: SB_URL and SB_KEY already defined in head script
 // ============================================================
 // DEBUG LOGGER - Traffic Light System
 // ============================================================
