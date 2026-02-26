@@ -58,12 +58,13 @@ Progress: [████████████░░░░░░░░░░] ~
 
 None.
 
+- OpenCode [07-T03] — RLS policies verification — claimed 2026-02-26 00:XX UTC
 - Claude [06-T08] — Route creation UI — claimed 2026-02-25 22:XX UTC
 
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: T05 (security) + T06 (DB-driven summary) done on fix branch
+Stopped at: T03 (RLS) in progress - needs Supabase RLS enablement
 Resume file: None
 
 ## Phase 4 Task Checklist (04-01-PLAN.md)
@@ -133,7 +134,7 @@ Resume file: None
 |------|--------|-------|
 | T1: Route card details - street names, map boundary | ○ Pending | - |
 | T2: Route deletion UI | ○ Pending | - |
-| T3: RLS policies verification | ○ Pending | - |
+| T3: RLS policies verification | ○ In Progress | OC | Trying to verify but RLS not enabled in Supabase - need to enable and create policies |
 | T4: Route completion - explicit leaflet count + rolling adjustment | ○ Pending | - |
 | T5: Security - move credentials to config.js | ✓ Done | OC |
 | T6: DB-driven Summary Bar fix (CFG-03) | ✓ Done | OC |
