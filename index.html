@@ -175,7 +175,7 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
   <div class="stat"><div class="val" id="sumDelivered">—</div><div class="lbl">Delivered</div></div>
   <div class="stat"><div class="val" id="sumRemaining">—</div><div class="lbl">Remaining</div></div>
   <div class="stat"><div class="val" id="sumSessions">—</div><div class="lbl">Sessions Done</div></div>
-  <div class="stat"><div class="val" id="sumProjected">&mdash;</div><div class="lbl">Est. Completion</div></div>
+  <div class="stat"><div class="val" id="sumProjected">&mdash;</div><div class="lbl">This Month</div></div>
   <div class="progress-bar-wrap">
     <div class="progress-bar"><div class="progress-bar-fill" id="progressFill" style="width:0%"></div></div>
     <span id="progressPct" style="font-size:0.85rem;font-weight:700;color:#1a3a5c">0%</span>
@@ -292,7 +292,7 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
         <tr><td>Optimistic</td><td>1.0%</td><td id="f3_sofar">&mdash;</td><td id="f3_todo">&mdash;</td><td id="f3_total">&mdash;</td><td id="f3_rev" class="highlight">&mdash;</td></tr>
       </tbody>
     </table>
-    <p style="font-size:0.72rem;color:#999;margin-top:8px">Actuals from recorded enquiries. Projections use configured case value &pound;<span id="fi_acv_display">294.42</span>.</p>
+    <p style="font-size:0.72rem;color:#999;margin-top:8px">Actuals from recorded enquiries. * Avg case value shows actual (revenue &divide; cases) when real data exists, else configured estimate &pound;<span id="fi_acv_display">294.42</span>. Projections use configured estimate.</p>
   </div>
   </div><!-- /financeProjectionsSection -->
 </div>
@@ -1119,7 +1119,6 @@ async function loadCampaigns(){
           await loadTeamProgress();
           await loadDeliveryJournal();
           await loadEnquiryList();
-          await loadFinanceFromDB();updateSummary();
         };
       }
       if(campaigns.length > 0){
@@ -1463,10 +1462,13 @@ async function loadSummaryStats(){
 
     // Fetch deliveries from DB (filtered by campaign)
     const delivUrl=currentCampaignId
-      ?'/rest/v1/deliveries?select=leaflets_delivered,campaign_id&campaign_id=eq.'+currentCampaignId
-      :'/rest/v1/deliveries?select=leaflets_delivered';
+      ?'/rest/v1/deliveries?select=leaflets_delivered,delivery_date&campaign_id=eq.'+currentCampaignId
+      :'/rest/v1/deliveries?select=leaflets_delivered,delivery_date';
     const deliveries=await sbFetch(delivUrl);
     const totalDelivered=(deliveries||[]).reduce((s,d)=>s+(d.leaflets_delivered||0),0);
+    const now=new Date();
+    const thisMonth=now.getFullYear()+'-'+(String(now.getMonth()+1).padStart(2,'0'));
+    const thisMonthLeaflets=(deliveries||[]).filter(d=>(d.delivery_date||'').startsWith(thisMonth)).reduce((s,d)=>s+(d.leaflets_delivered||0),0);
 
     // Fetch completed routes count from DB
     const areasUrl=currentCampaignId
@@ -1484,7 +1486,7 @@ async function loadSummaryStats(){
     document.getElementById('sumSessions').textContent=completedAreas+' / '+totalAreas+' routes';
     document.getElementById('progressFill').style.width=pct+'%';
     document.getElementById('progressPct').textContent=pct+'%';
-    document.getElementById('sumProjected').textContent='—';
+    document.getElementById('sumProjected').textContent=thisMonthLeaflets>0?thisMonthLeaflets.toLocaleString():'—';
 
     // Finance — show summary cards in All Campaigns mode, projections otherwise
     const isAllCampaigns = !currentCampaignId;
@@ -1767,7 +1769,7 @@ async function deleteEnquiry(id){
   try{
     await sbFetch('/rest/v1/enquiries?id=eq.'+id,{method:'DELETE'});
     await loadEnquiryList();
-    await loadFinanceFromDB();updateSummary();
+    await loadSummaryStats();
     setSyncStatus('ok','Enquiry deleted');
   }catch(e){
     alert('Error deleting enquiry: '+e.message);
@@ -1969,7 +1971,7 @@ async function saveEnquiry(){
 
     closeEnquiryModal();
     await loadEnquiryList();
-    await loadFinanceFromDB();updateSummary();
+    await loadSummaryStats();
     setSyncStatus('ok',currentEditEnquiryId?'Enquiry updated':'Enquiry recorded');
   }catch(e){
     errorEl.textContent='Error: '+e.message;
@@ -2712,7 +2714,6 @@ async function loadAll(){
     await loadDeliveryJournal();
     await loadEnquiryList();
     await loadTeamProgress();
-    await loadFinanceFromDB();updateSummary();
     // P8 T3: Check if any campaigns need routing after load
     await checkAndPromptRouting();
     setSyncStatus('ok','Live \u00b7 auto-syncing every 30s');
@@ -2891,7 +2892,9 @@ function updateFinance(td,rem){
   const leafR=td>0&&enq>0?enq/td:null;
   const rev100=leafR!==null?leafR*acv*cas/enq*100:null; // per 100 leaflets based on actual rate × ACV × conv rate
   const revPEnq=enq>0&&cas>0?inv/enq:null;
-  document.getElementById('dm_avgcase').textContent=fmtCurrency(acv);
+  // Avg case value: use actual (inv÷cas) when real data exists, else configured constant
+  const actualAcv=cas>0&&inv>0?inv/cas:null;
+  document.getElementById('dm_avgcase').textContent=actualAcv!==null?fmtCurrency(actualAcv):fmtCurrency(acv)+'*';
   document.getElementById('dm_convrate').textContent=convR!==null?Math.round(convR*100)+'%':'\u2014';
   // Revenue per 100 leaflets: actual revenue ÷ delivered × 100
   document.getElementById('dm_per100').textContent=td>0&&inv>0?fmtCurrency((inv/td)*100):'\u2014';
