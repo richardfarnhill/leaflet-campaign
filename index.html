@@ -1769,7 +1769,7 @@ async function saveEnquiry(){
           const pcTrimmed=postcode.trim().toUpperCase();
           const spaceIdx=pcTrimmed.lastIndexOf(' ');
           const sector=spaceIdx>0?pcTrimmed.slice(0,spaceIdx+2):normPostcode.slice(0,-2);
-          const sectorMatch=await sbFetch('/rest/v1/route_postcodes?postcode_sector=eq.'+encodeURIComponent(sector)+'&'+idFilter+'&limit=1');
+          const sectorMatch=await sbFetch('/rest/v1/route_postcodes?postcode_sector=eq.'+sector+'&'+idFilter+'&limit=1');
           if(sectorMatch&&sectorMatch[0])routeVal=sectorMatch[0].target_area_id;
         }
         // Pre-fill dropdown with matched route (user can still override before save completes)
