@@ -1748,7 +1748,35 @@ async function saveEnquiry(){
   errorEl.classList.remove('show');
   
   try{
-    const routeVal=document.getElementById('enquiryRoute').value||null;
+    // Normalise postcode for lookup
+    const normPostcode=postcode.replace(/\s+/g,'').toUpperCase();
+
+    // Auto-match route from route_postcodes (only if user hasn't manually selected one)
+    let routeVal=document.getElementById('enquiryRoute').value||null;
+    if(!routeVal&&currentCampaignId){
+      // Get target_area_ids for this campaign
+      const campaignRoutes=await sbFetch('/rest/v1/target_areas?campaign_id=eq.'+currentCampaignId+'&select=id');
+      const routeIds=(campaignRoutes||[]).map(r=>r.id);
+      if(routeIds.length){
+        const idFilter='target_area_id=in.('+routeIds.join(',')+')';
+        // Exact postcode match
+        const exactMatch=await sbFetch('/rest/v1/route_postcodes?postcode=eq.'+encodeURIComponent(normPostcode)+'&'+idFilter+'&limit=1');
+        if(exactMatch&&exactMatch[0]){
+          routeVal=exactMatch[0].target_area_id;
+        }else{
+          // Sector fallback: outward + first digit of inward (e.g. "WF3 1" from "WF3 1AB")
+          // postcode_sector stored with space e.g. "WF3 1"
+          const pcTrimmed=postcode.trim().toUpperCase();
+          const spaceIdx=pcTrimmed.lastIndexOf(' ');
+          const sector=spaceIdx>0?pcTrimmed.slice(0,spaceIdx+2):normPostcode.slice(0,-2);
+          const sectorMatch=await sbFetch('/rest/v1/route_postcodes?postcode_sector=eq.'+encodeURIComponent(sector)+'&'+idFilter+'&limit=1');
+          if(sectorMatch&&sectorMatch[0])routeVal=sectorMatch[0].target_area_id;
+        }
+        // Pre-fill dropdown with matched route (user can still override before save completes)
+        if(routeVal)document.getElementById('enquiryRoute').value=routeVal;
+      }
+    }
+
     let lat=null,lng=null;
     const geoRes=await fetch('https://api.postcodes.io/postcodes/'+encodeURIComponent(postcode)).then(r=>r.json());
     if(geoRes.status===200&&geoRes.result){lat=geoRes.result.latitude;lng=geoRes.result.longitude;}
