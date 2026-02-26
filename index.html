@@ -257,10 +257,13 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
   <!-- Phase 6: Enquiries -->
   <div id="enquiriesSection" style="margin-bottom:24px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <h2 style="margin:0;">Enquiries</h2>
+      <h2 style="margin:0;">Enquiries &amp; Instructions</h2>
       <button id="recordEnquiryBtn" onclick="openEnquiryModal()" style="background:#8b5cf6;color:#fff;padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:0.9rem;">+ Record Enquiry</button>
     </div>
+    <h3 style="margin:0 0 8px;font-size:1rem;color:#4b5563;">Enquiries</h3>
     <div id="enquiryList"><p style="color:#888;font-size:0.9rem;">Loading...</p></div>
+    <h3 style="margin:20px 0 8px;font-size:1rem;color:#4b5563;">Instructions</h3>
+    <div id="instructionList"><p style="color:#888;font-size:0.9rem;">Loading...</p></div>
   </div>
 
   <div id="allCampaignsFinanceSummary" style="display:none;margin-bottom:24px;">
@@ -1583,8 +1586,8 @@ async function loadEnquiryList(){
     const enqSelect = showCampaignCol ? '*,campaigns(name)' : '*';
     const campFilter = currentCampaignId ? '&campaign_id=eq.' + currentCampaignId : '';
     const rows=await sbFetch('/rest/v1/enquiries?select='+enqSelect+'&order=created_at.desc' + campFilter);
-    const el=document.getElementById('enquiryList');
-    if(!rows||rows.length===0){el.innerHTML='<p style="color:#888;font-size:0.9rem;">No enquiries recorded yet.</p>';return;}
+    const enqEl=document.getElementById('enquiryList');
+    const instEl=document.getElementById('instructionList');
 
     function fmtDate(iso){
       if(!iso)return'';
@@ -1592,40 +1595,86 @@ async function loadEnquiryList(){
       return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
     }
 
-    let html='<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">';
-    html+='<thead><tr style="background:#8b5cf6;color:white;">';
-    if(showCampaignCol) html+='<th style="padding:8px;text-align:left;">Campaign</th>';
-    html+='<th style="padding:8px;text-align:left;">Date</th>';
-    html+='<th style="padding:8px;text-align:left;">Client</th>';
-    html+='<th style="padding:8px;text-align:left;">Postcode</th>';
-    html+='<th style="padding:8px;text-align:center;">Instructed</th>';
-    html+='<th style="padding:8px;text-align:right;">Value</th>';
-    html+='<th style="padding:8px;text-align:left;">Notes</th>';
-    if(!showCampaignCol) html+='<th style="padding:8px;text-align:center;">Action</th>';
-    html+='</tr></thead>';
-    html+='<tbody>';
-    rows.forEach(r=>{
-      const client=r.client_name||'Anonymous';
-      const postcode=r.postcode||'—';
-      const instructed=r.instructed?'<span style="color:#16a34a;font-weight:700;">Yes</span>':'<span style="color:#666;">No</span>';
-      const value=r.instruction_value?'&pound;'+parseFloat(r.instruction_value).toLocaleString():'—';
-      const notes=r.notes||'';
-      const date=fmtDate(r.created_at);
-      html+='<tr style="border-bottom:1px solid #eee;">';
-      if(showCampaignCol) html+='<td style="padding:8px;color:#666;">'+(r.campaigns?.name||'—')+'</td>';
-      html+='<td style="padding:8px;">'+date+'</td>';
-      html+='<td style="padding:8px;"><strong>'+client+'</strong></td>';
-      html+='<td style="padding:8px;">'+postcode+'</td>';
-      html+='<td style="padding:8px;text-align:center;">'+instructed+'</td>';
-      html+='<td style="padding:8px;text-align:right;">'+value+'</td>';
-      html+='<td style="padding:8px;color:#666;">'+notes+'</td>';
-      if(!showCampaignCol) html+='<td style="padding:8px;text-align:center;"><button onclick="editEnquiry(\''+r.id+'\')" style="padding:4px 8px;background:#8b5cf6;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.75rem;margin-right:4px;">Edit</button><button onclick="deleteEnquiry(\''+r.id+'\')" style="padding:4px 8px;background:#dc2626;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.75rem;">Delete</button></td>';
+    const enquiries=(rows||[]).filter(r=>!r.instructed);
+    const instructions=(rows||[]).filter(r=>r.instructed);
+
+    // --- Enquiries table (non-instructed) ---
+    if(enquiries.length===0){
+      enqEl.innerHTML='<p style="color:#888;font-size:0.9rem;">No enquiries recorded yet.</p>';
+    } else {
+      let html='<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">';
+      html+='<thead><tr style="background:#8b5cf6;color:white;">';
+      if(showCampaignCol) html+='<th style="padding:8px;text-align:left;">Campaign</th>';
+      html+='<th style="padding:8px;text-align:left;">Date</th>';
+      html+='<th style="padding:8px;text-align:left;">Client</th>';
+      html+='<th style="padding:8px;text-align:left;">Postcode</th>';
+      html+='<th style="padding:8px;text-align:left;">Notes</th>';
+      if(!showCampaignCol) html+='<th style="padding:8px;text-align:center;">Action</th>';
+      html+='</tr></thead><tbody>';
+      enquiries.forEach(r=>{
+        const client=r.client_name||'Anonymous';
+        const postcode=r.postcode||'—';
+        const notes=r.notes||'';
+        const date=fmtDate(r.created_at);
+        html+='<tr style="border-bottom:1px solid #eee;">';
+        if(showCampaignCol) html+='<td style="padding:8px;color:#666;">'+(r.campaigns?.name||'—')+'</td>';
+        html+='<td style="padding:8px;">'+date+'</td>';
+        html+='<td style="padding:8px;"><strong>'+client+'</strong></td>';
+        html+='<td style="padding:8px;">'+postcode+'</td>';
+        html+='<td style="padding:8px;color:#666;">'+notes+'</td>';
+        if(!showCampaignCol) html+='<td style="padding:8px;text-align:center;"><button onclick="editEnquiry(\''+r.id+'\')" style="padding:4px 8px;background:#8b5cf6;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.75rem;margin-right:4px;">Edit</button><button onclick="deleteEnquiry(\''+r.id+'\')" style="padding:4px 8px;background:#dc2626;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.75rem;">Delete</button></td>';
+        html+='</tr>';
+      });
+      html+='</tbody></table>';
+      enqEl.innerHTML=html;
+    }
+
+    // --- Instructions table (instructed=true, with value + grand total) ---
+    if(instructions.length===0){
+      instEl.innerHTML='<p style="color:#888;font-size:0.9rem;">No instructions recorded yet.</p>';
+    } else {
+      const grandTotal=instructions.reduce((s,r)=>s+(parseFloat(r.instruction_value)||0),0);
+      const colCount=(showCampaignCol?5:5)+(showCampaignCol?0:1); // date,client,postcode,value,notes + optional campaign + optional action
+      let html='<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">';
+      html+='<thead><tr style="background:#16a34a;color:white;">';
+      if(showCampaignCol) html+='<th style="padding:8px;text-align:left;">Campaign</th>';
+      html+='<th style="padding:8px;text-align:left;">Date</th>';
+      html+='<th style="padding:8px;text-align:left;">Client</th>';
+      html+='<th style="padding:8px;text-align:left;">Postcode</th>';
+      html+='<th style="padding:8px;text-align:right;">Value</th>';
+      html+='<th style="padding:8px;text-align:left;">Notes</th>';
+      if(!showCampaignCol) html+='<th style="padding:8px;text-align:center;">Action</th>';
+      html+='</tr></thead><tbody>';
+      instructions.forEach(r=>{
+        const client=r.client_name||'Anonymous';
+        const postcode=r.postcode||'—';
+        const value=r.instruction_value?'&pound;'+parseFloat(r.instruction_value).toLocaleString():'—';
+        const notes=r.notes||'';
+        const date=fmtDate(r.created_at);
+        html+='<tr style="border-bottom:1px solid #eee;">';
+        if(showCampaignCol) html+='<td style="padding:8px;color:#666;">'+(r.campaigns?.name||'—')+'</td>';
+        html+='<td style="padding:8px;">'+date+'</td>';
+        html+='<td style="padding:8px;"><strong>'+client+'</strong></td>';
+        html+='<td style="padding:8px;">'+postcode+'</td>';
+        html+='<td style="padding:8px;text-align:right;font-weight:600;color:#16a34a;">'+value+'</td>';
+        html+='<td style="padding:8px;color:#666;">'+notes+'</td>';
+        if(!showCampaignCol) html+='<td style="padding:8px;text-align:center;"><button onclick="editEnquiry(\''+r.id+'\')" style="padding:4px 8px;background:#16a34a;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.75rem;margin-right:4px;">Edit</button><button onclick="deleteEnquiry(\''+r.id+'\')" style="padding:4px 8px;background:#dc2626;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.75rem;">Delete</button></td>';
+        html+='</tr>';
+      });
+      // Grand total row
+      html+='<tr style="background:#dcfce7;font-weight:700;border-top:2px solid #16a34a;">';
+      if(showCampaignCol) html+='<td style="padding:8px;"></td>';
+      html+='<td style="padding:8px;" colspan="3">Total ('+instructions.length+' instruction'+(instructions.length===1?'':'s')+')</td>';
+      html+='<td style="padding:8px;text-align:right;color:#16a34a;">&pound;'+grandTotal.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</td>';
+      html+='<td style="padding:8px;"></td>';
+      if(!showCampaignCol) html+='<td style="padding:8px;"></td>';
       html+='</tr>';
-    });
-    html+='</tbody></table>';
-    el.innerHTML=html;
+      html+='</tbody></table>';
+      instEl.innerHTML=html;
+    }
   }catch(e){
     document.getElementById('enquiryList').innerHTML='<p style="color:#888;font-size:0.9rem;">Could not load enquiries.</p>';
+    document.getElementById('instructionList').innerHTML='';
   }
 }
 
