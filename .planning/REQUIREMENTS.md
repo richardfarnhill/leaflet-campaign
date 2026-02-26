@@ -27,7 +27,7 @@
 | ID | Requirement | Description |
 |----|-------------|-------------|
 | TEA-01 | Progress Broadcasting | See team progress in real-time across all areas |
-| TEA-02 | Leaderboards | Gamify completion - show rankings by doors delivered |
+| TEA-02 | Leaderboards | Gamify completion - show rankings by doors delivered and revenue from instructed sales (attributed via route → team member, enabled by RTE-04 auto-matching) |
 
 ### GEO-01: Route Geocoding
 

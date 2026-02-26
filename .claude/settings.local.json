@@ -7,7 +7,16 @@
       "mcp__claude_ai_Hugging_Face__hub_repo_search",
       "WebFetch(domain:findthatpostcode.uk)",
       "Bash(curl -s -I \"https://www.nomisweb.co.uk/api/v01/dataset/NM_2072_1.data.json?geography=629202434&measures=20301&select=geography_code,c2021_tenure_6_name,obs_value\")",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://api.os.uk/search/names/v1/find?query=Wilmslow&output_format=geojson\")"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://api.os.uk/search/names/v1/find?query=Wilmslow&output_format=geojson\")",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "Bash(git add index.html .planning/STATE.md)",
+      "Bash(git commit:*)",
+      "Bash(curl -s \"https://api.postcodes.io/postcodes/LS279AA\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d[''result''], indent=2\\)\\)\")",
+      "Bash(curl -s \"https://api.postcodes.io/postcodes/SK82BW\")",
+      "Bash(curl -s \"https://api.postcodes.io/postcodes?lon=-2.204481&lat=53.395872&limit=3\")",
+      "Bash(curl -s \"https://api.postcodes.io/postcodes?q=SK8%207&limit=100\")",
+      "Bash(node -e \"let d=''''; process.stdin.on\\(''data'',c=>d+=c\\); process.stdin.on\\(''end'',\\(\\)=>{ const r=JSON.parse\\(d\\); console.log\\(r.result ? r.result.length : 0, ''results''\\); }\\)\")"
     ]
   }
 }

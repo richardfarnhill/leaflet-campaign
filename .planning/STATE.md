@@ -54,7 +54,12 @@ Progress: [████████████████░░░░░] ~78%
 
 ## Active Tasks
 
-None.
+<!-- Multi-agent coordination — see .planning/COORDINATION.md for full protocol.
+     REQUIRED: Claim here before making ANY code changes. Remove when done.
+     Format: - [AGENT] [scope] — [brief description] — claimed [YYYY-MM-DD HH:MM UTC] -->
+
+- OpenCode [P8-T05] — API endpoints (Supabase) — claimed 2026-02-26 03:08 UTC
+- Claude [P8 T7] — Backfill route_postcodes for 14k_Feb_2026 campaign — claimed 2026-02-26 09:00 UTC
 
 ## Session Continuity
 
@@ -158,7 +163,7 @@ See 06-01-PLAN.md Task 8 for full spec. Simple modal: Route Name, Postcode, Hous
 | T1: Create campaign - enhance with route creation questions | ○ Pending | Review after P7 |
 | T2: Global exclusion areas review | ✓ Done | OC | Table exists with postcode_prefix/radius_miles/label; UI CRUD works; map renders circles; data is GLOBAL (not per-campaign) - correct for exclusion areas |
 | T3: Prompt new route when 500 houses short | ○ Pending | |
-| T4: Auto-assign enquiries to routes | ✓ Done | Claude | Exact postcode + sector fallback via route_postcodes; pre-fills dropdown |
+| T4: Auto-assign enquiries to routes | ✓ Done | Claude | Two-step modal: lookup geocodes + auto-matches route, step 2 shows pre-filled route + team member |
 | T4c: oa21_code written to demographic_feedback inline | ✓ Done | Claude | Extracted from postcodes.io geocode response (codes.oa21) at save time |
 | T5: API endpoints (Supabase) | ○ Pending | |
 | T6: Demographic feedback table from enquiries | ✓ Done | OC | Auto-captures instructed enquiries to demographic_feedback; TODO: populate oa21_code |
