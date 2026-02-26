@@ -42,7 +42,7 @@ Progress: [████████████████░░░░░] ~78%
 ### Pending Todos
 
 - Phase 6: Enquiry recording and analytics (T1-T6)
-- **demographic_feedback oa21_code population:** Set up process to lookup OA codes from postcodes.io for captured postcodes (or add postcode column to table)
+- **P8 T9 INCOMPLETE — postcode_oa_lookup table is empty.** Must load ONSPD outcode CSVs into Supabase before historic enquiry enrichment works. See HANDOFF.md for exact steps. Pre-extracted WF data is in scripts/wf_rows.json (18,767 rows, 10 MCP batches needed). Priority load order: WF, M, SK, WA, CH, CW, LS, HD, HX, BD, OL, BL, WN, TN, EX. DO NOT SKIP Scotland/NI: AB DD DG EH FK G HS IV KA KW KY ML PA PH TD BT GY JE IM ZE.
 
 ### Blockers/Concerns
 
@@ -62,8 +62,8 @@ Progress: [████████████████░░░░░] ~78%
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: P8 T9 in progress (Demographic enrichment). T10 (Phase Review) pending.
-Resume file: None
+Stopped at: P8 T9 partially done. postcode_oa_lookup table created but EMPTY. WF data pre-extracted. T10 (Phase Review) still pending.
+Resume file: .planning/HANDOFF.md
 
 ### T1 Handoff Note
 
@@ -177,7 +177,7 @@ See 06-01-PLAN.md Task 8 for full spec. Simple modal: Route Name, Postcode, Hous
 | T6: Demographic feedback table from enquiries | ✓ Done | OC | Auto-captures instructed enquiries to demographic_feedback; TODO: populate oa21_code |
 | T7: Backfill route_postcodes for 14k_Feb_2026 | ✓ Done | Claude | 4,596 rows via ONSPD Nov 2025. Known limit: routes sharing a sector get identical postcode sets (Planning Screen v2 fix). |
 | T8: Testing procedure | ✓ Done | OC | Created tests/test-runner.html; updated QUALITY.md with automated tests |
-| T9: Demographic enrichment — auto-populate owner_occupied_pct | ✓ Done | Claude | BEFORE INSERT trigger live. `postcode` column restored to demographic_feedback. Trigger: (1) resolves oa21_code from postcode via route_postcodes if not supplied; (2) fills owner_occupied_pct from route_postcodes. Works for live enquiries AND historic data inserts. NOMIS backfill of route_postcodes.owner_occupied_pct still needed (349 OAs). |
+| T9: Demographic enrichment — auto-populate owner_occupied_pct | ⚠ Partial | Claude | Trigger live + NOMIS backfill done for route postcodes. But `postcode_oa_lookup` table is EMPTY — historic enquiries from outside route areas (e.g. WF12 7DX) still fail to enrich. See HANDOFF.md. Remaining work: load ONSPD outcode CSVs into `postcode_oa_lookup` via Supabase MCP (data in multi_csv/, script in scripts/load_postcode_area.py, wf_rows.json pre-extracted). Priority outcodes: WF, M, SK, WA, CH, CW, LS, HD, HX, BD, OL, BL, WN, TN, EX. |
 | T10: Phase Review & Audit | ○ Pending | | Verify all T1-T9 implementations match requirements, test critical flows, document any gaps for Phase 9 |
 
 ## Phase 9 Task Checklist (Backlog)
