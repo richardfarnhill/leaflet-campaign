@@ -1,6 +1,6 @@
 # Leaflet Campaign Tracker
 
-**Last updated:** 2026-02-26 after Phase 6 T8 completion and Phase 7 complete
+**Last updated:** 2026-02-26 after Phase 8 complete
 
 ---
 
@@ -183,12 +183,12 @@ This is a brownfield project. Codebase analysis completed:
 
 ---
 
-## Current State (Phase 7 Complete)
+## Current State (Phase 8 Complete)
 
 **Last activity:** 2026-02-26
-**Status:** Phases 1-7 fully complete. Phase 8 next.
+**Status:** Phases 1-8 fully complete. Phase 9 (backlog) next.
 
-### What's Been Delivered
+### What's Been Delivered (Phases 1-8)
 - Card-based area reservation system
 - Multi-campaign support with data isolation (Chinese wall)
 - Analytics dashboard with charts
@@ -201,12 +201,18 @@ This is a brownfield project. Codebase analysis completed:
 - Credentials in config.js, RLS enabled
 - route_postcodes table: full unit postcode expansion (enquiry auto-matching ready)
 - Route card street names (click-to-expand) + map boundary polygon (Turf.js convex hull)
+- `needs_routing` flag on campaigns - prompts when 500+ leaflets short
+- Auto-assign enquiries to routes via postcode lookup
+- Stats API endpoint (get_delivery_stats RPC) for external reporting
+- Demographic feedback table auto-capture from enquiries
+- Testing procedure documented
 
-### Next Milestone Goals (Phase 8)
-- Auto-assign enquiries to routes (via route_postcodes lookup)
-- Refactor existing real campaigns into the new data model
-- Prompt to add routes when house count is short
-- API endpoints via Supabase
+### Next (Phase 9 Backlog)
+- Dark mode toggle
+- CSV/Sheets export
+- Gmail notifications
+- ClickUp integration
+- Planning screen v2
 
 ---
 

@@ -229,13 +229,13 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 | 3 - Delivery Recording | ✅ Complete | Implicit |
 | 4 - Analytics & Heatmaps | ✅ Complete | 4 |
 | 5 - Campaign Management | ✅ Complete | 5 |
-| 6 - Enquiry & Team | 🔄 In Progress | 4 |
-| 7 - Core Enhancements | ⏳ Pending | 5 |
-| 8 - Auto-assignment & API | ⏳ Pending | 6 |
+| 6 - Enquiry & Team | ✅ Complete | 4 |
+| 7 - Core Enhancements | ✅ Complete | 5 |
+| 8 - Auto-assignment & API | ✅ Complete | 6 |
 | 9 - Backlog | ⏳ Pending | 7 |
 
-**Total: 7 phases, 19 v1 requirements mapped ✓**
+**Total: 8 phases, v1 requirements complete ✓**
 
 ---
 
-*Last updated: 2026-02-25 - Phase 6 in progress, Phase 7-10 restructured*
+*Last updated: 2026-02-26 - Phase 8 complete*

@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Teams can reserve geographic delivery areas (cards), record deliveries, and the system accurately tracks coverage, enquiries, and cases per area.
-**Current focus:** Phase 8 — T4, T5, T6 done. T7 (route_postcodes backfill) done 2026-02-26. Remaining: T1, T3.
+**Current focus:** Phase 8 — T1, T3 done. Phase complete.
 
 ## Current Position
 
@@ -13,7 +13,7 @@ Phase: 8 of 9 (Auto-assignment & API)
 Plan: 08-01 — Ready to start
 Status: Phase 8 next — P7 fully closed (T1 route card details done)
 
-Last activity: 2026-02-26 — P8 T7 done: route_postcodes backfilled for all 15 routes in 14k_Feb_2026 (4,596 rows) using ONSPD Nov 2025
+Last activity: 2026-02-26 — P8 T3 done: Prompt new route when 500 houses short. checkAndPromptRouting() added.
 
 Progress: [████████████████░░░░░] ~78% (7 of 9 phases)
 
@@ -62,7 +62,7 @@ Progress: [████████████████░░░░░] ~78%
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: P8 T7 complete. Next: Claude takes T1, OpenCode takes T3.
+Stopped at: P8 T3 complete. Phase 8 tasks all done.
 Resume file: None
 
 ### T1 Handoff Note
@@ -170,7 +170,7 @@ See 06-01-PLAN.md Task 8 for full spec. Simple modal: Route Name, Postcode, Hous
 |------|--------|-------|
 | T1: Create campaign - enhance with route creation questions | ✓ Done | Claude | Two-step modal: step 2 shows success + "Add Route" / "Done" buttons |
 | T2: Global exclusion areas review | ✓ Done | OC | Table exists with postcode_prefix/radius_miles/label; UI CRUD works; map renders circles; data is GLOBAL (not per-campaign) - correct for exclusion areas |
-| T3: Prompt new route when 500 houses short | ○ Pending | Use `campaigns.needs_routing` (boolean) — set `true` on campaign create, clear to `false` when routing is complete. |
+| T3: Prompt new route when 500 houses short | ✓ Done | OC | Added `checkAndPromptRouting()` - checks on page load, after route delete, after route add. Auto-clears `needs_routing` when shortfall ≤ 500. |
 | T4: Auto-assign enquiries to routes | ✓ Done | Claude | Two-step modal: lookup geocodes + auto-matches route, step 2 shows pre-filled route + team member |
 | T4c: oa21_code written to demographic_feedback inline | ✓ Done | Claude | Extracted from postcodes.io geocode response (codes.oa21) at save time |
 | T5: API endpoints (Supabase) | ✓ Done | OC | RPC function in supabase_schema.sql; web page no longer calls it (simplified) |

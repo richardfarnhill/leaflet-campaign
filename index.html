@@ -411,6 +411,19 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
   </div>
 </div>
 
+<!-- Routing Prompt Modal (P8 T3) -->
+<div id="routingPromptModal" class="modal-overlay">
+  <div class="modal">
+    <h3>Campaign Needs Routes</h3>
+    <p style="margin-bottom:16px;">Campaign <strong id="routingPromptCampaign"></strong> is <strong id="routingPromptCount"></strong> leaflets short of its target.</p>
+    <p style="margin-bottom:16px;color:#666;">Add routes to cover the shortfall?</p>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeRoutingPromptModal()">Later</button>
+      <button class="modal-btn confirm" onclick="closeRoutingPromptModal();openAddRouteModal();">Add Route</button>
+    </div>
+  </div>
+</div>
+
 <!-- Add Route Modal -->
 <div id="addRouteModal" class="modal-overlay">
   <div class="modal">
@@ -2250,6 +2263,8 @@ async function confirmDeleteRoute(){
     renderAreaCards();
     await loadSummaryStats();
     setSyncStatus('ok','Route deleted');
+    // P8 T3: Check if campaign needs routing after deletion
+    await checkAndPromptRouting();
   }catch(e){
     errorEl.textContent='Error: '+e.message;
     errorEl.classList.add('show');
@@ -2258,7 +2273,68 @@ async function confirmDeleteRoute(){
   btn.textContent='Delete';
 }
 
-// Add Route Modal (T8)
+// P8 T3: Check routing shortfall for a campaign
+async function checkRoutingShortfall(campaignId){
+  try{
+    // Get campaign target
+    const camps = await sbFetch('/rest/v1/campaigns?select=id,name,target_leaflets,needs_routing&id=eq.'+campaignId);
+    if(!camps || camps.length === 0) return null;
+    const camp = camps[0];
+    if(camp.needs_routing !== true) return null;
+    
+    // Get total house count from routes
+    const areas = await sbFetch('/rest/v1/target_areas?select=house_count&campaign_id=eq.'+campaignId);
+    const totalHouses = (areas || []).reduce((sum, a) => sum + (a.house_count || 0), 0);
+    
+    // Get total delivered
+    const delivs = await sbFetch('/rest/v1/deliveries?select=leaflets_delivered&campaign_id=eq.'+campaignId);
+    const totalDelivered = (delivs || []).reduce((sum, d) => sum + (d.leaflets_delivered || 0), 0);
+    
+    const shortfall = (camp.target_leaflets || 0) - totalHouses - totalDelivered;
+    return { campaignId, name: camp.name, shortfall, needsRouting: camp.needs_routing };
+  }catch(e){
+    Logger.error('checkRoutingShortfall failed', e);
+    return null;
+  }
+}
+
+// P8 T3: Check all campaigns needing routing and prompt if needed
+let pendingRoutingPrompt = false;
+async function checkAndPromptRouting(){
+  if(pendingRoutingPrompt) return; // Prevent multiple prompts
+  try{
+    // Get campaigns that need routing
+    const camps = await sbFetch('/rest/v1/campaigns?select=id,name,needs_routing&needs_routing=eq.true');
+    if(!camps || camps.length === 0) return;
+    
+    for(const camp of camps){
+      const result = await checkRoutingShortfall(camp.id);
+      if(result && result.shortfall > 500){
+        pendingRoutingPrompt = true;
+        // Show prompt
+        document.getElementById('routingPromptCampaign').textContent = result.name;
+        document.getElementById('routingPromptCount').textContent = result.shortfall.toLocaleString();
+        document.getElementById('routingPromptModal').classList.add('active');
+        return;
+      }else if(result && result.shortfall <= 500){
+        // Auto-clear needs_routing flag
+        await sbFetch('/rest/v1/campaigns?id=eq.'+camp.id, {
+          method:'PATCH',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({needs_routing:false})
+        });
+      }
+    }
+  }catch(e){
+    Logger.error('checkAndPromptRouting failed', e);
+  }
+}
+
+function closeRoutingPromptModal(){
+  document.getElementById('routingPromptModal').classList.remove('active');
+  pendingRoutingPrompt = false;
+}
+
 function openAddRouteModal(){
   document.getElementById('addRouteName').value='';
   document.getElementById('addRoutePostcode').value='';
@@ -2314,6 +2390,8 @@ async function saveNewRoute(){
     await loadAreaCards();
     renderAreaCards();
     await loadSummaryStats();
+    // P8 T3: Check if routing is now complete
+    await checkAndPromptRouting();
     setSyncStatus('ok','Route added');
   }catch(e){
     errorEl.textContent='Error: '+e.message;
@@ -2528,6 +2606,8 @@ async function loadAll(){
     await loadEnquiryList();
     await loadTeamProgress();
     await loadFinanceFromDB();updateSummary();
+    // P8 T3: Check if any campaigns need routing after load
+    await checkAndPromptRouting();
     setSyncStatus('ok','Live \u00b7 auto-syncing every 30s');
   }catch(e){
     Logger.error('loadAll failed',e);
