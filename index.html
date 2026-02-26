@@ -442,27 +442,40 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
 <!-- New Campaign Modal -->
 <div id="newCampaignModal" class="modal-overlay">
   <div class="modal">
-    <h3>New Campaign</h3>
-    <div class="modal-field">
-      <label>Campaign Name</label>
-      <input type="text" id="newCampaignName" placeholder="e.g. Wilmslow Spring 2026">
+    <!-- Step 1: Campaign details -->
+    <div id="newCampaignStep1">
+      <h3>New Campaign</h3>
+      <div class="modal-field">
+        <label>Campaign Name</label>
+        <input type="text" id="newCampaignName" placeholder="e.g. Wilmslow Spring 2026">
+      </div>
+      <div class="modal-field">
+        <label>Target Leaflets</label>
+        <input type="number" id="newCampaignTarget" placeholder="30000">
+      </div>
+      <div class="modal-field">
+        <label>Start Date</label>
+        <input type="date" id="newCampaignStart">
+      </div>
+      <div class="modal-field">
+        <label>End Date</label>
+        <input type="date" id="newCampaignEnd">
+      </div>
+      <div class="modal-error" id="newCampaignError"></div>
+      <div class="modal-actions">
+        <button class="modal-btn cancel" onclick="closeNewCampaignModal()">Cancel</button>
+        <button class="modal-btn confirm" id="newCampaignConfirmBtn" onclick="saveNewCampaign()">Create</button>
+      </div>
     </div>
-    <div class="modal-field">
-      <label>Target Leaflets</label>
-      <input type="number" id="newCampaignTarget" placeholder="30000">
-    </div>
-    <div class="modal-field">
-      <label>Start Date</label>
-      <input type="date" id="newCampaignStart">
-    </div>
-    <div class="modal-field">
-      <label>End Date</label>
-      <input type="date" id="newCampaignEnd">
-    </div>
-    <div class="modal-error" id="newCampaignError"></div>
-    <div class="modal-actions">
-      <button class="modal-btn cancel" onclick="closeNewCampaignModal()">Cancel</button>
-      <button class="modal-btn confirm" id="newCampaignConfirmBtn" onclick="saveNewCampaign()">Create</button>
+    <!-- Step 2: Post-creation prompt -->
+    <div id="newCampaignStep2" style="display:none;text-align:center;padding:8px 0;">
+      <div style="font-size:2rem;margin-bottom:8px;">✓</div>
+      <h3 id="newCampaignSuccessTitle" style="margin:0 0 8px;"></h3>
+      <p style="color:#6b7280;margin:0 0 20px;font-size:0.95rem;">Ready to add routes to this campaign?</p>
+      <div class="modal-actions" style="justify-content:center;gap:12px;">
+        <button class="modal-btn cancel" onclick="closeNewCampaignModal()">Done</button>
+        <button class="modal-btn confirm" onclick="closeNewCampaignAndAddRoute()">+ Add Route</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1411,39 +1424,8 @@ function closeCompleteModal(){
   currentCompleteAreaId=null;
 }
 
-async function loadStatsFromAPI(){
-  try{
-    let url = '/rest/v1/rpc/get_delivery_stats';
-    if (currentCampaignId) {
-      url += '?p_campaign_id=' + currentCampaignId;
-    }
-    const stats = await sbFetch(url);
-    if(stats && typeof stats === 'object'){
-      return stats;
-    }
-  }catch(e){
-    Logger.warn('loadStatsFromAPI failed, using fallback', e.message);
-  }
-  return null;
-}
-
 async function loadSummaryStats(){
   try{
-    // Try to get stats from RPC API first (P8 T5)
-    const apiStats = await loadStatsFromAPI();
-    if(apiStats && apiStats.total_leaflets_all_time !== undefined){
-      document.getElementById('sumDelivered').textContent = (apiStats.total_leaflets_all_time || 0).toLocaleString();
-      document.getElementById('sumRemaining').textContent = Math.max(0, (apiStats.campaign_target || 0) - (apiStats.delivered_so_far || 0)).toLocaleString();
-      document.getElementById('sumSessions').textContent = (apiStats.routes_completed_count || 0) + ' / ' + ((apiStats.routes_completed_count || 0) + (apiStats.active_routes_count || 0)) + ' routes';
-      const pct = apiStats.campaign_target > 0 ? Math.min(100, Math.round((apiStats.delivered_so_far || 0) / apiStats.campaign_target * 100)) : 0;
-      document.getElementById('progressFill').style.width = pct + '%';
-      document.getElementById('progressPct').textContent = pct + '%';
-      const revPer100 = apiStats.revenue_per_100_leaflets || 0;
-      document.getElementById('sumProjected').textContent = revPer100 > 0 ? '£' + revPer100.toFixed(2) + '/100' : '—';
-      return;
-    }
-
-    // Fallback: original implementation
     let targetLeaflets=0;
     if(currentCampaignId){
       const camps=await sbFetch('/rest/v1/campaigns?select=target_leaflets&id=eq.'+currentCampaignId);
@@ -2350,11 +2332,18 @@ function openNewCampaignModal(){
   document.getElementById('newCampaignError').textContent='';
   document.getElementById('newCampaignConfirmBtn').disabled=false;
   document.getElementById('newCampaignConfirmBtn').textContent='Create';
+  document.getElementById('newCampaignStep1').style.display='';
+  document.getElementById('newCampaignStep2').style.display='none';
   document.getElementById('newCampaignModal').classList.add('active');
 }
 
 function closeNewCampaignModal(){
   document.getElementById('newCampaignModal').classList.remove('active');
+}
+
+function closeNewCampaignAndAddRoute(){
+  closeNewCampaignModal();
+  openAddRouteModal();
 }
 
 async function saveNewCampaign(){
@@ -2372,7 +2361,6 @@ async function saveNewCampaign(){
       headers:{'Prefer':'return=representation','Content-Type':'application/json'},
       body:JSON.stringify({name,target_leaflets:target,start_date:start,end_date:end,is_active:true})
     });
-    closeNewCampaignModal();
     await loadCampaigns();
     if(result&&result[0]&&result[0].id){
       currentCampaignId=result[0].id;
@@ -2382,6 +2370,10 @@ async function saveNewCampaign(){
     renderAreaCards();
     await loadSummaryStats();
     setSyncStatus('ok','Campaign created!');
+    // Show step 2: prompt to add a route
+    document.getElementById('newCampaignStep1').style.display='none';
+    document.getElementById('newCampaignSuccessTitle').textContent=name+' created!';
+    document.getElementById('newCampaignStep2').style.display='';
   }catch(e){
     errorEl.textContent='Failed to create campaign: '+e.message;
     btn.disabled=false;btn.textContent='Create';
