@@ -1,6 +1,6 @@
 # Leaflet Campaign Tracker
 
-**Last updated:** 2026-02-25 after initialization and user feedback
+**Last updated:** 2026-02-26 after Phase 6 T8 completion and Phase 7 complete
 
 ---
 
@@ -30,11 +30,12 @@ A **commercial** leaflet delivery tracking application that enables teams to res
 ## Technical Context
 
 **Current State:**
-- Single-file HTML application (index.html - 414 lines)
+- Single-file HTML application (index.html - ~2200 lines)
 - Supabase backend (https://tjebidvgvbpnxgnphcrg.supabase.co)
-- Hardcoded credentials in JavaScript (security concern)
+- Credentials moved to config.js (Phase 7 T5)
+- RLS enabled on all tables (Phase 7 T3)
 - No build system, no tests
-- Existing database: session_log, finance_actuals, rescheduled_sessions
+- Database: campaigns, target_areas, route_postcodes, reservations, deliveries, enquiries, team_members, restricted_areas
 
 **Target State:**
 - Multi-file structure: index.html, styles.css, app.js
@@ -63,8 +64,8 @@ A **commercial** leaflet delivery tracking application that enables teams to res
 | Team progress + leaderboards | Track leaflets delivered (split if 2 members) + revenue from enquiries | ✅ Done |
 | OS Names API integration | Get accurate street names and counts for chunking | ⚠️ Requires API key — replaced by postcodes.io + NOMIS |
 | Census 2021 demographic filtering | Target 60-80% owner-occupied areas | ✅ Designed — NOMIS NM_2072_1 (TS054 Tenure) |
-| **Route Planning Engine** | **Resolve area → postcodes → demographic filter → exclusion check → chunked routes → DB** | **🔧 Phase 6 T8 — see [ROUTE-PLANNING-ENGINE.md](ROUTE-PLANNING-ENGINE.md)** |
-| **libpostal + demography integration** | **CRITICAL - chunking and area selection from criteria** | Superseded by postcodes.io + NOMIS approach |
+| **Route Planning Engine** | **Resolve area → postcodes → demographic filter → exclusion check → chunked routes → DB** | **🔧 Phase 8 — see [ROUTE-PLANNING-ENGINE.md](ROUTE-PLANNING-ENGINE.md). Manual Add Route UI done (Phase 6 T8).** |
+| **libpostal + demography integration** | **CRITICAL - chunking and area selection from criteria** | 🔧 Phase 8/9 — postcodes.io + NOMIS handles demographic filtering; libpostal for address parsing/normalisation |
 | **Planning Screen** | Define criteria → generate areas → create campaign in DB | 🔧 Phase 6 T8 — implemented as `/leaflet-plan-routes` skill |
 | **ClickUp integration stub** | Create API structure for ClickUp, full implementation v2 | — Pending |
 | Supabase for backend | Already in use, provides auth and database | ✅ Done |
@@ -152,10 +153,6 @@ This is a brownfield project. Codebase analysis completed:
 - [x] **Multi-campaign support** with campaign_id in all tables
 - [x] **Campaign switching** - Ability to switch between campaigns
 - [x] **Aggregated data view** - See data across all campaigns
-- [ ] OS Names API integration for street data
-- [ ] Census 2021 demographic filtering (60-80% owner-occupied)
-- [ ] **libpostal + demography integration** - Critical for chunking/area selection
-- [ ] Chunking algorithm (800-1200 doors per chunk)
 - [x] Analytics dashboard with charts
 - [x] **Heatmap visualization** - Show completed areas AND enquiries on map
 - [x] Team member management (route-level)
@@ -165,8 +162,17 @@ This is a brownfield project. Codebase analysis completed:
 - [x] **Enquiry heatmap** - Visualize enquiries on same map as delivery coverage
 - [x] **Team progress tracking** - Real-time progress of team members
 - [x] **Leaderboards** - Rank by leaflets delivered (split if 2 members) AND revenue from instructed enquiries
-- [ ] **ClickUp integration stub** - API endpoints for ClickUp (full implementation v2)
-- [ ] **Planning Screen** - Define criteria → generate areas → create campaign (v2)
+- [x] **Route creation UI** - Add Route modal with geocoding
+- [x] **Route deletion UI** - Delete with cascade guard
+- [x] **route_postcodes expansion** - Full unit postcodes per route (enquiry auto-matching)
+- [x] **Security** - Credentials in config.js, RLS enabled
+- [ ] **Enquiry auto-matching** - Auto-assign enquiries to routes via route_postcodes lookup (Phase 8 T4)
+- [ ] **Refactor real campaigns** - Migrate existing real campaign data into new model (Phase 8 T7)
+- [ ] OS Names API integration for street data (deferred)
+- [ ] Census 2021 demographic filtering (deferred — NOMIS NM_2072_1 approach designed)
+- [ ] **libpostal + demography integration** - Critical for intelligent chunking/area selection (Phase 8/9)
+- [ ] **ClickUp integration stub** - API endpoints for ClickUp (Phase 9 backlog)
+- [ ] **Planning Screen** - Define criteria → generate areas → create campaign (Phase 8/9)
 
 ### Out of Scope
 
@@ -177,25 +183,29 @@ This is a brownfield project. Codebase analysis completed:
 
 ---
 
-## Current State (v1.0 Shipped)
+## Current State (Phase 7 Complete)
 
-**Shipped:** 2026-02-25
-**Tag:** v1.0
-**Status:** Stable release - production ready
+**Last activity:** 2026-02-26
+**Status:** Phases 1-7 complete (~78%). Phase 8 next.
 
-### What Was Delivered
+### What's Been Delivered
 - Card-based area reservation system
-- Multi-campaign support with data isolation
+- Multi-campaign support with data isolation (Chinese wall)
 - Analytics dashboard with charts
 - Heat maps (deliveries + enquiries)
 - Team leaderboards (leaflets + revenue)
-- Robust enquiry recording
-- Route creation UI (in progress)
+- Robust enquiry recording with geocoding
+- Route creation UI (+ Add Route modal)
+- Route deletion UI with cascade
+- Per-postcode exclusion radius config
+- Credentials in config.js, RLS enabled
+- route_postcodes table: full unit postcode expansion (enquiry auto-matching ready)
 
-### Next Milestone Goals (v1.1)
-- Phase 7: Core Enhancements (route cards, completion, security)
-- Phase 8: Auto-assignment & API
-- Phase 9: UI/UX (dark mode)
+### Next Milestone Goals (Phase 8)
+- Auto-assign enquiries to routes (via route_postcodes lookup)
+- Refactor existing real campaigns into the new data model
+- Prompt to add routes when house count is short
+- API endpoints via Supabase
 
 ---
 
