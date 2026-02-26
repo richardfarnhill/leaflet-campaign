@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Teams can reserve geographic delivery areas (cards), record deliveries, and the system accurately tracks coverage, enquiries, and cases per area.
-**Current focus:** Phase 6 T8 done. Phase 7 complete. Phase 8 next.
+**Current focus:** Phase 8 — T4, T5, T6 done. T7 (route_postcodes backfill) done 2026-02-26. Remaining: T1, T3.
 
 ## Current Position
 
@@ -13,7 +13,7 @@ Phase: 8 of 9 (Auto-assignment & API)
 Plan: 08-01 — Ready to start
 Status: Phase 8 next — P7 fully closed (T1 route card details done)
 
-Last activity: 2026-02-26 — Route card street names, map boundary polygon, P7 closed
+Last activity: 2026-02-26 — P8 T7 done: route_postcodes backfilled for all 15 routes in 14k_Feb_2026 (4,596 rows) using ONSPD Nov 2025
 
 Progress: [████████████████░░░░░] ~78% (7 of 9 phases)
 
@@ -58,14 +58,22 @@ Progress: [████████████████░░░░░] ~78%
      REQUIRED: Claim here before making ANY code changes. Remove when done.
      Format: - [AGENT] [scope] — [brief description] — claimed [YYYY-MM-DD HH:MM UTC] -->
 
-- OpenCode [P8-T05] — API endpoints (Supabase) — claimed 2026-02-26 03:08 UTC
-- Claude [P8 T7] — Backfill route_postcodes for 14k_Feb_2026 campaign — claimed 2026-02-26 09:00 UTC
 
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: T03 (RLS) in progress - needs Supabase RLS enablement
+Stopped at: P8 T7 complete. Next: Claude takes T1, OpenCode takes T3.
 Resume file: None
+
+### T1 Handoff Note
+
+**Task:** P8 T1 — Enhance "Create Campaign" flow with route creation questions.
+
+**What exists today:** A "New Campaign" modal in index.html with basic fields (name, target leaflets, start date). On save it POSTs to `target_areas` and redirects.
+
+**What T1 should add:** After the basic campaign details are saved, prompt the user with route creation questions — either inline in the modal or as a follow-up step. At minimum: "How many routes do you want to create?" with a simple "Add Route" shortcut that pre-populates the Add Route modal with the new campaign selected.
+
+**Scope guidance:** Keep it simple. Don't build the full route planning engine (that's Planning Screen v2). Just make it obvious after creating a campaign that the next step is adding routes, and make that easy to do.
 
 ## Phase 4 Task Checklist (04-01-PLAN.md)
 
@@ -160,14 +168,14 @@ See 06-01-PLAN.md Task 8 for full spec. Simple modal: Route Name, Postcode, Hous
 
 | Task | Status | Notes |
 |------|--------|-------|
-| T1: Create campaign - enhance with route creation questions | ○ Pending | Review after P7 |
+| T1: Create campaign - enhance with route creation questions | ✓ Done | Claude | Two-step modal: step 2 shows success + "Add Route" / "Done" buttons |
 | T2: Global exclusion areas review | ✓ Done | OC | Table exists with postcode_prefix/radius_miles/label; UI CRUD works; map renders circles; data is GLOBAL (not per-campaign) - correct for exclusion areas |
-| T3: Prompt new route when 500 houses short | ○ Pending | |
+| T3: Prompt new route when 500 houses short | ○ Pending | Use `campaigns.needs_routing` (boolean) — set `true` on campaign create, clear to `false` when routing is complete. |
 | T4: Auto-assign enquiries to routes | ✓ Done | Claude | Two-step modal: lookup geocodes + auto-matches route, step 2 shows pre-filled route + team member |
 | T4c: oa21_code written to demographic_feedback inline | ✓ Done | Claude | Extracted from postcodes.io geocode response (codes.oa21) at save time |
-| T5: API endpoints (Supabase) | ○ Pending | |
+| T5: API endpoints (Supabase) | ✓ Done | OC | RPC function in supabase_schema.sql; web page no longer calls it (simplified) |
 | T6: Demographic feedback table from enquiries | ✓ Done | OC | Auto-captures instructed enquiries to demographic_feedback; TODO: populate oa21_code |
-| T7: Migrate real campaigns into new data model | ○ Pending | Richard's existing real campaign data (routes, deliveries, enquiries) needs refactoring into campaigns/target_areas/route_postcodes/enquiries schema. Probably done interactively with Richard. |
+| T7: Backfill route_postcodes for 14k_Feb_2026 | ✓ Done | Claude | 4,596 rows via ONSPD Nov 2025. Known limit: routes sharing a sector get identical postcode sets (Planning Screen v2 fix). |
 | T8: Testing procedure | ✓ Done | OC | Created tests/test-runner.html; updated QUALITY.md with automated tests |
 
 ## Phase 9 Task Checklist (Backlog)

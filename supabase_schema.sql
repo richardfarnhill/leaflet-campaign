@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
     end_date DATE,
     target_leaflets INTEGER DEFAULT 30000,
     is_active BOOLEAN DEFAULT true,
+    needs_routing BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -330,25 +331,9 @@ BEGIN
     'revenue_per_100_leaflets', CASE WHEN v_total_leaflets > 0 THEN (v_total_revenue / v_total_leaflets) * 100 ELSE 0 END,
     'enquiries_count', v_enquiries_count,
     'enquiries_in_period', v_enquiries_in_period,
-    'cases_count', v_cases_count,
-    'cases_in_period', v_cases_in_period,
-    'conversion_rate', v_response_rate,
-    'average_case_value', CASE WHEN v_cases_count > 0 THEN v_total_revenue / v_cases_count ELSE 0 END,
-    'campaign_target', v_campaign_target,
-    'delivered_so_far', v_delivered_so_far,
-    'projected_revenue_remaining', v_projected_remaining
-  );
-
-  result := jsonb_build_object(
-    'total_leaflets_all_time', v_total_leaflets,
-    'leaflets_last_30_days', v_leaflets_last_30_days,
-    'routes_completed_count', v_routes_completed_count,
-    'active_routes_count', v_active_routes_count,
-    'total_revenue', v_total_revenue,
-    'revenue_per_100_leaflets', CASE WHEN v_total_leaflets > 0 THEN (v_total_revenue / v_total_leaflets) * 100 ELSE 0 END,
-    'enquiries_count', v_enquiries_count,
     'enquiries_last_30_days', v_enquiries_last_30_days,
     'cases_count', v_cases_count,
+    'cases_in_period', v_cases_in_period,
     'conversion_rate', v_response_rate,
     'average_case_value', CASE WHEN v_cases_count > 0 THEN v_total_revenue / v_cases_count ELSE 0 END,
     'campaign_target', v_campaign_target,

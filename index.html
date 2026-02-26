@@ -2359,7 +2359,7 @@ async function saveNewCampaign(){
     const result=await sbFetch('/rest/v1/campaigns',{
       method:'POST',
       headers:{'Prefer':'return=representation','Content-Type':'application/json'},
-      body:JSON.stringify({name,target_leaflets:target,start_date:start,end_date:end,is_active:true})
+      body:JSON.stringify({name,target_leaflets:target,start_date:start,end_date:end,is_active:true,needs_routing:true})
     });
     await loadCampaigns();
     if(result&&result[0]&&result[0].id){
