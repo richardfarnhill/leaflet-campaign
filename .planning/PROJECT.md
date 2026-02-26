@@ -184,12 +184,12 @@ This is a brownfield project. Codebase analysis completed:
 
 ---
 
-## Current State (Phase 8 Complete)
+## Current State (Phase 8 In Progress)
 
 **Last activity:** 2026-02-26
-**Status:** Phases 1-8 fully complete. Phase 9 (backlog) next.
+**Status:** Phase 8 in progress (T9: Demographic enrichment). T10: Phase Review pending.
 
-### What's Been Delivered (Phases 1-8)
+### What's Been Delivered (Phases 1-8 so far)
 - Card-based area reservation system
 - Multi-campaign support with data isolation (Chinese wall)
 - Analytics dashboard with charts
