@@ -2118,6 +2118,7 @@ async function saveCampaignConfig(){
     
     closeCampaignConfig();
     await loadCampaigns();
+    await loadSummaryStats();
     if (window.analyticsMap) await loadHeatmap();
     setSyncStatus('ok','Campaign updated!');
   }catch(e){
