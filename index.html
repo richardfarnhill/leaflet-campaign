@@ -549,10 +549,10 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
   </div>
 </div>
 
-<!-- Enquiry Modal -->
+<!-- Enquiry Modal — Step 1: Postcode lookup -->
 <div id="enquiryModal" class="modal-overlay">
   <div class="modal">
-    <h3 id="enquiryModalTitle">Record Enquiry</h3>
+    <h3>Record Enquiry <span style="font-size:0.75rem;color:#94a3b8;font-weight:400;">Step 1 of 2</span></h3>
     <div class="modal-field">
       <label>Client Name</label>
       <input type="text" id="enquiryClientName" placeholder="Optional">
@@ -560,10 +560,6 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
     <div class="modal-field">
       <label>Postcode *</label>
       <input type="text" id="enquiryPostcode" placeholder="e.g. WA14 2LY" required>
-    </div>
-    <div class="modal-field">
-      <label>Route</label>
-      <select id="enquiryRoute"><option value="">Select...</option></select>
     </div>
     <div class="modal-field">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
@@ -575,14 +571,35 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
       <label>Instruction Value (&pound;)</label>
       <input type="number" id="enquiryInstructionValue" placeholder="e.g. 2500" min="0">
     </div>
+    <div class="modal-error" id="enquiryError"></div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeEnquiryModal()">Cancel</button>
+      <button class="modal-btn confirm" id="enquiryLookupBtn" onclick="enquiryLookup()">Look up →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Enquiry Modal — Step 2: Confirm & save -->
+<div id="enquiryConfirmModal" class="modal-overlay">
+  <div class="modal">
+    <h3>Record Enquiry <span style="font-size:0.75rem;color:#94a3b8;font-weight:400;">Step 2 of 2</span></h3>
+    <div class="modal-field" id="enquiryConfirmPostcodeRow">
+      <label>Postcode</label>
+      <div id="enquiryConfirmPostcode" style="font-weight:600;padding:4px 0;"></div>
+    </div>
+    <div class="modal-field">
+      <label>Route</label>
+      <select id="enquiryRoute"><option value="">Route unknown</option></select>
+    </div>
+    <div id="enquiryConfirmTeamInfo" style="font-size:0.8rem;color:#64748b;margin:-8px 0 8px 0;padding-left:2px;"></div>
     <div class="modal-field">
       <label>Notes</label>
       <textarea id="enquiryNotes" rows="2" placeholder="Optional"></textarea>
     </div>
-    <div class="modal-error" id="enquiryError"></div>
+    <div class="modal-error" id="enquiryConfirmError"></div>
     <div class="modal-actions">
-      <button class="modal-btn cancel" onclick="closeEnquiryModal()">Cancel</button>
-      <button class="modal-btn confirm" id="enquiryConfirmBtn" onclick="saveEnquiry()">Save</button>
+      <button class="modal-btn cancel" onclick="closeEnquiryConfirmModal()">← Back</button>
+      <button class="modal-btn confirm" id="enquiryConfirmBtn" onclick="saveEnquiry()">Save Enquiry</button>
     </div>
   </div>
 </div>
@@ -1688,130 +1705,192 @@ async function deleteEnquiry(id){
   }
 }
 
+// State carried between step 1 and step 2
+let _enquiryGeo={lat:null,lng:null,oa21:null,spacedPostcode:null};
+
 function openEnquiryModal(enquiryId){
-  const isEdit=!!enquiryId;
-  document.getElementById('enquiryModalTitle').textContent=isEdit?'Edit Enquiry':'Record Enquiry';
+  if(enquiryId){
+    // Edit flow: skip step 1, go straight to step 2 with existing data
+    currentEditEnquiryId=enquiryId;
+    sbFetch('/rest/v1/enquiries?id=eq.'+enquiryId).then(rows=>{
+      if(rows&&rows[0]){
+        const r=rows[0];
+        _enquiryGeo={lat:r.lat,lng:r.lng,oa21:null,spacedPostcode:r.postcode};
+        // Pre-fill step 1 fields (for Back navigation)
+        document.getElementById('enquiryClientName').value=r.client_name||'';
+        document.getElementById('enquiryPostcode').value=r.postcode||'';
+        document.getElementById('enquiryInstructed').checked=r.instructed||false;
+        document.getElementById('enquiryInstructionValue').value=r.instruction_value||'';
+        document.getElementById('enquiryValueField').style.display=r.instructed?'block':'none';
+        // Open step 2 directly
+        _openEnquiryStep2(r.target_area_id||null, r.notes||'');
+      }
+    });
+    return;
+  }
+  // New enquiry: open step 1
+  currentEditEnquiryId=null;
+  _enquiryGeo={lat:null,lng:null,oa21:null,spacedPostcode:null};
   document.getElementById('enquiryClientName').value='';
   document.getElementById('enquiryPostcode').value='';
   document.getElementById('enquiryInstructed').checked=false;
   document.getElementById('enquiryInstructionValue').value='';
-  document.getElementById('enquiryNotes').value='';
   document.getElementById('enquiryError').textContent='';
+  document.getElementById('enquiryError').classList.remove('show');
   document.getElementById('enquiryValueField').style.display='none';
-  
-  const routeSelect=document.getElementById('enquiryRoute');
-  routeSelect.innerHTML='<option value="">Route unknown</option>';
-  (targetAreas||[]).forEach(ta=>{
-    routeSelect.innerHTML+='<option value="'+ta.id+'">'+ta.area_name+'</option>';
-  });
-  
-  if(isEdit){
-    sbFetch('/rest/v1/enquiries?id=eq.'+enquiryId).then(rows=>{
-      if(rows&&rows[0]){
-        const r=rows[0];
-        document.getElementById('enquiryClientName').value=r.client_name||'';
-        document.getElementById('enquiryPostcode').value=r.postcode||'';
-        document.getElementById('enquiryRoute').value=r.target_area_id||'';
-        document.getElementById('enquiryInstructed').checked=r.instructed||false;
-        document.getElementById('enquiryInstructionValue').value=r.instruction_value||'';
-        document.getElementById('enquiryNotes').value=r.notes||'';
-        if(r.instructed)document.getElementById('enquiryValueField').style.display='block';
-      }
-    });
-  }
-  
-  document.getElementById('enquiryModal').classList.add('active');
-  
   document.getElementById('enquiryInstructed').onchange=function(){
     document.getElementById('enquiryValueField').style.display=this.checked?'block':'none';
   };
+  document.getElementById('enquiryModal').classList.add('active');
 }
 
 function closeEnquiryModal(){
   document.getElementById('enquiryModal').classList.remove('active');
+  document.getElementById('enquiryConfirmModal').classList.remove('active');
   currentEditEnquiryId=null;
 }
 
-async function saveEnquiry(){
+function closeEnquiryConfirmModal(){
+  document.getElementById('enquiryConfirmModal').classList.remove('active');
+  document.getElementById('enquiryModal').classList.add('active');
+}
+
+async function enquiryLookup(){
   const postcode=document.getElementById('enquiryPostcode').value.trim();
   const errorEl=document.getElementById('enquiryError');
-  const btn=document.getElementById('enquiryConfirmBtn');
-  
+  const btn=document.getElementById('enquiryLookupBtn');
   if(!postcode){
     errorEl.textContent='Please enter a postcode';
     errorEl.classList.add('show');
     return;
   }
-  
   btn.disabled=true;
-  btn.textContent='Saving...';
+  btn.textContent='Looking up...';
   errorEl.classList.remove('show');
-  
   try{
-    // Normalise postcode: strip spaces + uppercase, then re-form standard spaced format (inward = last 3 chars)
-    const normPostcode=postcode.replace(/\s+/g,'').toUpperCase();
-    const spacedPostcode=normPostcode.length>3?normPostcode.slice(0,-3)+' '+normPostcode.slice(-3):normPostcode;
-    // Sector = everything except last 2 chars of spaced postcode e.g. "LS27 7" from "LS27 7ED"
-    const sector=spacedPostcode.slice(0,-2);
+    // Normalise to spaced format and derive sector
+    const norm=postcode.replace(/\s+/g,'').toUpperCase();
+    const spaced=norm.length>3?norm.slice(0,-3)+' '+norm.slice(-3):norm;
+    const sector=spaced.slice(0,-2);
 
-    // Auto-match route from route_postcodes (only if user hasn't manually selected one)
-    let routeVal=document.getElementById('enquiryRoute').value||null;
-    if(!routeVal&&currentCampaignId){
+    // Geocode
+    const geoRes=await fetch('https://api.postcodes.io/postcodes/'+encodeURIComponent(spaced)).then(r=>r.json());
+    if(geoRes.status!==200||!geoRes.result){
+      errorEl.textContent='Postcode not found — please check and try again';
+      errorEl.classList.add('show');
+      btn.disabled=false;btn.textContent='Look up →';
+      return;
+    }
+    _enquiryGeo={
+      lat:geoRes.result.latitude,
+      lng:geoRes.result.longitude,
+      oa21:geoRes.result.codes?.oa21||null,
+      spacedPostcode:spaced
+    };
+
+    // Auto-match route
+    let matchedRouteId=null;
+    if(currentCampaignId){
       const campaignRoutes=await sbFetch('/rest/v1/target_areas?campaign_id=eq.'+currentCampaignId+'&select=id');
       const routeIds=(campaignRoutes||[]).map(r=>r.id);
       if(routeIds.length){
         const idFilter='target_area_id=in.('+routeIds.join(',')+')';
-        // Exact match using spaced format (as stored in DB)
-        const exactMatch=await sbFetch('/rest/v1/route_postcodes?postcode=eq.'+spacedPostcode+'&'+idFilter+'&limit=1');
+        const exactMatch=await sbFetch('/rest/v1/route_postcodes?postcode=eq.'+spaced+'&'+idFilter+'&limit=1');
         if(exactMatch&&exactMatch[0]){
-          routeVal=exactMatch[0].target_area_id;
+          matchedRouteId=exactMatch[0].target_area_id;
         }else{
-          // Sector fallback e.g. "LS27 7"
           const sectorMatch=await sbFetch('/rest/v1/route_postcodes?postcode_sector=eq.'+sector+'&'+idFilter+'&limit=1');
-          if(sectorMatch&&sectorMatch[0])routeVal=sectorMatch[0].target_area_id;
+          if(sectorMatch&&sectorMatch[0])matchedRouteId=sectorMatch[0].target_area_id;
         }
-        if(routeVal)document.getElementById('enquiryRoute').value=routeVal;
       }
     }
 
-    let lat=null,lng=null,oa21=null;
-    const geoRes=await fetch('https://api.postcodes.io/postcodes/'+encodeURIComponent(postcode)).then(r=>r.json());
-    if(geoRes.status===200&&geoRes.result){lat=geoRes.result.latitude;lng=geoRes.result.longitude;oa21=geoRes.result.codes?.oa21||null;}
+    document.getElementById('enquiryModal').classList.remove('active');
+    _openEnquiryStep2(matchedRouteId, '');
+  }catch(e){
+    errorEl.textContent='Error: '+e.message;
+    errorEl.classList.add('show');
+  }
+  btn.disabled=false;btn.textContent='Look up →';
+}
+
+function _openEnquiryStep2(matchedRouteId, notes){
+  // Populate postcode display
+  document.getElementById('enquiryConfirmPostcode').textContent=_enquiryGeo.spacedPostcode||document.getElementById('enquiryPostcode').value.trim();
+
+  // Populate route dropdown
+  const routeSelect=document.getElementById('enquiryRoute');
+  routeSelect.innerHTML='<option value="">Route unknown</option>';
+  (targetAreas||[]).forEach(ta=>{
+    routeSelect.innerHTML+='<option value="'+ta.id+'">'+ta.area_name+'</option>';
+  });
+  if(matchedRouteId)routeSelect.value=matchedRouteId;
+
+  // Show team member info for matched route
+  _updateEnquiryTeamInfo(matchedRouteId);
+  routeSelect.onchange=function(){_updateEnquiryTeamInfo(this.value||null);};
+
+  document.getElementById('enquiryNotes').value=notes||'';
+  document.getElementById('enquiryConfirmError').textContent='';
+  document.getElementById('enquiryConfirmError').classList.remove('show');
+  document.getElementById('enquiryConfirmBtn').disabled=false;
+  document.getElementById('enquiryConfirmBtn').textContent='Save Enquiry';
+  document.getElementById('enquiryConfirmModal').classList.add('active');
+}
+
+function _updateEnquiryTeamInfo(routeId){
+  const infoEl=document.getElementById('enquiryConfirmTeamInfo');
+  if(!routeId){infoEl.textContent='';return;}
+  const ta=(targetAreas||[]).find(t=>t.id===routeId);
+  if(!ta){infoEl.textContent='';return;}
+  const names=[];
+  if(ta.team_member_1_id){const tm=teamMembers.find(t=>t.id===ta.team_member_1_id);if(tm)names.push(tm.name);}
+  if(ta.team_member_2_id){const tm=teamMembers.find(t=>t.id===ta.team_member_2_id);if(tm)names.push(tm.name);}
+  infoEl.textContent=names.length?'Team: '+names.join(' & '):'No team member assigned';
+}
+
+async function saveEnquiry(){
+  const btn=document.getElementById('enquiryConfirmBtn');
+  const errorEl=document.getElementById('enquiryConfirmError');
+  btn.disabled=true;btn.textContent='Saving...';
+  errorEl.classList.remove('show');
+  try{
+    const routeVal=document.getElementById('enquiryRoute').value||null;
     const data={
       campaign_id:currentCampaignId,
       client_name:document.getElementById('enquiryClientName').value.trim()||null,
-      postcode:postcode,
-      lat:lat,
-      lng:lng,
+      postcode:_enquiryGeo.spacedPostcode||document.getElementById('enquiryPostcode').value.trim(),
+      lat:_enquiryGeo.lat,
+      lng:_enquiryGeo.lng,
       target_area_id:routeVal,
       instructed:document.getElementById('enquiryInstructed').checked,
       instruction_value:document.getElementById('enquiryInstructed').checked?parseFloat(document.getElementById('enquiryInstructionValue').value)||null:null,
       notes:document.getElementById('enquiryNotes').value.trim()||null,
       enquiry_date:new Date().toISOString().split('T')[0]
     };
-    
+
     if(currentEditEnquiryId){
       await sbFetch('/rest/v1/enquiries?id=eq.'+currentEditEnquiryId,{method:'PATCH',body:JSON.stringify(data)});
     }else{
       await sbFetch('/rest/v1/enquiries',{method:'POST',body:JSON.stringify(data)});
     }
 
-    // Auto-capture demographic data for instructed enquiries (oa21_code from postcodes.io response)
-    if(data.instructed && data.instruction_value && data.instruction_value > 0 && !currentEditEnquiryId){
-      const savedEnquiry=await sbFetch('/rest/v1/enquiries?campaign_id=eq.'+currentCampaignId+'&postcode=eq.'+encodeURIComponent(postcode)+'&order=created_at.desc&limit=1&select=id');
+    // Auto-capture demographic data for new instructed enquiries
+    if(data.instructed&&data.instruction_value&&data.instruction_value>0&&!currentEditEnquiryId){
+      const savedEnquiry=await sbFetch('/rest/v1/enquiries?campaign_id=eq.'+currentCampaignId+'&postcode=eq.'+encodeURIComponent(data.postcode)+'&order=created_at.desc&limit=1&select=id');
       const enquiryId=savedEnquiry&&savedEnquiry[0]?savedEnquiry[0].id:null;
       await sbFetch('/rest/v1/demographic_feedback',{
         method:'POST',
         body:JSON.stringify({
           campaign_id:currentCampaignId,
           enquiry_id:enquiryId,
-          oa21_code:oa21,
+          oa21_code:_enquiryGeo.oa21,
           instructed:true,
           instruction_value:data.instruction_value
         })
       });
     }
-    
+
     closeEnquiryModal();
     await loadEnquiryList();
     await loadFinanceFromDB();updateSummary();
@@ -1820,8 +1899,7 @@ async function saveEnquiry(){
     errorEl.textContent='Error: '+e.message;
     errorEl.classList.add('show');
   }
-  btn.disabled=false;
-  btn.textContent='Save';
+  btn.disabled=false;btn.textContent='Save Enquiry';
 }
 
 let currentEditDeliveryId=null;
