@@ -159,9 +159,11 @@ See 06-01-PLAN.md Task 8 for full spec. Simple modal: Route Name, Postcode, Hous
 | T2: Global exclusion areas review | ✓ Done | OC | Table exists with postcode_prefix/radius_miles/label; UI CRUD works; map renders circles; data is GLOBAL (not per-campaign) - correct for exclusion areas |
 | T3: Prompt new route when 500 houses short | ○ Pending | |
 | T4: Auto-assign enquiries to routes | ✓ Done | Claude | Exact postcode + sector fallback via route_postcodes; pre-fills dropdown |
+| T4c: oa21_code written to demographic_feedback inline | ✓ Done | Claude | Extracted from postcodes.io geocode response (codes.oa21) at save time |
 | T5: API endpoints (Supabase) | ○ Pending | |
 | T6: Demographic feedback table from enquiries | ✓ Done | OC | Auto-captures instructed enquiries to demographic_feedback; TODO: populate oa21_code |
 | T7: Migrate real campaigns into new data model | ○ Pending | Richard's existing real campaign data (routes, deliveries, enquiries) needs refactoring into campaigns/target_areas/route_postcodes/enquiries schema. Probably done interactively with Richard. |
+| T8: Testing procedure | ✓ Done | OC | Created tests/test-runner.html; updated QUALITY.md with automated tests |
 
 ## Phase 9 Task Checklist (Backlog)
 

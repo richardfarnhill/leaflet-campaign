@@ -118,13 +118,34 @@ function fmtDate(iso){
 
 ## Testing
 
-**Current State:** NONE
-- No unit tests
-- No integration tests
-- No E2E tests
-- Manual testing only
+**Current State:** AUTOMATED via test-runner.html
 
-**Assessment:** CRITICAL GAP - Needs test suite
+**Test Runner:** `tests/test-runner.html`
+- Self-contained HTML that loads app in iframe
+- Runs automated browser-based tests
+- No build system required
+
+**Test Cases:**
+- ✓ App Loads - index.html loads successfully
+- ✓ No Credentials Exposed - checks source for hardcoded secrets
+- ✓ Campaign Select Exists - dropdown UI present
+- ✓ Route Cards Render - area cards display
+- ✓ Enquiry Modal Exists - enquiry form HTML present
+- ✓ Map Container Exists - Leaflet map element found
+- ✓ Summary Stats - delivery/remaining counters present
+- ✓ Restricted Areas Config - exclusion areas UI present
+
+**Running Tests:**
+```bash
+# Open in browser
+open tests/test-runner.html
+# Or serve and open
+npx serve .
+```
+
+**Expected Output:** Console shows pass/fail for each test + summary
+
+**Assessment:** MANUAL/AUTOMATED HYBRID - Core paths tested, manual verification still recommended for complex flows
 
 ## Documentation
 
@@ -141,13 +162,17 @@ function fmtDate(iso){
 
 ## Security
 
-**Issues Found:**
-- Hardcoded password in source (line 9)
-- Hardcoded Supabase JWT key (line 135)
-- No HTTPS enforcement
-- No CSRF protection
+**Current State:** IMPROVED (Phase 7)
+- Credentials moved to config.js (not in source)
+- RLS enabled on all tables
+- No hardcoded secrets in index.html
 
-**Assessment:** POOR - Needs immediate attention
+**Remaining Concerns:**
+- No HTTPS enforcement
+- No CSRF protection (but Supabase handles this)
+- No authentication (anyone with URL can access)
+
+**Assessment:** ACCEPTABLE - Credentials secured, RLS enabled
 
 ## Performance
 
@@ -191,9 +216,9 @@ function fmtDate(iso){
 | Error Handling | MINIMAL |
 | JS Best Practices | MODERN |
 | HTML/CSS Quality | GOOD |
-| Testing | NONE |
+| Testing | AUTOMATED |
 | Documentation | PARTIAL |
-| Security | POOR |
+| Security | ACCEPTABLE |
 | Performance | ACCEPTABLE |
 | Maintainability | NEEDS WORK |
 

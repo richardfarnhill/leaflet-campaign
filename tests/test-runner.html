@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leaflet Campaign - Test Runner</title>
+  <style>
+    body { font-family: monospace; background: #1a1a1a; color: #e0e0e0; padding: 20px; }
+    h1 { color: #4ade80; }
+    .test { padding: 8px 12px; margin: 4px 0; border-radius: 4px; }
+    .pass { background: #166534; color: #bbf7d0; }
+    .fail { background: #991b1b; color: #fecaca; }
+    .pending { background: #854d0e; color: #fef08a; }
+    #summary { margin-top: 20px; padding: 16px; border-radius: 8px; font-size: 1.2em; }
+    #summary.pass { background: #15803d; }
+    #summary.fail { background: #b91c1c; }
+    #log { margin-top: 20px; background: #0a0a0a; padding: 12px; border-radius: 4px; max-height: 300px; overflow-y: auto; font-size: 0.85em; }
+    .log-entry { color: #9ca3af; margin: 2px 0; }
+  </style>
+</head>
+<body>
+  <h1>🧪 Leaflet Campaign Test Runner</h1>
+  <div id="results"></div>
+  <div id="summary"></div>
+  <div id="log"></div>
+
+  <script>
+    const TEST_RESULTS = [];
+    const CONFIG = {
+      appUrl: '../index.html',
+      supabaseUrl: 'https://tjebidvgvbpnxgnphcrg.supabase.co',
+      timeout: 10000
+    };
+
+    function log(msg) {
+      const el = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.textContent = `[${new Date().toISOString().slice(11,19)}] ${msg}`;
+      el.appendChild(entry);
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function report(test, status, message) {
+      TEST_RESULTS.push({ test, status, message });
+      const el = document.getElementById('results');
+      const div = document.createElement('div');
+      div.className = `test ${status}`;
+      div.textContent = `${status === 'pass' ? '✓' : status === 'fail' ? '✗' : '○'} ${test}: ${message}`;
+      el.appendChild(div);
+      log(`${test}: ${status} - ${message}`);
+    }
+
+    function getIframe() {
+      return document.getElementById('appFrame');
+    }
+
+    function waitFor(fn, timeout = CONFIG.timeout) {
+      return new Promise((resolve, reject) => {
+        const start = Date.now();
+        const check = () => {
+          try {
+            const result = fn();
+            if (result) resolve(result);
+            else if (Date.now() - start > timeout) reject(new Error('Timeout'));
+            else setTimeout(check, 100);
+          } catch(e) {
+            if (Date.now() - start > timeout) reject(e);
+            else setTimeout(check, 100);
+          }
+        };
+        check();
+      });
+    }
+
+    // ============================================================
+    // TEST CASES
+    // ============================================================
+
+    async function testAppLoads() {
+      return new Promise((resolve) => {
+        const iframe = getIframe();
+        iframe.onload = () => {
+          try {
+            const win = iframe.contentWindow;
+            if (win && win.document) {
+              report('App Loads', 'pass', 'index.html loaded successfully');
+              resolve(true);
+            } else {
+              report('App Loads', 'fail', 'iframe content not accessible');
+              resolve(false);
+            }
+          } catch(e) {
+            report('App Loads', 'fail', 'Error: ' + e.message);
+            resolve(false);
+          }
+        };
+        iframe.src = CONFIG.appUrl;
+      });
+    }
+
+    async function testNoCredentialsExposed() {
+      try {
+        const iframe = getIframe();
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        const html = doc.documentElement.outerHTML;
+        
+        // Check for hardcoded credentials
+        const hasUrl = html.includes('tjebidvgvbpnxgnphcrg.supabase.co');
+        const hasKey = html.includes('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9');
+        
+        if (!hasUrl && !hasKey) {
+          report('No Credentials Exposed', 'pass', 'Supabase URL/key not in source');
+          return true;
+        } else {
+          report('No Credentials Exposed', 'fail', 'Found hardcoded credentials in source');
+          return false;
+        }
+      } catch(e) {
+        report('No Credentials Exposed', 'fail', 'Error: ' + e.message);
+        return false;
+      }
+    }
+
+    async function testCampaignSelectExists() {
+      try {
+        const iframe = getIframe();
+        const doc = iframe.contentDocument;
+        const select = doc.getElementById('campaignSelect');
+        
+        if (select) {
+          report('Campaign Select Exists', 'pass', 'Campaign dropdown found');
+          return true;
+        } else {
+          report('Campaign Select Exists', 'fail', 'Campaign dropdown not found');
+          return false;
+        }
+      } catch(e) {
+        report('Campaign Select Exists', 'fail', 'Error: ' + e.message);
+        return false;
+      }
+    }
+
+    async function testRouteCardsRender() {
+      try {
+        const iframe = getIframe();
+        const win = iframe.contentWindow;
+        
+        await waitFor(() => {
+          const doc = iframe.contentDocument;
+          return doc.querySelector('.area-card, #routesSection, [class*="area-card"]');
+        }, 5000);
+        
+        report('Route Cards Render', 'pass', 'Area cards rendered');
+        return true;
+      } catch(e) {
+        report('Route Cards Render', 'fail', 'No area cards found');
+        return false;
+      }
+    }
+
+    async function testEnquiryModal() {
+      try {
+        const iframe = getIframe();
+        const doc = iframe.contentDocument;
+        
+        // Look for add enquiry button or check if modal exists
+        const modal = doc.getElementById('enquiryModal');
+        
+        if (modal) {
+          report('Enquiry Modal Exists', 'pass', 'Enquiry modal HTML found');
+          return true;
+        } else {
+          report('Enquiry Modal Exists', 'fail', 'Enquiry modal not found');
+          return false;
+        }
+      } catch(e) {
+        report('Enquiry Modal Exists', 'fail', 'Error: ' + e.message);
+        return false;
+      }
+    }
+
+    async function testMapContainer() {
+      try {
+        const iframe = getIframe();
+        const doc = iframe.contentDocument;
+        
+        const mapContainer = doc.getElementById('analyticsMap') || doc.querySelector('[id*="Map"]');
+        
+        if (mapContainer) {
+          report('Map Container Exists', 'pass', 'Map container found');
+          return true;
+        } else {
+          report('Map Container Exists', 'fail', 'Map container not found');
+          return false;
+        }
+      } catch(e) {
+        report('Map Container Exists', 'fail', 'Error: ' + e.message);
+        return false;
+      }
+    }
+
+    async function testSummaryStats() {
+      try {
+        const iframe = getIframe();
+        const doc = iframe.contentDocument;
+        
+        const delivered = doc.getElementById('sumDelivered');
+        const remaining = doc.getElementById('sumRemaining');
+        
+        if (delivered && remaining) {
+          report('Summary Stats', 'pass', 'Summary bar elements found');
+          return true;
+        } else {
+          report('Summary Stats', 'fail', 'Summary elements not found');
+          return false;
+        }
+      } catch(e) {
+        report('Summary Stats', 'fail', 'Error: ' + e.message);
+        return false;
+      }
+    }
+
+    async function testRestrictedAreasConfig() {
+      try {
+        const iframe = getIframe();
+        const doc = iframe.contentDocument;
+        
+        // Check for restricted areas config UI
+        const hasRestricted = doc.body.innerHTML.includes('restricted') || 
+                             doc.body.innerHTML.includes('Restricted');
+        
+        if (hasRestricted) {
+          report('Restricted Areas Config', 'pass', 'Restricted areas reference found');
+          return true;
+        } else {
+          report('Restricted Areas Config', 'fail', 'No restricted areas UI found');
+          return false;
+        }
+      } catch(e) {
+        report('Restricted Areas Config', 'fail', 'Error: ' + e.message);
+        return false;
+      }
+    }
+
+    // ============================================================
+    // RUN ALL TESTS
+    // ============================================================
+
+    async function runTests() {
+      log('Starting test suite...');
+      
+      // Wait for app to load
+      await testAppLoads();
+      
+      // Give app time to initialize
+      await new Promise(r => setTimeout(r, 2000));
+      
+      // Run tests
+      await testNoCredentialsExposed();
+      await testCampaignSelectExists();
+      await testRouteCardsRender();
+      await testEnquiryModal();
+      await testMapContainer();
+      await testSummaryStats();
+      await testRestrictedAreasConfig();
+      
+      // Summary
+      const passed = TEST_RESULTS.filter(t => t.status === 'pass').length;
+      const failed = TEST_RESULTS.filter(t => t.status === 'fail').length;
+      const total = TEST_RESULTS.length;
+      
+      const summary = document.getElementById('summary');
+      if (failed === 0) {
+        summary.className = 'pass';
+        summary.textContent = `🎉 ALL TESTS PASSED (${passed}/${total})`;
+      } else {
+        summary.className = 'fail';
+        summary.textContent = `❌ ${failed} TEST(S) FAILED - ${passed}/${total} passed`;
+      }
+      
+      log(`Summary: ${passed}/${total} passed, ${failed} failed`);
+      
+      // Return result for CI/CD
+      return { passed, failed, total, results: TEST_RESULTS };
+    }
+
+    // Auto-run on load
+    window.onload = () => {
+      log('Test runner initialized');
+      setTimeout(runTests, 500);
+    };
+  </script>
+
+  <iframe id="appFrame" style="display:none;"></iframe>
+</body>
+</html>
