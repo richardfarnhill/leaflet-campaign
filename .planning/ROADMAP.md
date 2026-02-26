@@ -187,17 +187,32 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 - Prompt new route when 500 houses short (needs_routing flag) ✅
 - Create campaign enhanced with route creation flow ✅
 - Global exclusion areas review ✅
-- Demographic enrichment: NOMIS backfill → DB trigger auto-populates owner_occupied_pct (DEM-02, DEM-03) — T9
+- ⛔ Demographic enrichment (DEM-02, DEM-03) — FAILED in P8, moved to Phase 9
 
 **Success Criteria:**
 1. Enquiries auto-assigned to routes based on postcode ✅
 2. API endpoints available ✅
 3. Demographic data captured from enquiries ✅
-4. owner_occupied_pct automatically populated on demographic_feedback insert via DB trigger — T9
+4. owner_occupied_pct automatically populated via on-demand NOMIS call — Phase 9 (P8 T9 FAILED, superseded)
 
 ---
 
-### Phase 9: Backlog
+### Phase 9: Demographic Enrichment (Option B)
+
+**Goal:** On-demand NOMIS enrichment for demographic feedback - replaces failed CSV loading approach
+
+**Requirements:**
+- DEM-02: Auto-enrich demographic_feedback via on-demand NOMIS call
+- DEM-03: Backfill historic data via script
+
+**Success Criteria:**
+1. New enquiries automatically get owner_occupied_pct from NOMIS
+2. Historic enquiries backfilled via script
+3. All documentation updated
+
+---
+
+### Phase 10: Backlog (was Phase 9)
 
 **Goals:** Future enhancements
 
@@ -233,11 +248,12 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 | 5 - Campaign Management | ✅ Complete | 5 |
 | 6 - Enquiry & Team | ✅ Complete | 4 |
 | 7 - Core Enhancements | ✅ Complete | 5 |
-| 8 - Auto-assignment & API | 🔧 In Progress (T9 pending) | 6 |
-| 9 - Backlog | ⏳ Pending | 7 |
+| 8 - Auto-assignment & API | ✅ Complete | 6 |
+| 9 - Demographic Enrichment | 🔧 In Progress | 2 |
+| 10 - Backlog | ⏳ Pending | 7 |
 
-**Total: 8 phases core + T9 demographic enrichment in progress**
+**Total: 9 phases core + backlog**
 
 ---
 
-*Last updated: 2026-02-26 - Phase 8 T9 (demographic enrichment) added*
+*Last updated: 2026-02-26 - Phase 9 added (P8 T9 FAILED, superseded by on-demand NOMIS)*

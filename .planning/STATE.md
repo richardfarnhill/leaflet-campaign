@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Teams can reserve geographic delivery areas (cards), record deliveries, and the system accurately tracks coverage, enquiries, and cases per area.
-**Current focus:** Phase 8 — T9 (Demographic enrichment) in progress. T10 (Phase Review) pending.
+**Current focus:** Phase 9 — Demographic enrichment (Option B: on-demand NOMIS). Phase 8 T9 failed, superseded by P9.
 
 ## Current Position
 
-Phase: 8 of 9 (Auto-assignment & API)
-Plan: 08-01 — Ready to start
-Status: Phase 8 next — P7 fully closed (T1 route card details done)
+Phase: 9 of 10 (Demographic Enrichment)
+Plan: 09-01 — Ready to start
+Status: Phase 9 next — P8 complete, P8 T9 failed (CSV load), superseded by P9
 
 Last activity: 2026-02-26 — P8 T3 done: Prompt new route when 500 houses short. checkAndPromptRouting() added.
 
-Progress: [████████████████░░░░░] ~78% (7 of 9 phases)
+Progress: [█████████████████░░░░] ~80% (8 of 10 phases)
 
 ## Performance Metrics
 
@@ -177,10 +177,21 @@ See 06-01-PLAN.md Task 8 for full spec. Simple modal: Route Name, Postcode, Hous
 | T6: Demographic feedback table from enquiries | ✓ Done | OC | Auto-captures instructed enquiries to demographic_feedback; TODO: populate oa21_code |
 | T7: Backfill route_postcodes for 14k_Feb_2026 | ✓ Done | Claude | 4,596 rows via ONSPD Nov 2025. Known limit: routes sharing a sector get identical postcode sets (Planning Screen v2 fix). |
 | T8: Testing procedure | ✓ Done | OC | Created tests/test-runner.html; updated QUALITY.md with automated tests |
-| T9: Demographic enrichment — auto-populate owner_occupied_pct | ⚠ Partial | Claude | Trigger live + NOMIS backfill done for route postcodes. But `postcode_oa_lookup` table is EMPTY — historic enquiries from outside route areas (e.g. WF12 7DX) still fail to enrich. See HANDOFF.md. Remaining work: load ONSPD outcode CSVs into `postcode_oa_lookup` via Supabase MCP (data in multi_csv/, script in scripts/load_postcode_area.py, wf_rows.json pre-extracted). Priority outcodes: WF, M, SK, WA, CH, CW, LS, HD, HX, BD, OL, BL, WN, TN, EX. |
+| T9: Demographic enrichment — auto-populate owner_occupied_pct | ⛔ Superseded | Failed CSV load approach. Replaced by Phase 9 (on-demand NOMIS). See 09-01-PLAN.md |
 | T10: Phase Review & Audit | ○ Pending | | Verify all T1-T9 implementations match requirements, test critical flows, document any gaps for Phase 9 |
 
-## Phase 9 Task Checklist (Backlog)
+## Phase 9 Task Checklist (Demographic Enrichment - Option B)
+
+| Task | Status | Notes |
+|------|--------|-------|
+| T1: enrichDemographicFeedback() function | ○ Pending | Browser JS fetches owner_occupied_pct from NOMIS |
+| T2: Hook into enquiry save | ○ Pending | Call enrichment after INSERT if owner_occupied_pct is NULL |
+| T3: Test new enquiry enrichment | ○ Pending | Verify WF12 7DX gets both oa21_code and owner_occupied_pct |
+| T4: Backfill script | ○ Pending | scripts/backfill_demographics.js for historic data |
+| T5: Run backfill | ○ Pending | Execute script to enrich all historic rows |
+| T6: Phase review + docs update | ○ Pending | Update all .planning/* files |
+
+## Phase 10 Task Checklist (Backlog - was Phase 9)
 
 | Task | Status | Notes |
 |------|--------|-------|
@@ -189,6 +200,7 @@ See 06-01-PLAN.md Task 8 for full spec. Simple modal: Route Name, Postcode, Hous
 | T3: Gmail notifications | ○ Pending | |
 | T4: Full ClickUp integration | ○ Pending | |
 | T5: Planning screen v2 | ○ Pending | |
+| T6: Investigate HuggingFace Postcodes space | ○ Pending | https://huggingface.co/spaces/Alealejandrooo/Postcodes - may improve mapping |
 
 ## Backlog (Consider Later)
 
