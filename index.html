@@ -2251,6 +2251,22 @@ function fmtCurrency(n){return n.toLocaleString('en-GB',{style:'currency',curren
 function updateSummary(){
   // Legacy - now handled by loadSummaryStats()
   // Keeping stub to prevent errors if called
+  
+  // OLD CODE - commented out (was used for legacy session system)
+  /*
+  const rfMsg=document.getElementById('reforecastMsg');
+  if(rfMsg){if(cs===0){
+    rfMsg.innerHTML='No sessions logged yet. Tick \u201CWe went out\u201D and enter leaflets delivered after each session.<br><br>&#128197; <strong>Estimated completion: '+expComp+'</strong>';
+  } else {
+    const avg=Math.round(td/cs),diff=avg-DAILY_TARGET;
+    const dl=diff>=0?'<span class="good">+'+diff+' ahead of target</span>':'<span class="warn">'+diff+' behind target</span>';
+    const sl=sessions.filter(s=>!(parseInt(sessionState[s.id]?.delivered)||0)).length;
+    const proj=td+avg*sl,sf=TOTAL-proj;
+    const pm=sf<=0?'<span class="good">On course to deliver all 20,000 leaflets!</span>':'<span class="warn">Projected shortfall of ~'+Math.round(sf).toLocaleString()+' at current pace.</span>';
+    rfMsg.innerHTML=cs+' session(s) done &nbsp;&middot;&nbsp; Avg: <strong>'+avg.toLocaleString()+'</strong>/session &nbsp;&middot;&nbsp; '+dl+'<br><br>'+pm+'<br><br>&#128197; <strong>Expected completion: '+expComp+'</strong>';
+  }}
+  updateFinance(td,rem);
+  */
 }
 }
 
