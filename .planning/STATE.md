@@ -42,6 +42,7 @@ Progress: [████████████████░░░░░] ~78%
 ### Pending Todos
 
 - Phase 6: Enquiry recording and analytics (T1-T6)
+- **demographic_feedback oa21_code population:** Set up process to lookup OA codes from postcodes.io for captured postcodes (or add postcode column to table)
 
 ### Blockers/Concerns
 
@@ -57,7 +58,7 @@ Progress: [████████████████░░░░░] ~78%
      REQUIRED: Claim here before making ANY code changes. Remove when done.
      Format: - [AGENT] [scope] — [brief description] — claimed [YYYY-MM-DD HH:MM UTC] -->
 
-None.
+- Claude [loadTeamProgress leaderboard] — P8 T4b enquiry count column in leaderboard — claimed 2026-02-26 10:30 UTC
 
 ## Session Continuity
 
@@ -161,9 +162,10 @@ See 06-01-PLAN.md Task 8 for full spec. Simple modal: Route Name, Postcode, Hous
 | T1: Create campaign - enhance with route creation questions | ○ Pending | Review after P7 |
 | T2: Global exclusion areas review | ○ Pending | Clarify DB state |
 | T3: Prompt new route when 500 houses short | ○ Pending | |
-| T4: Auto-assign enquiries to routes | ○ Pending | Critical for leaderboard accuracy |
+| T4: Auto-assign enquiries to routes | ✓ Done | Claude | Exact postcode + sector fallback via route_postcodes; pre-fills dropdown |
+| T4b: Enquiry + instructed counts in leaderboard (TEA-03) | ○ In progress | Claude |
 | T5: API endpoints (Supabase) | ○ Pending | |
-| T6: Demographic feedback table from enquiries | ○ Pending | |
+| T6: Demographic feedback table from enquiries | ✓ Done | OC | Auto-captures instructed enquiries to demographic_feedback; TODO: populate oa21_code |
 | T7: Migrate real campaigns into new data model | ○ Pending | Richard's existing real campaign data (routes, deliveries, enquiries) needs refactoring into campaigns/target_areas/route_postcodes/enquiries schema. Probably done interactively with Richard. |
 
 ## Phase 9 Task Checklist (Backlog)

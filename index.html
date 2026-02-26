@@ -1567,7 +1567,7 @@ async function loadTeamProgress(){
       sbFetch('/rest/v1/deliveries'+campFilter),
       sbFetch('/rest/v1/enquiries?select=*'+campFilter+'&instructed=eq.true&instruction_value=gt.0')
     ]);
-    
+
     const areaMap={};
     (areas||[]).forEach(a=>{areaMap[a.id]=a;});
     
@@ -1627,7 +1627,17 @@ async function loadTeamProgress(){
       if(hasMember1)stats[ta.team_member_1_id].revenue+=splitRevenue;
       if(hasMember2)stats[ta.team_member_2_id].revenue+=splitRevenue;
     });
-    
+
+    // Count all enquiries (and instructed subset) per team member via route → team member
+    (allEnquiries||[]).forEach(e=>{
+      const ta=e.target_area_id?areaMap[e.target_area_id]:null;
+      if(!ta)return;
+      const hasMember1=ta.team_member_1_id&&stats[ta.team_member_1_id];
+      const hasMember2=ta.team_member_2_id&&stats[ta.team_member_2_id];
+      if(hasMember1){stats[ta.team_member_1_id].enquiries++;if(e.instructed)stats[ta.team_member_1_id].instructed++;}
+      if(hasMember2){stats[ta.team_member_2_id].enquiries++;if(e.instructed)stats[ta.team_member_2_id].instructed++;}
+    });
+
     const list=Object.values(stats).sort((a,b)=>b.revenue-a.revenue);
     const el=document.getElementById('teamProgressList');
     
@@ -1797,6 +1807,21 @@ async function saveEnquiry(){
       await sbFetch('/rest/v1/enquiries?id=eq.'+currentEditEnquiryId,{method:'PATCH',body:JSON.stringify(data)});
     }else{
       await sbFetch('/rest/v1/enquiries',{method:'POST',body:JSON.stringify(data)});
+    }
+
+    // Auto-capture demographic data for instructed enquiries
+    // TODO: oa21_code - populate via postcodes.io lookup or add postcode column to table
+    if(data.instructed && data.instruction_value && data.instruction_value > 0){
+      await sbFetch('/rest/v1/demographic_feedback',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Prefer':'return=minimal'},
+        body:JSON.stringify({
+          campaign_id:currentCampaignId,
+          oa21_code:postcode,
+          instructed:true,
+          instruction_value:data.instruction_value
+        })
+      });
     }
     
     closeEnquiryModal();
