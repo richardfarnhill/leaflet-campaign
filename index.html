@@ -551,6 +551,8 @@ footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
     <div class="modal-error" id="configError"></div>
     <div class="modal-actions">
       <button class="modal-btn cancel" onclick="closeCampaignConfig()">Cancel</button>
+      <button class="modal-btn" onclick="archiveCampaign()" style="background:#f59e0b;color:#fff;border:none;" title="Hide from dropdown but keep all data">Archive</button>
+      <button class="modal-btn" onclick="deleteCampaign()" style="background:#dc2626;color:#fff;border:none;" title="Permanently delete campaign and ALL data">Delete</button>
       <button class="modal-btn confirm" id="configConfirmBtn" onclick="saveCampaignConfig()">Save</button>
     </div>
   </div>
@@ -2643,6 +2645,50 @@ function openCampaignConfig(){
 function closeCampaignConfig(){
   document.getElementById('campaignConfigModal').classList.remove('active');
   currentConfigCampaignId=null;
+}
+
+async function archiveCampaign(){
+  const name=document.getElementById('configCampaignName').value.trim()||'this campaign';
+  if(!confirm('Archive "'+name+'"?\n\nIt will be removed from the dropdown but all data is kept and still counts in analytics.'))return;
+  const errorEl=document.getElementById('configError');
+  try{
+    await sbFetch('/rest/v1/campaigns?id=eq.'+currentConfigCampaignId,{
+      method:'PATCH',
+      body:JSON.stringify({is_active:false})
+    });
+    closeCampaignConfig();
+    currentCampaignId=null;
+    await loadCampaigns();
+    await loadAll();
+    setSyncStatus('ok','Campaign archived');
+  }catch(e){
+    errorEl.textContent='Error: '+e.message;
+    errorEl.classList.add('show');
+  }
+}
+
+async function deleteCampaign(){
+  const name=document.getElementById('configCampaignName').value.trim()||'this campaign';
+  if(!confirm('DELETE "'+name+'" permanently?\n\nThis will remove ALL routes, deliveries, enquiries, and demographic data for this campaign. This cannot be undone.'))return;
+  if(!confirm('Are you sure? All data will be gone forever.'))return;
+  const errorEl=document.getElementById('configError');
+  const id=currentConfigCampaignId;
+  try{
+    // Delete in FK order: enquiries first (NO ACTION), then deliveries (NO ACTION),
+    // then target_areas (cascades reservations + route_postcodes), then campaign (cascades demographic_feedback + restricted_areas)
+    await sbFetch('/rest/v1/enquiries?campaign_id=eq.'+id,{method:'DELETE'});
+    await sbFetch('/rest/v1/deliveries?campaign_id=eq.'+id,{method:'DELETE'});
+    await sbFetch('/rest/v1/target_areas?campaign_id=eq.'+id,{method:'DELETE'});
+    await sbFetch('/rest/v1/campaigns?id=eq.'+id,{method:'DELETE'});
+    closeCampaignConfig();
+    currentCampaignId=null;
+    await loadCampaigns();
+    await loadAll();
+    setSyncStatus('ok','Campaign deleted');
+  }catch(e){
+    errorEl.textContent='Error deleting campaign: '+e.message;
+    errorEl.classList.add('show');
+  }
 }
 
 async function saveCampaignConfig(){
