@@ -16,7 +16,9 @@
       "Bash(curl -s \"https://api.postcodes.io/postcodes/SK82BW\")",
       "Bash(curl -s \"https://api.postcodes.io/postcodes?lon=-2.204481&lat=53.395872&limit=3\")",
       "Bash(curl -s \"https://api.postcodes.io/postcodes?q=SK8%207&limit=100\")",
-      "Bash(node -e \"let d=''''; process.stdin.on\\(''data'',c=>d+=c\\); process.stdin.on\\(''end'',\\(\\)=>{ const r=JSON.parse\\(d\\); console.log\\(r.result ? r.result.length : 0, ''results''\\); }\\)\")"
+      "Bash(node -e \"let d=''''; process.stdin.on\\(''data'',c=>d+=c\\); process.stdin.on\\(''end'',\\(\\)=>{ const r=JSON.parse\\(d\\); console.log\\(r.result ? r.result.length : 0, ''results''\\); }\\)\")",
+      "Bash(node --version)",
+      "Bash(curl -s \"https://api.postcodes.io/postcodes?q=SK8+7&limit=100&page=1\")"
     ]
   }
 }

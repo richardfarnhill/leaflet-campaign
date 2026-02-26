@@ -315,40 +315,29 @@ This is why storing full unit postcodes in `route_postcodes` is critical.
 
 ---
 
-## ⚠️ KNOWN GAP — Critical Fix Required Before In-App Implementation
+## ✅ Backfill Approach — ONSPD (Resolved 2026-02-26)
 
-**Issue:** `route_postcodes` currently stores ONE row per Output Area (representative postcode only),
-not one row per unit postcode. This means only ~16 postcodes are stored for Tingley (6 OAs × ~2-3
-postcodes sampled) when the full route covers many more.
+The original approach of using postcodes.io API to expand sectors was blocked by WSL networking
+issues. The solution used was:
 
-**Why this is critical:**
-- **Enquiry auto-matching** — an enquiry from LS27 9DS won't match if LS27 9DS isn't in the table
-- **Heatmap coverage** — only sampled postcodes will light up, not the full route area
-- **Analytics** — sector-level join queries will miss real data
+1. Download ONSPD (ONS Postcode Directory, Nov 2025) — 1.4GB CSV, ~2.5M postcodes
+2. Filter to relevant sectors only using a Python script → ~3,146 rows
+3. Load filtered CSV into a temporary `onspd` Supabase staging table
+4. Run a SQL JOIN to insert all matching postcodes into `route_postcodes` for all 15 routes
+5. Drop the staging table
 
-**Required fix for T8-F (in-app implementation):**
-When instantiating routes, after grouping OAs, expand each OA to its FULL unit postcode list:
+**Result:** All 15 routes in `14k_Feb_2026` campaign now have full unit postcode coverage
+(4,596 rows total, 234–399 postcodes per route).
 
-```javascript
-// For each OA in a route:
-const res = await fetch(`https://api.postcodes.io/postcodes?q=${sector}&limit=100`);
-const unitPostcodes = res.result.filter(p => p.codes.oa21 === oa21_code);
-// INSERT all of these into route_postcodes, not just one representative
-```
+**Known limitation:** Routes sharing a sector (e.g. two routes both in SK9 3) receive identical
+postcode sets. Proper per-route geographic boundary definition is deferred to Planning Screen v2.
 
-For the LS27 9 / Tingley route this means iterating all unit postcodes returned for LS27 9*
-and filtering to the 6 OAs in the route — giving ~16 rows not 6.
+**For future route instantiation (T8-F):** The same ONSPD approach is recommended over
+postcodes.io API calls — more reliable, no rate limits, no WSL networking issues. Keep the
+ONSPD filtered.csv or the filter script at `.planning/postcode-data/fetch.py` for reuse.
 
-**Test run data:** Tingley route (36d762e1) currently has 6 rows (one per OA). These are the
-confirmed unit postcodes that SHOULD be in the table:
-- E00058082: LS27 9BJ, LS27 9DN, LS27 9DS, LS27 9DX
-- E00058088: LS27 9BE, LS27 9EA
-- E00058121: LS27 9AB, LS27 9AH
-- E00058125: LS27 9DE, LS27 9DL, LS27 9DW
-- E00058202: LS27 9AT, LS27 9AY, LS27 9AZ, LS27 9BB
-- E00187102: LS27 9AE, LS27 9BF
-
-**Action:** Fix in T8-F implementation. Also backfill the test campaign data in a new context window.
+**Data source note:** ONSPD does NOT contain street names. Street names on route cards continue
+to use postcodes.io at display time (existing implementation).
 
 ---
 

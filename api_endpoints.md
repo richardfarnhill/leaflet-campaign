@@ -6,7 +6,7 @@
 
 **API URL:** `https://tjebidvgvbpnxgnphcrg.supabase.co`
 
-**API Key (anon):** Get from `config.js` → `CONFIG.SUPABASE_KEY`
+**API Key (anon):** Get from Richard
 
 ---
 
