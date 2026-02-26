@@ -344,3 +344,31 @@ BEGIN
   RETURN result;
 END;
 $$;
+
+-- ============================================================
+-- DEMOGRAPHIC ENRICHMENT TRIGGER (Phase 8 T9 — DEM-02)
+-- ============================================================
+-- Automatically populates owner_occupied_pct on demographic_feedback
+-- by joining route_postcodes on oa21_code at INSERT time.
+-- Prerequisite: route_postcodes.owner_occupied_pct must be backfilled
+-- from NOMIS NM_2072_1 (TS054 Tenure) per unique oa21_code.
+
+CREATE OR REPLACE FUNCTION enrich_demographic_feedback()
+RETURNS TRIGGER AS $$
+BEGIN
+  SELECT owner_occupied_pct
+  INTO NEW.owner_occupied_pct
+  FROM route_postcodes
+  WHERE oa21_code = NEW.oa21_code
+    AND owner_occupied_pct IS NOT NULL
+  LIMIT 1;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_enrich_demographic_feedback ON demographic_feedback;
+CREATE TRIGGER trg_enrich_demographic_feedback
+  BEFORE INSERT ON demographic_feedback
+  FOR EACH ROW
+  EXECUTE FUNCTION enrich_demographic_feedback();

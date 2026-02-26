@@ -177,7 +177,7 @@ See 06-01-PLAN.md Task 8 for full spec. Simple modal: Route Name, Postcode, Hous
 | T6: Demographic feedback table from enquiries | ✓ Done | OC | Auto-captures instructed enquiries to demographic_feedback; TODO: populate oa21_code |
 | T7: Backfill route_postcodes for 14k_Feb_2026 | ✓ Done | Claude | 4,596 rows via ONSPD Nov 2025. Known limit: routes sharing a sector get identical postcode sets (Planning Screen v2 fix). |
 | T8: Testing procedure | ✓ Done | OC | Created tests/test-runner.html; updated QUALITY.md with automated tests |
-| T9: Demographic enrichment — auto-populate owner_occupied_pct | ○ In Progress | Claude | Two steps: (1) backfill route_postcodes.owner_occupied_pct from NOMIS per OA21 code; (2) DB trigger on demographic_feedback INSERT |
+| T9: Demographic enrichment — auto-populate owner_occupied_pct | ✓ Done | Claude | BEFORE INSERT trigger `trg_enrich_demographic_feedback` live — joins route_postcodes on oa21_code, auto-fills owner_occupied_pct. Tested with 3 postcodes (WA14 2QD=44.5%, SK7 1BN=95.9%). NOMIS backfill of route_postcodes needed per campaign when routes added. |
 | T10: Phase Review & Audit | ○ Pending | | Verify all T1-T9 implementations match requirements, test critical flows, document any gaps for Phase 9 |
 
 ## Phase 9 Task Checklist (Backlog)
