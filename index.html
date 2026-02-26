@@ -104,9 +104,9 @@ h2{font-size:1rem;color:#1a3a5c;margin-bottom:12px;margin-top:24px;}
 .campaign-selector select option{color:black;background:white;}
 
 /* Modal */
-.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;display:none;}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;display:none;overflow:auto;padding:20px;box-sizing:border-box;}
 .modal-overlay.active{display:flex;}
-.modal{background:white;border-radius:12px;padding:24px;max-width:400px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,0.2);}
+.modal{background:white;border-radius:12px;padding:24px;max-width:400px;width:90%;max-height:90vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.2);}
 .modal h3{color:#1a3a5c;margin:0 0 16px 0;font-size:1.2rem;}
 .modal-field{margin-bottom:16px;}
 .modal-field label{display:block;font-size:0.8rem;color:#666;margin-bottom:6px;font-weight:600;}
@@ -906,15 +906,16 @@ async function loadAnalyticsCharts() {
     
     const deliveryByDate = {};
     (deliveries || []).forEach(d => {
-      const date = d.delivery_date;
+      const date = d.delivery_date ? d.delivery_date.slice(0, 10) : null;
       if (date) deliveryByDate[date] = (deliveryByDate[date] || 0) + (d.leaflets_delivered || 0);
     });
     
     const deliveriesCtx = document.getElementById('chartDeliveries');
     if (deliveriesCtx) {
-      new Chart(deliveriesCtx, {
+      if (deliveriesCtx.chart) deliveriesCtx.chart.destroy();
+      deliveriesCtx.chart = new Chart(deliveriesCtx, {
         type: 'line',
-        data: { labels: Object.keys(deliveryByDate), datasets: [{ label: 'Leaflets', data: Object.values(deliveryByDate), borderColor: '#2563eb', fill: true, tension: 0.3 }] },
+        data: { labels: Object.keys(deliveryByDate).sort(), datasets: [{ label: 'Leaflets', data: Object.values(deliveryByDate), borderColor: '#2563eb', fill: true, tension: 0.3 }] },
         options: { responsive: true, plugins: { legend: { display: false } } }
       });
     }
@@ -927,9 +928,10 @@ async function loadAnalyticsCharts() {
     
     const revenueCtx = document.getElementById('chartRevenue');
     if (revenueCtx) {
-      new Chart(revenueCtx, {
+      if (revenueCtx.chart) revenueCtx.chart.destroy();
+      revenueCtx.chart = new Chart(revenueCtx, {
         type: 'line',
-        data: { labels: Object.keys(revenueByDate), datasets: [{ label: 'Revenue (£)', data: Object.values(revenueByDate), borderColor: '#16a34a', fill: true, tension: 0.3 }] },
+        data: { labels: Object.keys(revenueByDate).sort(), datasets: [{ label: 'Revenue (£)', data: Object.values(revenueByDate), borderColor: '#16a34a', fill: true, tension: 0.3 }] },
         options: { responsive: true, plugins: { legend: { display: false } } }
       });
     }
@@ -942,9 +944,10 @@ async function loadAnalyticsCharts() {
     
     const enquiriesCtx = document.getElementById('chartEnquiries');
     if (enquiriesCtx) {
-      new Chart(enquiriesCtx, {
+      if (enquiriesCtx.chart) enquiriesCtx.chart.destroy();
+      enquiriesCtx.chart = new Chart(enquiriesCtx, {
         type: 'bar',
-        data: { labels: Object.keys(enquiriesByDate), datasets: [{ label: 'Enquiries', data: Object.values(enquiriesByDate), backgroundColor: '#8b5cf6' }] },
+        data: { labels: Object.keys(enquiriesByDate).sort(), datasets: [{ label: 'Enquiries', data: Object.values(enquiriesByDate), backgroundColor: '#8b5cf6' }] },
         options: { responsive: true, plugins: { legend: { display: false } } }
       });
     }
@@ -2240,16 +2243,9 @@ function render(){
 function fmtCurrency(n){return n.toLocaleString('en-GB',{style:'currency',currency:'GBP',maximumFractionDigits:0});}
 
 function updateSummary(){
-  let td=0,cs=0;
-  sessions.forEach(s=>{const d=parseInt(sessionState[s.id]?.delivered)||0;td+=d;if(d>0)cs++;});
-  const rem=Math.max(0,TOTAL-td),pct=Math.min(100,Math.round(td/TOTAL*100));
-  document.getElementById('sumRemaining').textContent=rem.toLocaleString();
-  document.getElementById('sumSessions').textContent=cs;
-  document.getElementById('progressFill').style.width=pct+'%';
-  document.getElementById('progressPct').textContent=pct+'%';
-
-  const expComp=calcCompletion(sessions,sessionState);
-  document.getElementById('sumProjected').textContent=expComp;
+  // Legacy - now handled by loadSummaryStats()
+  // Keeping stub to prevent errors if called
+}
 
   const rfMsg=document.getElementById('reforecastMsg');
   if(rfMsg){if(cs===0){
@@ -2347,7 +2343,7 @@ function updateFinance(td,rem){
 
 document.addEventListener('DOMContentLoaded',()=>{
   showView('cards');
-  loadAll();setInterval(loadAll,30000);
+  loadAll();setInterval(loadAll,1800000);
 });
 </script>
 </body>
