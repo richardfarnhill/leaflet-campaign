@@ -1170,7 +1170,7 @@ function renderAreaCards(){
     const hasStreets=streetList.length>0;
     html+='<div class="area-card-header"><div>'+(hasStreets?'<div class="area-card-title" style="cursor:pointer;" onclick="toggleCardStreets(\''+area.id+'\')" title="Click to see streets">'+area.area_name+' <span id="streets-arrow-'+area.id+'" style="font-size:0.7rem;color:#888;">▼</span></div>':'<div class="area-card-title">'+area.area_name+'</div>')+'<div class="area-card-postcode">'+area.postcode+'</div></div>';
     html+='<span class="area-card-badge '+status+'">'+status+'</span></div>';
-    if(hasStreets){html+='<div class="area-card-streets" id="streets-'+area.id+'" style="display:none;">'+streetList.join(', ')+'</div>';}
+    if(hasStreets){html+='<div class="area-card-streets" id="streets-'+area.id+'" style="display:none;">'+streetList.join('<br>')+'</div>';}
     const delivered=areaDeliveries[area.id]||0;
     const houseCount=area.house_count||0;
     const pct=houseCount>0?Math.round(delivered/houseCount*100):0;
