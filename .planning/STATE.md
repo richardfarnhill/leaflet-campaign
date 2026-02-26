@@ -57,7 +57,7 @@ Progress: [████████████████░░░░░] ~78%
      REQUIRED: Claim here before making ANY code changes. Remove when done.
      Format: - [AGENT] [scope] — [brief description] — claimed [YYYY-MM-DD HH:MM UTC] -->
 
-None.
+- OpenCode [06-T10] — Phase review — claimed 2026-02-26 01:42 UTC
 
 ## Session Continuity
 
@@ -146,7 +146,7 @@ See 06-01-PLAN.md Task 8 for full spec. Simple modal: Route Name, Postcode, Hous
 
 | Task | Status | Agent |
 |------|--------|-------|
-| T1: Route card details - street names, map boundary | ○ Pending | - |
+| T1: Route card details - street names, map boundary | ✓ Done | Claude | streets shown on card click (▼ toggle); "Map" button highlights route postcodes on map view |
 | T2: Route deletion UI | ✓ Done | OC | Delete button on route cards, confirmation modal, cascades to deliveries/reservations |
 | T3: RLS policies verification | ✓ Done | OC | RLS enabled on all tables, public read policies (2026-02-26) |
 | T4: Route completion - explicit leaflet count + rolling adjustment | ✓ Done | OC | Already implemented: modal requires count, saves to DB, displays remaining |
