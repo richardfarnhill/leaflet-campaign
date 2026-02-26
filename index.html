@@ -1777,9 +1777,9 @@ async function saveEnquiry(){
       }
     }
 
-    let lat=null,lng=null;
+    let lat=null,lng=null,oa21=null;
     const geoRes=await fetch('https://api.postcodes.io/postcodes/'+encodeURIComponent(postcode)).then(r=>r.json());
-    if(geoRes.status===200&&geoRes.result){lat=geoRes.result.latitude;lng=geoRes.result.longitude;}
+    if(geoRes.status===200&&geoRes.result){lat=geoRes.result.latitude;lng=geoRes.result.longitude;oa21=geoRes.result.codes?.oa21||null;}
     const data={
       campaign_id:currentCampaignId,
       client_name:document.getElementById('enquiryClientName').value.trim()||null,
@@ -1799,15 +1799,16 @@ async function saveEnquiry(){
       await sbFetch('/rest/v1/enquiries',{method:'POST',body:JSON.stringify(data)});
     }
 
-    // Auto-capture demographic data for instructed enquiries
-    // TODO: oa21_code - populate via postcodes.io lookup or add postcode column to table
-    if(data.instructed && data.instruction_value && data.instruction_value > 0){
+    // Auto-capture demographic data for instructed enquiries (oa21_code from postcodes.io response)
+    if(data.instructed && data.instruction_value && data.instruction_value > 0 && !currentEditEnquiryId){
+      const savedEnquiry=await sbFetch('/rest/v1/enquiries?campaign_id=eq.'+currentCampaignId+'&postcode=eq.'+encodeURIComponent(postcode)+'&order=created_at.desc&limit=1&select=id');
+      const enquiryId=savedEnquiry&&savedEnquiry[0]?savedEnquiry[0].id:null;
       await sbFetch('/rest/v1/demographic_feedback',{
         method:'POST',
-        headers:{'Content-Type':'application/json','Prefer':'return=minimal'},
         body:JSON.stringify({
           campaign_id:currentCampaignId,
-          oa21_code:postcode,
+          enquiry_id:enquiryId,
+          oa21_code:oa21,
           instructed:true,
           instruction_value:data.instruction_value
         })
