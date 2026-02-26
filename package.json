@@ -1,0 +1,16 @@
+{
+  "name": "leaflet-campaign",
+  "version": "1.0.0",
+  "description": "**Commercial Delivery Management Software**   *All rights reserved. Not for public distribution or open source use.*",
+  "main": "config.example.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.97.0",
+    "puppeteer": "^24.37.5"
+  }
+}
