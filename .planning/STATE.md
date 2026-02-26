@@ -54,10 +54,6 @@ Progress: [████████████████░░░░░] ~78%
 
 ## Active Tasks
 
-<!-- Multi-agent coordination — see .planning/COORDINATION.md for full protocol.
-     REQUIRED: Claim here before making ANY code changes. Remove when done.
-     Format: - [AGENT] [scope] — [brief description] — claimed [YYYY-MM-DD HH:MM UTC] -->
-
 None.
 
 ## Session Continuity
