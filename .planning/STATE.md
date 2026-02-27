@@ -1,6 +1,6 @@
 # Project State
 
-**Last updated:** 2026-02-27
+**Last updated:** 2026-02-27 (v1.1 release)
 
 ---
 
@@ -15,8 +15,7 @@
 | Route enrichment rules (what/when/why) | [ROUTE-FLAGGING.md](./ROUTE-FLAGGING.md) |
 | Route planning engine technical spec | [ROUTE-PLANNING-ENGINE.md](./ROUTE-PLANNING-ENGINE.md) |
 | Route planning & enrichment skill | `~/.claude/commands/leaflet-plan-routes.md` |
-| Postcode OA lookup load status | [POSTCODE_LOAD_STATUS.md](./POSTCODE_LOAD_STATUS.md) |
-| 14k_Feb_2026 re-plan prompt (ready to run) | [REPLAN-14K-PROMPT-CORRECTED.md](./REPLAN-14K-PROMPT-CORRECTED.md) |
+| Street name research prompt (OI-01) | [STREET-NAMES-RESEARCH-PROMPT.md](./STREET-NAMES-RESEARCH-PROMPT.md) |
 | Unresolved open issues | [OPEN-ISSUES.md](./OPEN-ISSUES.md) |
 | DB schema | `supabase_schema.sql` |
 | Codebase reference | [codebase/](./codebase/) |

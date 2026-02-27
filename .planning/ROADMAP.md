@@ -1,8 +1,8 @@
 # Roadmap: Leaflet Campaign Tracker
 
 **Project:** Card-Based Reservation System  
-**Version:** 1.0
-**Date:** 2026-02-25
+**Version:** 1.1
+**Date:** 2026-02-27
 **Depth:** Standard (6 phases)
 
 ---
@@ -249,6 +249,7 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 ## Milestones
 
 - [v1.0](./milestones/v1.0-ROADMAP.md) - Card-based reservation system (2026-02-25)
+- v1.1 - Route planning engine + test suite + bug fixes (2026-02-27)
 
 ---
 
@@ -300,3 +301,25 @@ Multiple UI bugs fixed and improvements made outside the phase plan:
 - Enquiries section: split into two separate tables — "Enquiries" (non-instructed, no Value column) and "Instructions" (instructed, green header, Value column bold, grand total row)
 
 *Last updated: 2026-02-26 — Phase 9 complete, all bugs fixed, UI improved.*
+
+---
+
+### Route Planning Session (2026-02-27) — v1.1
+
+First real use of the route planning engine (Mode A) for the 14k_Feb_2026 campaign.
+
+**What was done:**
+- Deleted 14 poorly-planned routes (ONSPD sector-wide backfill problem)
+- Re-planned 17 routes via Mode A: postcodes.io → NOMIS NM_2072_1 → demographic filter → exclusion radius → geographic chunking
+- Selected routes ranked by owner-occupied % (avg 89%) to target wills/probate demographic
+- Forced 1 Knutsford + 1 Lymm route for geographic coverage alongside best-scoring Bramhall/Poynton/Cheadle Hulme/Wilmslow routes
+- Inserted 17 `target_areas` rows + 534 `route_postcodes` rows — 13,450 doors total
+
+**Routes inserted:**
+Bramhall A–G (7), Cheadle Hulme A–B (2), Knutsford A (1), Lymm A (1), Poynton A–D (4), Wilmslow A–B (2)
+
+**Open item:** `streets` arrays left empty pending resolution of OI-01 (street name extraction source unknown). Research prompt at `.planning/STREET-NAMES-RESEARCH-PROMPT.md`.
+
+**Route planning scripts** saved at `c:/Users/richa/` (not in repo — data files only).
+
+*Last updated: 2026-02-27 — v1.1 release.*
