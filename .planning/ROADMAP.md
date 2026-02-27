@@ -1,9 +1,21 @@
 # Roadmap: Leaflet Campaign Tracker
 
 **Project:** Card-Based Reservation System  
-**Version:** 1.0  
-**Date:** 2026-02-25  
+**Version:** 1.1
+**Date:** 2026-02-27
 **Depth:** Standard (6 phases)
+
+---
+
+## Navigation
+
+| Document | Purpose |
+|----------|---------|
+| [STATE.md](./STATE.md) | Current position, task checklists, outstanding items |
+| [REQUIREMENTS.md](./REQUIREMENTS.md) | Full feature requirements with status |
+| [COORDINATION.md](./COORDINATION.md) | Multi-agent claiming protocol |
+| [OPEN-ISSUES.md](./OPEN-ISSUES.md) | Unresolved concerns & open questions |
+| Phase plan files | `.planning/phases/{N}-{name}/{N}-01-PLAN.md` |
 
 ---
 
@@ -15,15 +27,18 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 
 ## Phase Structure
 
-| Phase | Goal | Dependencies | Requirements |
-|-------|------|--------------|--------------|
-| 1 - Database Foundation | Supabase schema with RLS and PostGIS operational | None | TER-01, TER-02, TER-03 |
-| 2 - Territory & Reservation | Teams can claim geographic chunks with date selection | Phase 1 | TER-01, TER-02, TER-03 |
-| 3 - Delivery Recording | Teams can record delivery completions with leaflet counts | Phase 2 | TER-01 (completion) |
-| 4 - Analytics & Heatmaps | Users can visualize delivery coverage and enquiry locations | Phase 3 | ANL-01, ANL-02, ANL-03, ANL-04, GEO-01 |
-| 5 - Campaign Management | Users can switch between campaigns and configure settings | Phase 1 | CMP-01, CMP-02, CFG-01, CFG-02, DEM-01 |
-| 6 - Enquiry & Team | Robust enquiry recording with heatmap and team progress | Phase 4 | ENQ-01, ENQ-02, TEA-01, TEA-02 |
-| 7 - Integrations | External tool connections (ClickUp, Sheets, Gmail) | Phase 4 | INT-01, INT-02, INT-03 |
+| Phase | Goal | Dependencies | Requirements | Plan |
+|-------|------|--------------|--------------|------|
+| 1 - Database Foundation | Supabase schema with RLS and PostGIS operational | None | TER-01, TER-02, TER-03 | [01-SUMMARY](./phases/01-database-foundation/SUMMARY.md) |
+| 2 - Territory & Reservation | Teams can claim geographic chunks with date selection | Phase 1 | TER-01, TER-02, TER-03 | [02-SUMMARY](./phases/02-territory-reservation/SUMMARY.md) |
+| 3 - Delivery Recording | Teams can record delivery completions with leaflet counts | Phase 2 | TER-01 (completion) | [03-PLAN](./phases/03-delivery-recording/03-01-PLAN.md) |
+| 4 - Analytics & Heatmaps | Users can visualize delivery coverage and enquiry locations | Phase 3 | ANL-01, ANL-02, ANL-03, ANL-04, GEO-01 | [04-PLAN](./phases/04-analytics-heatmaps/04-01-PLAN.md) |
+| 5 - Campaign Management | Users can switch between campaigns and configure settings | Phase 1 | CMP-01, CMP-02, CFG-01, CFG-02, DEM-01 | [05-PLAN](./phases/05-campaign-management/05-01-PLAN.md) |
+| 6 - Enquiry & Team | Robust enquiry recording with heatmap and team progress | Phase 4 | ENQ-01, ENQ-02, TEA-01, TEA-02 | [06-PLAN](./phases/06-enquiry-team/06-01-PLAN.md) |
+| 7 - Core Enhancements | Route cards, completion, security | Phase 6 | (see plan) | [07-PLAN](./phases/07-core-enhancements/07-01-PLAN.md) |
+| 8 - Auto-assignment & API | Enquiry auto-assign, demographics, enrichment | Phase 7 | RTE-04, DEM-01, DEM-02 | [08-PLAN](./phases/08-core-management/08-01-PLAN.md) |
+| 9 - Demographic Enrichment | On-demand NOMIS enrichment for demographic feedback | Phase 8 | DEM-02, DEM-03 | [09-PLAN](./phases/09-demographic-enrichment/09-01-PLAN.md) |
+| 10 - Backlog | Future enhancements | Phase 9 | (see STATE.md) | [STATE.md](./STATE.md) |
 
 ---
 
@@ -187,17 +202,36 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 - Prompt new route when 500 houses short (needs_routing flag) ✅
 - Create campaign enhanced with route creation flow ✅
 - Global exclusion areas review ✅
-- Demographic enrichment: NOMIS backfill → DB trigger auto-populates owner_occupied_pct (DEM-02, DEM-03) — T9
+- ⛔ Demographic enrichment (DEM-02, DEM-03) — FAILED in P8, moved to Phase 9
 
 **Success Criteria:**
 1. Enquiries auto-assigned to routes based on postcode ✅
 2. API endpoints available ✅
 3. Demographic data captured from enquiries ✅
-4. owner_occupied_pct automatically populated on demographic_feedback insert via DB trigger — T9
+4. owner_occupied_pct automatically populated via on-demand NOMIS call — Phase 9 (P8 T9 FAILED, superseded)
 
 ---
 
-### Phase 9: Backlog
+### Phase 9: Demographic Enrichment (Option B) — ✅ Complete
+
+**Goal:** On-demand NOMIS enrichment for demographic feedback - replaces failed CSV loading approach
+
+**Status:** COMPLETE — All tasks done and validated with real data (2026-02-26).
+
+**Implementation:**
+- ✅ Browser JS `enrichDemographicFeedback()` hooked into enquiry save (T1+T2)
+- ✅ SQL trigger `trg_enrich_demographic_feedback` deployed — on INSERT auto-resolves `oa21_code` and `owner_occupied_pct` from `route_postcodes` (T2b). Tested with direct SQL INSERT.
+- ✅ Backfill script `scripts/backfill_demographics.js` created and validated (T4+T5)
+- ✅ RLS UPDATE policy added to `demographic_feedback`
+- ✅ 4,692 route_postcodes rows all have `owner_occupied_pct` populated from NOMIS
+
+**Requirements:**
+- DEM-02: Auto-enrich demographic_feedback (UI + bulk pathways) ✅
+- DEM-03: Backfill historic data via script ✅
+
+---
+
+### Phase 10: Backlog (was Phase 9)
 
 **Goals:** Future enhancements
 
@@ -211,14 +245,11 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 - Bulk route creation
 
 ---
-- Campaign duplication
-- Bulk route creation
-
----
 
 ## Milestones
 
 - [v1.0](./milestones/v1.0-ROADMAP.md) - Card-based reservation system (2026-02-25)
+- v1.1 - Route planning engine + test suite + bug fixes (2026-02-27)
 
 ---
 
@@ -233,11 +264,62 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 | 5 - Campaign Management | ✅ Complete | 5 |
 | 6 - Enquiry & Team | ✅ Complete | 4 |
 | 7 - Core Enhancements | ✅ Complete | 5 |
-| 8 - Auto-assignment & API | 🔧 In Progress (T9 pending) | 6 |
-| 9 - Backlog | ⏳ Pending | 7 |
+| 8 - Auto-assignment & API | ✅ Complete | 6 |
+| 9 - Demographic Enrichment | ✅ Complete | 2 |
+| 10 - Backlog | ⏳ Pending | 7 |
 
-**Total: 8 phases core + T9 demographic enrichment in progress**
+**Total: 9 phases core + backlog**
 
 ---
 
-*Last updated: 2026-02-26 - Phase 8 T9 (demographic enrichment) added*
+---
+
+### Bug Fix Session (2026-02-26) — post-Phase 9
+
+Multiple UI bugs fixed and improvements made outside the phase plan:
+
+**Bug fixes:**
+- Delivery journal `id` missing from SELECT → `openEditDelivery('undefined')` crash
+- Delivery journal: added Delete button per row
+- Financial projections never rendered (`updateFinance` was dead code — fixed call chain)
+- Revenue attribution used non-existent `target_areas.team_member_1_id` — fixed to use deliveries
+- Team revenue showed `£1,000%` (double-suffix bug) — fixed
+- Postcode not saved to `demographic_feedback` on enquiry insert — fixed
+- NOMIS enrichment silently failing: `order=created_at.desc` should be `recorded_at` — fixed
+- Missing RLS UPDATE policy on `demographic_feedback` — added
+
+**UI improvements:**
+- All Campaigns mode: Delivery journal shows Campaign column as first column
+- All Campaigns mode: Enquiries list now visible (was hidden); Campaign column; read-only (no Edit/Delete)
+- All Campaigns mode: Finance projections hidden; replaced by 4 summary cards (total leaflets, enquiries, conversion rate, avg response rate)
+- All Campaigns mode: Campaign Breakdown replaced HTML table with `.finance-metric-card` grid with mini progress bars
+- All Campaigns mode: Sessions Done / progress % now correctly filters to active campaigns only
+- Finance projections: `updateSummary()` stub replaced with `loadSummaryStats()` — projections now re-render after enquiry save/delete
+- Finance: Avg case value card shows actual (revenue ÷ cases) when real data exists; configured estimate shown as fallback with `*`
+- Banner: "Est. Completion" (always `—`) replaced with "This Month" — leaflets delivered in current calendar month
+- Campaign config modal: Archive (amber) and Delete (red) buttons — archive sets `is_active=false`, delete cascades all child data
+- Enquiries section: split into two separate tables — "Enquiries" (non-instructed, no Value column) and "Instructions" (instructed, green header, Value column bold, grand total row)
+
+*Last updated: 2026-02-26 — Phase 9 complete, all bugs fixed, UI improved.*
+
+---
+
+### Route Planning Session (2026-02-27) — v1.1
+
+First real use of the route planning engine (Mode A) for the 14k_Feb_2026 campaign.
+
+**What was done:**
+- Deleted 14 poorly-planned routes (ONSPD sector-wide backfill problem)
+- Re-planned 17 routes via Mode A: postcodes.io → NOMIS NM_2072_1 → demographic filter → exclusion radius → geographic chunking
+- Selected routes ranked by owner-occupied % (avg 89%) to target wills/probate demographic
+- Forced 1 Knutsford + 1 Lymm route for geographic coverage alongside best-scoring Bramhall/Poynton/Cheadle Hulme/Wilmslow routes
+- Inserted 17 `target_areas` rows + 534 `route_postcodes` rows — 13,450 doors total
+
+**Routes inserted:**
+Bramhall A–G (7), Cheadle Hulme A–B (2), Knutsford A (1), Lymm A (1), Poynton A–D (4), Wilmslow A–B (2)
+
+**Open item:** `streets` arrays left empty pending resolution of OI-01 (street name extraction source unknown). Research prompt at `.planning/STREET-NAMES-RESEARCH-PROMPT.md`.
+
+**Route planning scripts** saved at `c:/Users/richa/` (not in repo — data files only).
+
+*Last updated: 2026-02-27 — v1.1 release.*

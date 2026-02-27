@@ -2,8 +2,19 @@
 
 **Project:** Leaflet Campaign Tracker
 **Version:** 1.0
-**Last updated:** 2026-02-25
-**Status:** Designed, pending implementation (Phase 6 T8)
+**Last updated:** 2026-02-27
+**Status:** Partially implemented — Mode B (enrich) in use; Mode A (create) available via skill
+
+---
+
+## Related Documents
+
+| Document | Purpose |
+|----------|---------|
+| [STATE.md](./STATE.md) | Current project position |
+| [ROUTE-FLAGGING.md](./ROUTE-FLAGGING.md) | Authoritative rules: when to flag, enrich, size constraints |
+| [OPEN-ISSUES.md](./OPEN-ISSUES.md) | Unresolved concerns — including OI-01 (street name source) |
+| `~/.claude/commands/leaflet-plan-routes.md` | Skill: Mode A (create routes) and Mode B (enrich existing routes) |
 
 ---
 
@@ -12,7 +23,7 @@
 The Route Planning Engine generates a campaign's delivery routes from a natural-language area
 description. It resolves the area to constituent postcode sectors, filters by demographic
 criteria (owner-occupied tenure), excludes restricted areas by radius, chunks the remaining
-sectors into 800-1200 door delivery routes, and presents a plan for the user to approve and
+sectors into 500-1000 door delivery routes, and presents a plan for the user to approve and
 instantiate into the database.
 
 ---
@@ -96,10 +107,13 @@ GET /dataset/NM_2072_1.data.json
 **Method:** ONS standard — a 2021 Output Area contains **approximately 125 households** on average
 (Census design target: 100-625, mean ~125 for residential OAs).
 
-For more precise counts, query NOMIS `NM_2001_1` (TS001 - Usual residents / households):
+For precise counts, use NOMIS `NM_2059_1` (TS041 — Number of Households):
 ```
-GET /dataset/NM_2001_1.data.json?geography={oa21_numeric_id}&measures=20100
+Step 1: GET /dataset/NM_2059_1/geography/{oa1},{oa2},...def.sdmx.json  → NomisKeys per OA
+Step 2: GET /dataset/NM_2059_1.data.json?geography={key1},{key2},...&measures=20100 → household counts
 ```
+⚠️ Do NOT use NM_2001_1 — it returns no data at OA21 level.
+Round all counts to nearest 50 before storing — exact Census figures look arbitrary to team members.
 
 **House count per route = sum of household counts across all OAs in that route.**
 This is what populates `target_areas.house_count` — the number the user sees on the card.
@@ -112,7 +126,7 @@ Already on stack (CDN: `https://unpkg.com/turf@3.0.14/turf.min.js`)
 
 Used for:
 - **Exclusion radius check:** `turf.distance(point, restrictedCentre, {units:'miles'}) < radius`
-- **Route chunking:** Cluster OA centroids into groups of 800-1200 doors using proximity
+- **Route chunking:** Cluster OA centroids into groups of 500-1000 doors using proximity
 - **Contiguity:** Keep geographically adjacent OAs together in the same route
 
 ---
@@ -133,16 +147,14 @@ future model refinement (e.g. "areas with 70-75% owner-occupied convert at 0.8% 
 in 60-65% areas"). A later phase will import Richard's existing client spreadsheet to
 pre-populate this table.
 
-**Auto-enrichment (Phase 8 T9 — DEM-02/DEM-03):**
-`owner_occupied_pct` is populated automatically — no manual steps required:
+**Auto-enrichment (Phase 9 — DEM-02/DEM-03 — COMPLETE):**
+`owner_occupied_pct` is populated automatically via on-demand NOMIS call — no pre-loading required:
 
-1. **NOMIS backfill (one-time per campaign):** For each unique `oa21_code` in `route_postcodes`,
-   fetch tenure data from NOMIS `NM_2072_1` (TS054) and UPDATE `route_postcodes.owner_occupied_pct`.
-   Re-run when new routes are added.
+1. **Browser JS (Phase 9):** After an instructed enquiry is saved, `enrichDemographicFeedback()` 
+   calls NOMIS NM_2072_1 (TS054 Tenure) API directly from the browser to get owner_occupied_pct.
+   Works for ANY postcode, not just those in route_postcodes.
 
-2. **DB trigger (permanent):** `AFTER INSERT ON demographic_feedback` — the trigger joins
-   `route_postcodes WHERE oa21_code = NEW.oa21_code LIMIT 1` and sets `owner_occupied_pct`.
-   No external API call at enquiry time. No pg_cron, no Edge Function needed.
+2. **Backfill script:** `scripts/backfill_demographics.js` can be run to enrich historic data.
 
 **Result:** Every instructed enquiry row automatically carries its OA's tenure % for analytics.
 
@@ -250,7 +262,7 @@ User selects. The selection gives us the outcode(s) to process.
 ### Step 3 — Confirm Parameters
 Pre-filled form, all editable:
 - **Demographic filter:** Owner-occupied ≥ [60]% ✓
-- **Route size:** [800] – [1200] doors
+- **Route size:** [500] – [1000] doors
 - **Leaflet budget:** pulled from `campaign.target_leaflets`
 - **Campaign-specific exclusions:** list (add/remove inline)
 - **Global exclusions:** shown read-only (WA14 1QP etc.)
@@ -264,7 +276,7 @@ The engine:
 3. Fetches NOMIS tenure for each unique OA (batched, cached)
 4. Filters out OAs below owner-occupied threshold
 5. Checks each OA centroid against all exclusion radii (Turf.js)
-6. Clusters remaining OAs into routes of 800-1200 doors (proximity grouping)
+6. Clusters remaining OAs into routes of 500-1000 doors (proximity grouping)
 7. Names each route: `{admin_district} {N}` (e.g. "Didsbury 1", "Didsbury 2")
 
 ### Step 5 — Review Plan
@@ -349,8 +361,22 @@ postcode sets. Proper per-route geographic boundary definition is deferred to Pl
 postcodes.io API calls — more reliable, no rate limits, no WSL networking issues. Keep the
 ONSPD filtered.csv or the filter script at `.planning/postcode-data/fetch.py` for reuse.
 
-**Data source note:** ONSPD does NOT contain street names. Street names on route cards continue
-to use postcodes.io at display time (existing implementation).
+**Data source note:** ONSPD does NOT contain street names. Street names on route cards were intended to use postcodes.io `thoroughfare` field, but this field has **not been confirmed** to exist in any postcodes.io API response. See [OPEN-ISSUES.md OI-01](./OPEN-ISSUES.md) — street name source is currently unresolved.
+
+---
+
+## Environment Notes
+
+- **Shell:** Git Bash on Windows — `/tmp` does not work. Use full Windows paths: `c:/Users/richa/...`
+- **Python scripts:** `python "c:/path/to/script.py"` — works fine for API calls with `requests` or `urllib`
+- **SSL:** Use `ssl.create_default_context(); ctx.verify_mode = ssl.CERT_NONE` for NOMIS if SSL errors occur
+
+---
+
+## Related Documents
+
+- **ROUTE-FLAGGING.md** — authoritative rules: when routes/campaigns are flagged, size rules, enrichment detection
+- **`~/.claude/commands/leaflet-plan-routes.md`** — the skill that executes both Mode A (create) and Mode B (enrich)
 
 ---
 
@@ -358,6 +384,7 @@ to use postcodes.io at display time (existing implementation).
 
 - postcodes.io docs: https://postcodes.io/docs
 - NOMIS API: https://www.nomisweb.co.uk/api/v01/
-- NOMIS TS054 dataset: NM_2072_1
+- NOMIS TS054 dataset: NM_2072_1 (tenure/owner-occupied)
+- NOMIS TS041 dataset: NM_2059_1 (household counts — use this, not NM_2001_1)
 - ONS OA design spec: ~125 households per Output Area
 - Turf.js: https://unpkg.com/turf@3.0.14/

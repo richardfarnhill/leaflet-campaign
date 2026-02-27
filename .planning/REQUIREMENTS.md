@@ -12,7 +12,7 @@
 
 | ID | Requirement | Description |
 |----|-------------|-------------|
-| TER-01 | Area Reservation System | Teams can claim geographic chunks (800-1200 doors) with a date selection |
+| TER-01 | Area Reservation System | Teams can claim geographic chunks (500–1000 doors, rounded to nearest 50) with a date selection |
 | TER-02 | Real-time Availability | Display which areas are available/reserved/completed in real-time |
 | TER-03 | Manual Override | Coordinator can reassign areas manually |
 
@@ -77,13 +77,37 @@
 | RTE-03 | route_postcodes Expansion | Each route stores all unit postcodes for its OAs (not just representative). Enables enquiry auto-matching and full heatmap coverage. |
 | RTE-04 | Enquiry Auto-matching | When an enquiry's postcode is recorded, auto-assign target_area_id by looking up route_postcodes. Phase 8 T4. |
 | RTE-05 | Real Campaign Migration | Migrate existing real-world campaign data (routes, deliveries, enquiries) into the new data model. Phase 8. |
+| RTE-06 | Route Size Rule | Every route must be 500–1000 doors (Census households, rounded to nearest 50). Routes exceeding 1000 must be split into A/B before use. See ROUTE-FLAGGING.md. |
+| RTE-07 | Campaign Routing Flag | `campaigns.needs_routing` set true on creation; auto-cleared when shortfall ≤ 500 leaflets. Prompts user to add routes via `/leaflet-plan-routes` Mode A. See ROUTE-FLAGGING.md. |
+| RTE-08 | Route Enrichment | Manually-created routes with null `household_count` in route_postcodes must be enriched with real Census data via `/leaflet-plan-routes` Mode B. Detected at query time — no separate flag column needed. See ROUTE-FLAGGING.md. |
 
 ### DEM-10: Demographic Enrichment
 
 | ID | Requirement | Description |
 |----|-------------|-------------|
-| DEM-02 | Auto-enrich demographic_feedback | When a new row is inserted into demographic_feedback (on instructed enquiry save), automatically populate owner_occupied_pct by joining on oa21_code from route_postcodes. Implemented as a PostgreSQL AFTER INSERT trigger — no external call at enquiry time. |
-| DEM-03 | NOMIS backfill for route_postcodes | For each unique oa21_code in route_postcodes, fetch Census 2021 tenure data from NOMIS NM_2072_1 (TS054) and store owner_occupied_pct. One-time job per campaign; re-run when new routes are added. Data source: NOMIS API (free, no key, CORS-enabled). |
+| DEM-02 | Auto-enrich demographic_feedback (both UI + bulk) | **Two pathways:** (1) Browser JS calls NOMIS on UI enquiry save (T2) ✅, (2) SQL trigger `trg_enrich_demographic_feedback` auto-enriches any INSERT via route_postcodes lookup (T2b) ✅. Both implemented and validated. |
+| DEM-03 | Backfill historic demographic_feedback | Script `scripts/backfill_demographics.js` fetches owner_occupied_pct from NOMIS for rows with NULL owner_occupied_pct. ✅ Created and validated. |
+
+### CMP-11: Campaign Lifecycle
+
+| ID | Requirement | Description |
+|----|-------------|-------------|
+| CMP-04 | Archive Campaign | Set `is_active=false` on a campaign — removes it from dropdown but retains all data. Archived campaigns still count in All Campaigns analytics. ✅ Done (2026-02-26) |
+| CMP-05 | Delete Campaign | Hard-delete a campaign and ALL associated data (enquiries, deliveries, target_areas, route_postcodes, demographic_feedback, restricted_areas). Double-confirm required. ✅ Done (2026-02-26) |
+
+### ENQ-12: Enquiry Display
+
+| ID | Requirement | Description |
+|----|-------------|-------------|
+| ENQ-03 | Separate Enquiries and Instructions | Display enquiries (non-instructed) and instructions (instructed) as separate tables. Instructions table has Value column (bold green) and grand total row. No Value column on enquiries table. ✅ Done (2026-02-26) |
+| ENQ-04 | All Campaigns enquiry visibility | Enquiries and Instructions tables visible in All Campaigns mode with Campaign column; read-only (no Add/Edit/Delete). ✅ Done (2026-02-26) |
+
+### CFG-13: All Campaigns Mode
+
+| ID | Requirement | Description |
+|----|-------------|-------------|
+| CFG-06 | All Campaigns finance summary | In All Campaigns mode, replace per-campaign finance projections with 4 summary cards: total leaflets delivered, total enquiries, enquiry→case conversion rate, avg response rate. ✅ Done (2026-02-26) |
+| CFG-07 | All Campaigns campaign breakdown cards | In All Campaigns mode, show one card per active campaign with delivery progress, remaining count, and colour-coded progress bar. ✅ Done (2026-02-26) |
 
 ### INT-08: Integrations
 
@@ -153,11 +177,17 @@
 | RTE-03: route_postcodes Expansion | Phase 6 | ✅ Done | T8 backfill — 18 rows for Tingley |
 | RTE-04: Enquiry Auto-matching | Phase 8 | ✅ Done | T4 |
 | RTE-05: Real Campaign Migration | Phase 8 | ✅ Done | T7 |
-| DEM-02: Auto-enrich demographic_feedback | Phase 8 | 📋 Planned | T9 — trigger + NOMIS backfill |
-| DEM-03: NOMIS backfill for route_postcodes | Phase 8 | 📋 Planned | T9 — prerequisite for DEM-02 trigger |
-| INT-01: ClickUp Stub | Phase 9 | 📋 Backlog | - |
-| INT-02: Google Sheets Export | Phase 9 | 📋 Backlog | - |
-| INT-03: Gmail Notifications | Phase 9 | 📋 Backlog | - |
+| DEM-02: Auto-enrich demographic_feedback | Phase 9 | ✅ Done | UI pathway (T2) + SQL trigger T2b both deployed and validated. |
+| DEM-03: Backfill historic demographics | Phase 9 | ✅ Done | Script created and validated with real data. |
+| CMP-04: Archive Campaign | Bug fix session | ✅ Done | Archive button in config modal, sets is_active=false |
+| CMP-05: Delete Campaign | Bug fix session | ✅ Done | Delete button in config modal, cascades all child data |
+| ENQ-03: Separate Enquiries/Instructions | Bug fix session | ✅ Done | Two tables, Instructions has grand total |
+| ENQ-04: All Campaigns enquiry visibility | Bug fix session | ✅ Done | Campaign column, read-only |
+| CFG-06: All Campaigns finance summary | Bug fix session | ✅ Done | 4 summary cards |
+| CFG-07: All Campaigns campaign breakdown cards | Bug fix session | ✅ Done | Card grid with progress bars |
+| INT-01: ClickUp Stub | Phase 10 | 📋 Backlog | - |
+| INT-02: Google Sheets Export | Phase 10 | 📋 Backlog | - |
+| INT-03: Gmail Notifications | Phase 10 | 📋 Backlog | - |
 
 ---
 

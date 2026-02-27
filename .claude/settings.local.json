@@ -18,7 +18,15 @@
       "Bash(curl -s \"https://api.postcodes.io/postcodes?q=SK8%207&limit=100\")",
       "Bash(node -e \"let d=''''; process.stdin.on\\(''data'',c=>d+=c\\); process.stdin.on\\(''end'',\\(\\)=>{ const r=JSON.parse\\(d\\); console.log\\(r.result ? r.result.length : 0, ''results''\\); }\\)\")",
       "Bash(node --version)",
-      "Bash(curl -s \"https://api.postcodes.io/postcodes?q=SK8+7&limit=100&page=1\")"
+      "Bash(curl -s \"https://api.postcodes.io/postcodes?q=SK8+7&limit=100&page=1\")",
+      "mcp__chrome-devtools__wait_for",
+      "mcp__chrome-devtools__take_screenshot",
+      "mcp__chrome-devtools__navigate_page",
+      "mcp__chrome-devtools__evaluate_script",
+      "mcp__chrome-devtools__list_console_messages",
+      "Bash(git add .planning/ROADMAP.md .planning/REQUIREMENTS.md .planning/STATE.md)",
+      "mcp__plugin_supabase_supabase__execute_sql",
+      "Bash(python -c \":*)"
     ]
   }
 }

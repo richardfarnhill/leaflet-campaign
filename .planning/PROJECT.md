@@ -1,6 +1,6 @@
 # Leaflet Campaign Tracker
 
-**Last updated:** 2026-02-26 — Phase 8 T9 (demographic enrichment) in progress
+**Last updated:** 2026-02-26 — Phase 9 complete — Ready for Phase 10
 
 ---
 
@@ -184,12 +184,12 @@ This is a brownfield project. Codebase analysis completed:
 
 ---
 
-## Current State (Phase 8 In Progress)
+## Current State (Phase 9 Complete)
 
 **Last activity:** 2026-02-26
-**Status:** Phase 8 in progress (T9: Demographic enrichment). T10: Phase Review pending.
+**Status:** Phase 9 complete — Ready for Phase 10 (backlog)
 
-### What's Been Delivered (Phases 1-8 so far)
+### What's Been Delivered (Phases 1-9)
 - Card-based area reservation system
 - Multi-campaign support with data isolation (Chinese wall)
 - Analytics dashboard with charts
@@ -202,16 +202,22 @@ This is a brownfield project. Codebase analysis completed:
 - Credentials in config.js, RLS enabled
 - route_postcodes table: full unit postcode expansion (enquiry auto-matching ready)
 - Route card street names (click-to-expand) + map boundary polygon (Turf.js convex hull)
-- `needs_routing` flag on campaigns - prompts when 500+ leaflets short
+- `needs_routing` flag on campaigns - prompts when 500+ leaflets short (see ROUTE-FLAGGING.md)
+- Route enrichment: routes with null `household_count` in route_postcodes detected at query time and enriched via `/leaflet-plan-routes` Mode B (see ROUTE-FLAGGING.md)
+- Route size rule: 500–1000 doors per route, rounded to nearest 50, split as A/B if exceeded
 - Auto-assign enquiries to routes via postcode lookup
 - Stats API endpoint (get_delivery_stats RPC) for external reporting
-- Demographic feedback table auto-capture from enquiries (oa21_code written inline at save)
-- Testing procedure documented
+- Demographic feedback table auto-capture from enquiries
+- **Phase 9 (complete):** On-demand NOMIS enrichment - browser JS fetches owner_occupied_pct for any postcode via NOMIS NM_2072_1 API
 
-### Next (Phase 8 T9 — in progress)
-- **DEM-02/DEM-03: Demographic enrichment**
-  - Step 1: Backfill `route_postcodes.owner_occupied_pct` from NOMIS NM_2072_1 (TS054 Tenure) per unique oa21_code
-  - Step 2: PostgreSQL AFTER INSERT trigger on `demographic_feedback` — joins `route_postcodes` on `oa21_code`, auto-populates `owner_occupied_pct`
+### Next (Phase 10 — backlog)
+- Dark mode toggle
+- CSV/Sheets export
+- Gmail notifications
+- Full ClickUp integration
+- Planning screen v2
+- Campaign duplication
+- Bulk route creation
   - Result: Every instructed enquiry row in `demographic_feedback` automatically gets tenure % — no manual steps, no cron, no Edge Function
 
 ### Phase 9 Backlog (after T9)

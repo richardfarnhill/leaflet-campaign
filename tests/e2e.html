@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Leaflet Campaign - E2E Tests</title>
+  <style>
+    body { font-family: monospace; background: #1a1a1a; color: #e0e0e0; padding: 20px; }
+    h1 { color: #f59e0b; }
+    .test { padding: 8px 12px; margin: 4px 0; border-radius: 4px; }
+    .pass { background: #166534; color: #bbf7d0; }
+    .fail { background: #991b1b; color: #fecaca; }
+    .pending { background: #854d0e; color: #fef08a; }
+    .info { background: #1e3a5f; color: #93c5fd; }
+    #summary { margin-top: 20px; padding: 16px; border-radius: 8px; font-size: 1.2em; }
+    #summary.pass { background: #15803d; }
+    #summary.fail { background: #b91c1c; }
+    #log { margin-top: 20px; background: #0a0a0a; padding: 12px; border-radius: 4px; max-height: 250px; overflow-y: auto; font-size: 0.8em; }
+    .log-entry { color: #9ca3af; margin: 2px 0; }
+    .section-header { color: #f59e0b; margin: 16px 0 4px; font-weight: bold; border-bottom: 1px solid #374151; padding-bottom: 4px; }
+    .warn { color: #fbbf24; margin: 8px 0; padding: 8px; background: #292524; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>⚡ Leaflet Campaign E2E Tests</h1>
+  <div class="warn">⚠️ These tests write to the live DB using the <strong>E2E Test Campaign</strong>. Data is cleaned up after each test.</div>
+  <div id="results"></div>
+  <div id="summary"></div>
+  <div id="log"></div>
+
+  <script>
+    // ── Constants ────────────────────────────────────────────────
+    const E2E_CAMPAIGN_ID = 'e03bc913-942a-4839-a8f6-371917e60cfa';
+    const E2E_CAMPAIGN_NAME = 'E2E Test Campaign';
+    const E2E_ROUTE_ID = '4a39bbcd-32cb-47a6-abff-213495b11934';
+    const E2E_ROUTE_NAME = 'E2E Test Route';
+    const E2E_POSTCODE = 'WF3 1AA';
+    const E2E_TEAM_MEMBER_ID = '53c875e1-688f-4d02-88ae-651fe431d868'; // Richard
+    const E2E_TEAM_MEMBER_NAME = 'Richard';
+    const TIMEOUT = 15000;
+
+    const TEST_RESULTS = [];
+
+    // ── Helpers ──────────────────────────────────────────────────
+    function log(msg) {
+      const el = document.getElementById('log');
+      const d = document.createElement('div');
+      d.className = 'log-entry';
+      d.textContent = `[${new Date().toISOString().slice(11,19)}] ${msg}`;
+      el.appendChild(d);
+      el.scrollTop = el.scrollHeight;
+      console.log(msg);
+    }
+
+    function section(name) {
+      const d = document.createElement('div');
+      d.className = 'section-header';
+      d.textContent = `── ${name} ──`;
+      document.getElementById('results').appendChild(d);
+    }
+
+    function report(test, status, message) {
+      TEST_RESULTS.push({ test, status, message });
+      const d = document.createElement('div');
+      d.className = `test ${status}`;
+      d.textContent = `${status==='pass'?'✓':status==='fail'?'✗':'○'} ${test}: ${message}`;
+      document.getElementById('results').appendChild(d);
+      log(`[${status.toUpperCase()}] ${test}: ${message}`);
+    }
+
+    function doc() { return document.getElementById('appFrame').contentDocument; }
+    function win() { return document.getElementById('appFrame').contentWindow; }
+
+    function waitFor(fn, timeout = TIMEOUT) {
+      return new Promise((resolve, reject) => {
+        const start = Date.now();
+        const tick = () => {
+          try {
+            const r = fn();
+            if (r) return resolve(r);
+          } catch(e) {}
+          if (Date.now() - start > timeout) return reject(new Error('waitFor timeout'));
+          setTimeout(tick, 150);
+        };
+        tick();
+      });
+    }
+
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    function fire(el, event) {
+      const EvtCtor = win()[event === 'click' ? 'MouseEvent' : 'Event'];
+      el.dispatchEvent(new EvtCtor(event, { bubbles: true }));
+    }
+
+    function fill(id, value) {
+      const el = doc().getElementById(id);
+      if (!el) throw new Error(`Element #${id} not found`);
+      const nativeInputValueSetter = win().Object.getOwnPropertyDescriptor(win().HTMLInputElement.prototype, 'value')?.set
+        || win().Object.getOwnPropertyDescriptor(win().HTMLTextAreaElement.prototype, 'value')?.set;
+      if (nativeInputValueSetter) nativeInputValueSetter.call(el, value);
+      else el.value = value;
+      fire(el, 'input');
+      fire(el, 'change');
+    }
+
+    function fillSelect(id, value) {
+      const el = doc().getElementById(id);
+      if (!el) throw new Error(`Select #${id} not found`);
+      el.value = value;
+      fire(el, 'change');
+    }
+
+    function click(id) {
+      const el = doc().getElementById(id);
+      if (!el) throw new Error(`Button #${id} not found`);
+      el.click();
+    }
+
+    function isVisible(id) {
+      const el = doc().getElementById(id);
+      if (!el) return false;
+      return win().getComputedStyle(el).display !== 'none';
+    }
+
+    // ── Boot & Campaign Selection ────────────────────────────────
+
+    async function bootApp() {
+      return new Promise(resolve => {
+        const iframe = document.getElementById('appFrame');
+        iframe.onload = () => resolve(true);
+        iframe.src = '../index.html';
+      });
+    }
+
+    async function selectE2ECampaign() {
+      // Wait for campaign dropdown to be populated
+      await waitFor(() => {
+        const sel = doc().getElementById('campaignSelect');
+        return sel && [...sel.options].some(o => o.value === E2E_CAMPAIGN_ID);
+      });
+      fillSelect('campaignSelect', E2E_CAMPAIGN_ID);
+      // Wait for area cards section to render (cards may be 0 if all completed)
+      await sleep(2500);
+    }
+
+    // ── Reset helper: restore route to available after tests ─────
+
+    async function resetRouteStatus() {
+      try {
+        await win().sbFetch(`/rest/v1/target_areas?id=eq.${E2E_ROUTE_ID}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: 'available' })
+        });
+        log('Route reset to available');
+      } catch(e) { log(`Reset route failed: ${e.message}`); }
+    }
+
+    async function deleteTestData() {
+      try {
+        await win().sbFetch(`/rest/v1/enquiries?campaign_id=eq.${E2E_CAMPAIGN_ID}`, { method: 'DELETE' });
+        await win().sbFetch(`/rest/v1/deliveries?campaign_id=eq.${E2E_CAMPAIGN_ID}`, { method: 'DELETE' });
+        try { await win().sbFetch(`/rest/v1/target_areas?campaign_id=eq.${E2E_CAMPAIGN_ID}&area_name=eq.E2E%20Temp%20Route`, { method: 'DELETE' }); } catch(_){}
+        log('Test data deleted');
+      } catch(e) { log(`Cleanup failed: ${e.message}`); }
+    }
+
+    // ── E2E TESTS ────────────────────────────────────────────────
+
+    // E2E-01: App boots and E2E campaign appears in dropdown
+    async function e2e_01_campaignInDropdown() {
+      try {
+        await waitFor(() => {
+          const sel = doc().getElementById('campaignSelect');
+          return sel && [...sel.options].some(o => o.value === E2E_CAMPAIGN_ID);
+        });
+        report('E2E-01 | E2E Test Campaign in dropdown', 'pass', `"${E2E_CAMPAIGN_NAME}" found`);
+      } catch(e) {
+        report('E2E-01 | E2E Test Campaign in dropdown', 'fail', e.message);
+      }
+    }
+
+    // E2E-02: Selecting the campaign loads its route card
+    async function e2e_02_campaignSelectionLoadsRoutes() {
+      try {
+        await selectE2ECampaign();
+        const cards = doc().querySelectorAll('#areaCards .area-card');
+        const hasTestRoute = [...cards].some(c => c.textContent.includes(E2E_ROUTE_NAME));
+        if (hasTestRoute) {
+          report('E2E-02 | Campaign switch loads route cards', 'pass', `"${E2E_ROUTE_NAME}" card found`);
+        } else {
+          report('E2E-02 | Campaign switch loads route cards', 'fail',
+            `Card not found. Cards: ${[...cards].map(c => c.textContent.trim().slice(0,30)).join(' | ')}`);
+        }
+      } catch(e) {
+        report('E2E-02 | Campaign switch loads route cards', 'fail', e.message);
+      }
+    }
+
+    // E2E-03: Summary bar populates with campaign data
+    async function e2e_03_summaryBarPopulates() {
+      try {
+        await sleep(1500);
+        const delivered = doc().getElementById('sumDelivered').textContent.trim();
+        const remaining = doc().getElementById('sumRemaining').textContent.trim();
+        const pct = doc().getElementById('progressPct').textContent.trim();
+        if (delivered !== '' && remaining !== '' && pct !== '') {
+          report('E2E-03 | Summary bar populated', 'pass', `Delivered: ${delivered}, Remaining: ${remaining}, Progress: ${pct}`);
+        } else {
+          report('E2E-03 | Summary bar populated', 'fail', `delivered="${delivered}" remaining="${remaining}" pct="${pct}"`);
+        }
+      } catch(e) {
+        report('E2E-03 | Summary bar populated', 'fail', e.message);
+      }
+    }
+
+    // E2E-04: Reserve the E2E route
+    async function e2e_04_reserveRoute() {
+      try {
+        // Find the E2E test route card by data-area-id attribute (most reliable)
+        const cards = [...doc().querySelectorAll('#areaCards .area-card')];
+        const card = doc().querySelector(`[data-area-id="${E2E_ROUTE_ID}"]`)
+          || cards.find(c => c.textContent.includes(E2E_ROUTE_NAME));
+        if (!card) throw new Error(`"${E2E_ROUTE_NAME}" card not found`);
+
+        const reserveBtn = card.querySelector('button');
+        if (!reserveBtn) throw new Error('No button on card');
+        reserveBtn.click();
+
+        // Wait for reserve modal to open
+        await waitFor(() => isVisible('reserveModal'));
+
+        // Fill team member and date
+        fillSelect('reserveTeamMember', E2E_TEAM_MEMBER_ID);
+        fill('reserveDate', '2026-03-10');
+
+        // Submit
+        click('reserveConfirmBtn');
+
+        // Wait for modal to close and card to update
+        await waitFor(() => !isVisible('reserveModal'), 8000);
+        await sleep(1500);
+
+        // Check card now shows reserved
+        const updatedCards = [...doc().querySelectorAll('#areaCards .area-card')];
+        const updatedCard = updatedCards.find(c => c.textContent.includes(E2E_ROUTE_NAME));
+        const isReserved = updatedCard
+          ? (updatedCard.classList.contains('reserved') || updatedCard.classList.contains('status-reserved'))
+          : false;
+
+        // Also acceptable: card disappears if reserved cards are hidden
+        const cardGone = !updatedCard;
+
+        if (isReserved || cardGone) {
+          report('E2E-04 | Reserve route flow', 'pass', cardGone ? 'Card hidden after reservation' : 'Card shows reserved status');
+        } else {
+          report('E2E-04 | Reserve route flow', 'fail',
+            `Card still shows: classes="${updatedCard?.className}" text="${updatedCard?.textContent?.slice(0,60)}"`);
+        }
+      } catch(e) {
+        report('E2E-04 | Reserve route flow', 'fail', e.message);
+      }
+    }
+
+    // E2E-05: Complete the reserved route (need to re-open it first)
+    async function e2e_05_completeRoute() {
+      try {
+        // The card may be hidden (reserved). We need to find it.
+        // If it's hidden from grid, open complete modal directly via function
+        const w = win();
+
+        // Try clicking complete if card is visible
+        let card = [...doc().querySelectorAll('#areaCards .area-card')]
+          .find(c => c.textContent.includes(E2E_ROUTE_NAME));
+
+        if (card) {
+          // Find the Complete button
+          const btns = [...card.querySelectorAll('button')];
+          const completeBtn = btns.find(b => /complete/i.test(b.textContent));
+          if (completeBtn) completeBtn.click();
+        } else {
+          // Card hidden — call openCompleteModal directly
+          if (typeof w.openCompleteModal !== 'function') throw new Error('openCompleteModal not available');
+          w.openCompleteModal(E2E_ROUTE_ID);
+        }
+
+        // Wait for complete modal
+        await waitFor(() => isVisible('completeModal'), 8000);
+
+        // Fill leaflet count
+        fill('completeLeaflets', '180');
+
+        // Submit
+        click('completeConfirmBtn');
+
+        // Wait for modal to close
+        await waitFor(() => !isVisible('completeModal'), 8000);
+        await sleep(1500);
+
+        // Verify via DB: check the delivery was created
+        // sbFetch returns parsed JSON directly (not a Response object)
+        const deliveries = await w.sbFetch(
+          `/rest/v1/deliveries?campaign_id=eq.${E2E_CAMPAIGN_ID}&target_area_id=eq.${E2E_ROUTE_ID}&select=id,leaflets_delivered`
+        );
+        if (deliveries && deliveries.length > 0 && deliveries[0].leaflets_delivered === 180) {
+          report('E2E-05 | Complete route → delivery recorded in DB', 'pass', `Delivery: ${deliveries[0].leaflets_delivered} leaflets`);
+        } else {
+          report('E2E-05 | Complete route → delivery recorded in DB', 'fail',
+            `deliveries=${JSON.stringify(deliveries)}`);
+        }
+      } catch(e) {
+        report('E2E-05 | Complete route flow', 'fail', e.message);
+      }
+    }
+
+    // E2E-06: Summary bar updates after delivery
+    async function e2e_06_summaryBarUpdates() {
+      try {
+        await sleep(1000);
+        const delivered = parseInt(doc().getElementById('sumDelivered').textContent.replace(/,/g,''), 10);
+        if (delivered >= 180) {
+          report('E2E-06 | Summary bar reflects delivery', 'pass', `sumDelivered: ${delivered}`);
+        } else {
+          report('E2E-06 | Summary bar reflects delivery', 'fail', `sumDelivered="${delivered}" (expected ≥180)`);
+        }
+      } catch(e) {
+        report('E2E-06 | Summary bar reflects delivery', 'fail', e.message);
+      }
+    }
+
+    // E2E-07: Delivery journal shows the new entry
+    async function e2e_07_deliveryJournalEntry() {
+      try {
+        const journalHTML = doc().getElementById('journalList').innerHTML;
+        const hasEntry = journalHTML.includes('180') || journalHTML.includes(E2E_ROUTE_NAME);
+        if (hasEntry) {
+          report('E2E-07 | Delivery journal shows entry', 'pass', 'Entry with 180 leaflets found');
+        } else {
+          report('E2E-07 | Delivery journal shows entry', 'fail', 'No matching entry in journalList');
+        }
+      } catch(e) {
+        report('E2E-07 | Delivery journal entry', 'fail', e.message);
+      }
+    }
+
+    // E2E-08: Add an enquiry — step 1: enter postcode, lookup
+    async function e2e_08_addEnquiry_step1() {
+      try {
+        // Reset route first so enquiry can auto-match
+        await resetRouteStatus();
+        await sleep(500);
+
+        // Open enquiry modal
+        if (typeof win().openEnquiryModal !== 'function') throw new Error('openEnquiryModal not a function');
+        win().openEnquiryModal();
+
+        await waitFor(() => isVisible('enquiryModal'));
+
+        // Fill step 1 fields
+        fill('enquiryClientName', 'E2E Test Client');
+        fill('enquiryPostcode', E2E_POSTCODE);
+
+        report('E2E-08 | Enquiry modal opens + fields fillable', 'pass', `name + postcode filled`);
+      } catch(e) {
+        report('E2E-08 | Enquiry modal step 1', 'fail', e.message);
+      }
+    }
+
+    // E2E-09: Postcode lookup triggers route auto-match → step 2 opens
+    async function e2e_09_enquiryLookupAutoMatch() {
+      try {
+        click('enquiryLookupBtn');
+
+        // Wait for step 2 confirm modal to appear
+        await waitFor(() => isVisible('enquiryConfirmModal'), 12000);
+
+        // Check route dropdown has our route pre-selected or available
+        const routeSel = doc().getElementById('enquiryRoute');
+        const hasRoute = routeSel && [...routeSel.options].some(o => o.value === E2E_ROUTE_ID || o.text.includes(E2E_ROUTE_NAME));
+
+        if (hasRoute) {
+          report('E2E-09 | Enquiry postcode lookup auto-matched route', 'pass', `"${E2E_ROUTE_NAME}" in route dropdown`);
+        } else {
+          const opts = routeSel ? [...routeSel.options].map(o => o.text).join(', ') : 'no select';
+          report('E2E-09 | Enquiry postcode lookup auto-matched route', 'fail', `Options: ${opts}`);
+        }
+      } catch(e) {
+        report('E2E-09 | Enquiry postcode lookup auto-match', 'fail', e.message);
+      }
+    }
+
+    // E2E-10: Save enquiry → appears in enquiry list
+    async function e2e_10_saveEnquiryAppearsInList() {
+      try {
+        // Make sure route is selected
+        const routeSel = doc().getElementById('enquiryRoute');
+        if (routeSel && [...routeSel.options].some(o => o.value === E2E_ROUTE_ID)) {
+          routeSel.value = E2E_ROUTE_ID;
+          fire(routeSel, 'change');
+        }
+
+        // Submit
+        click('enquiryConfirmBtn');
+
+        // Wait for modal to close
+        await waitFor(() => !isVisible('enquiryConfirmModal'), 8000);
+        await sleep(1500);
+
+        // Check enquiry list
+        const enquiryHTML = doc().getElementById('enquiryList')?.innerHTML || '';
+        const instrHTML = doc().getElementById('instructionList')?.innerHTML || '';
+        const allHTML = enquiryHTML + instrHTML;
+        const found = allHTML.includes('E2E Test Client') || allHTML.includes(E2E_POSTCODE);
+
+        if (found) {
+          report('E2E-10 | Enquiry saved and appears in list', 'pass', 'E2E Test Client found in enquiry/instruction list');
+        } else {
+          report('E2E-10 | Enquiry saved and appears in list', 'fail', 'Client name not in enquiry list HTML');
+        }
+      } catch(e) {
+        report('E2E-10 | Save enquiry', 'fail', e.message);
+      }
+    }
+
+    // E2E-11: Finance projections render with real data
+    async function e2e_11_financeProjections() {
+      try {
+        const section = doc().getElementById('financeProjectionsSection');
+        const acv = doc().getElementById('fi_acv_display');
+        const f1 = doc().getElementById('f1_rev');
+        if (!section || !acv || !f1) throw new Error('Finance elements missing');
+
+        const acvText = acv.textContent.trim();
+        const f1Text = f1.textContent.trim();
+        const hasValues = acvText !== '' && acvText !== '—' && f1Text !== '' && f1Text !== '—';
+
+        if (hasValues) {
+          report('E2E-11 | Finance projections rendered with data', 'pass', `ACV: ${acvText}, Conservative rev: ${f1Text}`);
+        } else {
+          report('E2E-11 | Finance projections rendered with data', 'fail', `ACV="${acvText}" f1="${f1Text}"`);
+        }
+      } catch(e) {
+        report('E2E-11 | Finance projections', 'fail', e.message);
+      }
+    }
+
+    // E2E-12: All Campaigns mode — summary cards populate
+    async function e2e_12_allCampaignsSummaryCards() {
+      try {
+        fillSelect('campaignSelect', '');
+        await sleep(2500);
+
+        const container = doc().getElementById('allCampaignsFinanceSummary');
+        const leaflets = doc().getElementById('ac_total_leaflets')?.textContent.trim();
+        const enquiries = doc().getElementById('ac_total_enquiries')?.textContent.trim();
+
+        const visible = container && win().getComputedStyle(container).display !== 'none';
+        const hasData = leaflets && leaflets !== '—' && enquiries && enquiries !== '—';
+
+        if (visible && hasData) {
+          report('E2E-12 | All Campaigns finance cards populated', 'pass', `Leaflets: ${leaflets}, Enquiries: ${enquiries}`);
+        } else {
+          report('E2E-12 | All Campaigns finance cards populated', 'fail',
+            `visible=${visible} leaflets="${leaflets}" enquiries="${enquiries}"`);
+        }
+      } catch(e) {
+        report('E2E-12 | All Campaigns finance cards', 'fail', e.message);
+      }
+    }
+
+    // E2E-13: Campaign breakdown cards render (requires analytics tab to be active)
+    async function e2e_13_campaignBreakdownCards() {
+      try {
+        // Must be in All Campaigns mode AND analytics tab must be open for breakdown to load
+        doc().getElementById('viewBtnAnalytics')?.click();
+        await sleep(3000);
+        await waitFor(() => {
+          const body = doc().getElementById('campaignBreakdownBody');
+          return body && body.innerHTML.trim().length > 50;
+        }, 8000);
+        report('E2E-13 | Campaign breakdown cards rendered', 'pass', 'campaignBreakdownBody has content');
+      } catch(e) {
+        const body = doc().getElementById('campaignBreakdownBody');
+        report('E2E-13 | Campaign breakdown cards rendered', 'fail',
+          `Timed out. body length: ${body?.innerHTML?.trim()?.length ?? 'missing'}`);
+      }
+    }
+
+    // E2E-14: All Campaigns enquiry tables show campaign column
+    async function e2e_14_allCampaignsEnquiryTables() {
+      try {
+        const enquiryHTML = doc().getElementById('enquiriesSection')?.innerHTML || '';
+        // In All Campaigns mode there should be a Campaign column header
+        const hasCampaignCol = /campaign/i.test(enquiryHTML);
+        if (hasCampaignCol) {
+          report('E2E-14 | All Campaigns enquiry table has Campaign column', 'pass', '"Campaign" found in enquiriesSection');
+        } else {
+          report('E2E-14 | All Campaigns enquiry table has Campaign column', 'fail', 'No "Campaign" column in enquiry section');
+        }
+      } catch(e) {
+        report('E2E-14 | All Campaigns enquiry column', 'fail', e.message);
+      }
+    }
+
+    // E2E-15: CMP-03 data isolation — other campaign's data not shown
+    async function e2e_15_dataIsolation() {
+      try {
+        // Switch back to E2E campaign
+        fillSelect('campaignSelect', E2E_CAMPAIGN_ID);
+        await sleep(2500);
+
+        // The journal should NOT contain data from other campaigns
+        const journalHTML = doc().getElementById('journalList')?.innerHTML || '';
+        // "Tingley" is a route name from the real campaigns — should not appear in E2E campaign view
+        const leaksOtherData = journalHTML.includes('Tingley') || journalHTML.includes('Gildersome');
+
+        if (!leaksOtherData) {
+          report('E2E-15 | CMP-03 Data isolation — no cross-campaign leak', 'pass', 'Other campaign routes not in E2E journal');
+        } else {
+          report('E2E-15 | CMP-03 Data isolation — no cross-campaign leak', 'fail', 'Found Tingley/Gildersome data in E2E campaign view!');
+        }
+      } catch(e) {
+        report('E2E-15 | Data isolation', 'fail', e.message);
+      }
+    }
+
+    // E2E-16: Add a new route via modal
+    async function e2e_16_addRoute() {
+      try {
+        // Make sure we're on E2E campaign
+        const sel = doc().getElementById('campaignSelect');
+        if (sel.value !== E2E_CAMPAIGN_ID) {
+          fillSelect('campaignSelect', E2E_CAMPAIGN_ID);
+          await sleep(2000);
+        }
+
+        // Click Add Route button
+        const addBtn = doc().getElementById('addRouteBtn');
+        if (!addBtn) throw new Error('addRouteBtn not found');
+        addBtn.click();
+
+        await waitFor(() => isVisible('addRouteModal'));
+
+        // Fill form
+        fill('addRouteName', 'E2E Temp Route');
+        fill('addRoutePostcode', 'LS1 1BA');
+        fill('addRouteHouseCount', '150');
+
+        // Submit
+        click('addRouteConfirmBtn');
+
+        // Wait for modal to close
+        await waitFor(() => !isVisible('addRouteModal'), 12000);
+        await sleep(2000);
+
+        // Check if new card appears
+        const cards = [...doc().querySelectorAll('#areaCards .area-card')];
+        const found = cards.some(c => c.textContent.includes('E2E Temp Route'));
+
+        if (found) {
+          report('E2E-16 | Add Route → card appears in grid', 'pass', '"E2E Temp Route" card found');
+        } else {
+          // Could be geocode failure — check for error
+          const err = doc().getElementById('addRouteError')?.textContent?.trim();
+          report('E2E-16 | Add Route → card appears in grid', 'fail',
+            err ? `Error: ${err}` : 'Card not found (may be geocode failure for LS1 1BA)');
+        }
+      } catch(e) {
+        report('E2E-16 | Add Route flow', 'fail', e.message);
+      }
+    }
+
+    // ── Cleanup ──────────────────────────────────────────────────
+
+    async function cleanup() {
+      log('Running cleanup...');
+      await deleteTestData();
+      await resetRouteStatus();
+      log('Cleanup complete');
+    }
+
+    // ── Run all ──────────────────────────────────────────────────
+
+    async function runAll() {
+      log('Starting E2E suite...');
+
+      section('Boot');
+      await bootApp();
+      await sleep(2000);
+      // Pre-test cleanup: reset route + delete any leftover test data from previous run
+      await deleteTestData();
+      await resetRouteStatus();
+      await sleep(500);
+
+      section('Campaign Selection (CMP-01, CMP-02)');
+      await e2e_01_campaignInDropdown();
+      await e2e_02_campaignSelectionLoadsRoutes();
+      await e2e_03_summaryBarPopulates();
+
+      section('Reserve Route (TER-01, TER-02)');
+      await e2e_04_reserveRoute();
+
+      section('Complete Route → Delivery (ANL-03)');
+      await e2e_05_completeRoute();
+      await e2e_06_summaryBarUpdates();
+      await e2e_07_deliveryJournalEntry();
+
+      section('Enquiry Flow (ENQ-01, RTE-04)');
+      await e2e_08_addEnquiry_step1();
+      await e2e_09_enquiryLookupAutoMatch();
+      await e2e_10_saveEnquiryAppearsInList();
+
+      section('Finance Projections (CFG-02, CFG-04)');
+      await e2e_11_financeProjections();
+
+      section('All Campaigns Mode (CMP-02, CFG-06, CFG-07, ENQ-04)');
+      await e2e_12_allCampaignsSummaryCards();
+      await e2e_13_campaignBreakdownCards();
+      await e2e_14_allCampaignsEnquiryTables();
+
+      section('Data Isolation (CMP-03)');
+      await e2e_15_dataIsolation();
+
+      section('Add Route (RTE-01)');
+      await e2e_16_addRoute();
+
+      section('Cleanup');
+      await cleanup();
+
+      // Summary
+      const passed = TEST_RESULTS.filter(t => t.status === 'pass').length;
+      const failed = TEST_RESULTS.filter(t => t.status === 'fail').length;
+      const total = TEST_RESULTS.length;
+
+      const summary = document.getElementById('summary');
+      summary.className = failed === 0 ? 'pass' : 'fail';
+      summary.textContent = failed === 0
+        ? `🎉 ALL E2E TESTS PASSED — ${passed}/${total}`
+        : `❌ ${failed} FAILED — ${passed}/${total} passed`;
+
+      log(`Done: ${passed}/${total} passed, ${failed} failed`);
+      return { passed, failed, total, results: TEST_RESULTS };
+    }
+
+    window.onload = () => setTimeout(runAll, 500);
+  </script>
+
+  <iframe id="appFrame" style="width:100%;height:500px;margin-top:20px;border:1px solid #374151;"></iframe>
+</body>
+</html>
