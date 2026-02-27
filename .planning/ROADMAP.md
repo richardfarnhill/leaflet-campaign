@@ -1,9 +1,21 @@
 # Roadmap: Leaflet Campaign Tracker
 
 **Project:** Card-Based Reservation System  
-**Version:** 1.0  
-**Date:** 2026-02-25  
+**Version:** 1.0
+**Date:** 2026-02-25
 **Depth:** Standard (6 phases)
+
+---
+
+## Navigation
+
+| Document | Purpose |
+|----------|---------|
+| [STATE.md](./STATE.md) | Current position, task checklists, outstanding items |
+| [REQUIREMENTS.md](./REQUIREMENTS.md) | Full feature requirements with status |
+| [COORDINATION.md](./COORDINATION.md) | Multi-agent claiming protocol |
+| [OPEN-ISSUES.md](./OPEN-ISSUES.md) | Unresolved concerns & open questions |
+| Phase plan files | `.planning/phases/{N}-{name}/{N}-01-PLAN.md` |
 
 ---
 
@@ -15,15 +27,18 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 
 ## Phase Structure
 
-| Phase | Goal | Dependencies | Requirements |
-|-------|------|--------------|--------------|
-| 1 - Database Foundation | Supabase schema with RLS and PostGIS operational | None | TER-01, TER-02, TER-03 |
-| 2 - Territory & Reservation | Teams can claim geographic chunks with date selection | Phase 1 | TER-01, TER-02, TER-03 |
-| 3 - Delivery Recording | Teams can record delivery completions with leaflet counts | Phase 2 | TER-01 (completion) |
-| 4 - Analytics & Heatmaps | Users can visualize delivery coverage and enquiry locations | Phase 3 | ANL-01, ANL-02, ANL-03, ANL-04, GEO-01 |
-| 5 - Campaign Management | Users can switch between campaigns and configure settings | Phase 1 | CMP-01, CMP-02, CFG-01, CFG-02, DEM-01 |
-| 6 - Enquiry & Team | Robust enquiry recording with heatmap and team progress | Phase 4 | ENQ-01, ENQ-02, TEA-01, TEA-02 |
-| 7 - Integrations | External tool connections (ClickUp, Sheets, Gmail) | Phase 4 | INT-01, INT-02, INT-03 |
+| Phase | Goal | Dependencies | Requirements | Plan |
+|-------|------|--------------|--------------|------|
+| 1 - Database Foundation | Supabase schema with RLS and PostGIS operational | None | TER-01, TER-02, TER-03 | [01-SUMMARY](./phases/01-database-foundation/SUMMARY.md) |
+| 2 - Territory & Reservation | Teams can claim geographic chunks with date selection | Phase 1 | TER-01, TER-02, TER-03 | [02-SUMMARY](./phases/02-territory-reservation/SUMMARY.md) |
+| 3 - Delivery Recording | Teams can record delivery completions with leaflet counts | Phase 2 | TER-01 (completion) | [03-PLAN](./phases/03-delivery-recording/03-01-PLAN.md) |
+| 4 - Analytics & Heatmaps | Users can visualize delivery coverage and enquiry locations | Phase 3 | ANL-01, ANL-02, ANL-03, ANL-04, GEO-01 | [04-PLAN](./phases/04-analytics-heatmaps/04-01-PLAN.md) |
+| 5 - Campaign Management | Users can switch between campaigns and configure settings | Phase 1 | CMP-01, CMP-02, CFG-01, CFG-02, DEM-01 | [05-PLAN](./phases/05-campaign-management/05-01-PLAN.md) |
+| 6 - Enquiry & Team | Robust enquiry recording with heatmap and team progress | Phase 4 | ENQ-01, ENQ-02, TEA-01, TEA-02 | [06-PLAN](./phases/06-enquiry-team/06-01-PLAN.md) |
+| 7 - Core Enhancements | Route cards, completion, security | Phase 6 | (see plan) | [07-PLAN](./phases/07-core-enhancements/07-01-PLAN.md) |
+| 8 - Auto-assignment & API | Enquiry auto-assign, demographics, enrichment | Phase 7 | RTE-04, DEM-01, DEM-02 | [08-PLAN](./phases/08-core-management/08-01-PLAN.md) |
+| 9 - Demographic Enrichment | On-demand NOMIS enrichment for demographic feedback | Phase 8 | DEM-02, DEM-03 | [09-PLAN](./phases/09-demographic-enrichment/09-01-PLAN.md) |
+| 10 - Backlog | Future enhancements | Phase 9 | (see STATE.md) | [STATE.md](./STATE.md) |
 
 ---
 
@@ -226,10 +241,6 @@ This roadmap delivers a complete card-based reservation system for leaflet deliv
 - Gmail notifications
 - Full ClickUp integration
 - Planning screen v2
-- Campaign duplication
-- Bulk route creation
-
----
 - Campaign duplication
 - Bulk route creation
 

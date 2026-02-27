@@ -2,8 +2,19 @@
 
 **Project:** Leaflet Campaign Tracker
 **Version:** 1.0
-**Last updated:** 2026-02-25
-**Status:** Designed, pending implementation (Phase 6 T8)
+**Last updated:** 2026-02-27
+**Status:** Partially implemented — Mode B (enrich) in use; Mode A (create) available via skill
+
+---
+
+## Related Documents
+
+| Document | Purpose |
+|----------|---------|
+| [STATE.md](./STATE.md) | Current project position |
+| [ROUTE-FLAGGING.md](./ROUTE-FLAGGING.md) | Authoritative rules: when to flag, enrich, size constraints |
+| [OPEN-ISSUES.md](./OPEN-ISSUES.md) | Unresolved concerns — including OI-01 (street name source) |
+| `~/.claude/commands/leaflet-plan-routes.md` | Skill: Mode A (create routes) and Mode B (enrich existing routes) |
 
 ---
 
@@ -350,8 +361,7 @@ postcode sets. Proper per-route geographic boundary definition is deferred to Pl
 postcodes.io API calls — more reliable, no rate limits, no WSL networking issues. Keep the
 ONSPD filtered.csv or the filter script at `.planning/postcode-data/fetch.py` for reuse.
 
-**Data source note:** ONSPD does NOT contain street names. Street names on route cards continue
-to use postcodes.io at display time (existing implementation).
+**Data source note:** ONSPD does NOT contain street names. Street names on route cards were intended to use postcodes.io `thoroughfare` field, but this field has **not been confirmed** to exist in any postcodes.io API response. See [OPEN-ISSUES.md OI-01](./OPEN-ISSUES.md) — street name source is currently unresolved.
 
 ---
 

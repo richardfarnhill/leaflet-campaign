@@ -5,6 +5,18 @@ and **OpenCode**. This file defines how they coordinate to avoid conflicts.
 
 ---
 
+## Key Documents
+
+| Document | Purpose |
+|----------|---------|
+| [STATE.md](./STATE.md) | Live state — current position, active claims, outstanding items |
+| [ROADMAP.md](./ROADMAP.md) | Phase plan with links to individual phase plan files |
+| [REQUIREMENTS.md](./REQUIREMENTS.md) | Full feature requirements with status |
+| [OPEN-ISSUES.md](./OPEN-ISSUES.md) | Unresolved concerns and open questions |
+| [PROJECT.md](./PROJECT.md) | Project vision, goals, key decisions |
+
+---
+
 ## Rule: Claim Before You Work
 
 Before making any code changes or executing any plan, you MUST claim the work in
