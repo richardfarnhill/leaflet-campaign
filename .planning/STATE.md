@@ -13,7 +13,7 @@ Phase: 10 of 10 (Backlog)
 Plan: All phases 1-9 COMPLETE
 Status: Production-ready. Bug fix session complete 2026-02-26. Password bypass still in place (TODO: re-enable when ready to go live).
 
-Last activity: 2026-02-26 — Phase 9 complete + extensive bug fix + UI improvement session.
+Last activity: 2026-02-27 — Test suite rewrite + E2E tests + pre-commit security hook.
 
 Progress: [████████████████████░░] 95% (9/9 core phases + polish)
 
@@ -170,7 +170,7 @@ See 06-01-PLAN.md Task 8 for full spec. Simple modal: Route Name, Postcode, Hous
 |------|--------|-------|
 | T1: Create campaign - enhance with route creation questions | ✓ Done | Claude | Two-step modal: step 2 shows success + "Add Route" / "Done" buttons |
 | T2: Global exclusion areas review | ✓ Done | OC | Table exists with postcode_prefix/radius_miles/label; UI CRUD works; map renders circles; data is GLOBAL (not per-campaign) - correct for exclusion areas |
-| T3: Prompt new route when 500 houses short | ✓ Done | OC | Added `checkAndPromptRouting()` - checks on page load, after route delete, after route add. Auto-clears `needs_routing` when shortfall ≤ 500. |
+| T3: Prompt new route when 500 houses short | ✓ Done | OC | Added `checkAndPromptRouting()` - checks on page load, after route delete, after route add. Auto-clears `needs_routing` when shortfall ≤ 500. Full rules → ROUTE-FLAGGING.md. |
 | T4: Auto-assign enquiries to routes | ✓ Done | Claude | Two-step modal: lookup geocodes + auto-matches route, step 2 shows pre-filled route + team member |
 | T4c: oa21_code written to demographic_feedback inline | ✓ Done | Claude | Extracted from postcodes.io geocode response (codes.oa21) at save time |
 | T5: API endpoints (Supabase) | ✓ Done | OC | RPC function in supabase_schema.sql; web page no longer calls it (simplified) |

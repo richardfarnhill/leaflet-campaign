@@ -12,7 +12,7 @@
 
 | ID | Requirement | Description |
 |----|-------------|-------------|
-| TER-01 | Area Reservation System | Teams can claim geographic chunks (800-1200 doors) with a date selection |
+| TER-01 | Area Reservation System | Teams can claim geographic chunks (500–1000 doors, rounded to nearest 50) with a date selection |
 | TER-02 | Real-time Availability | Display which areas are available/reserved/completed in real-time |
 | TER-03 | Manual Override | Coordinator can reassign areas manually |
 
@@ -77,6 +77,9 @@
 | RTE-03 | route_postcodes Expansion | Each route stores all unit postcodes for its OAs (not just representative). Enables enquiry auto-matching and full heatmap coverage. |
 | RTE-04 | Enquiry Auto-matching | When an enquiry's postcode is recorded, auto-assign target_area_id by looking up route_postcodes. Phase 8 T4. |
 | RTE-05 | Real Campaign Migration | Migrate existing real-world campaign data (routes, deliveries, enquiries) into the new data model. Phase 8. |
+| RTE-06 | Route Size Rule | Every route must be 500–1000 doors (Census households, rounded to nearest 50). Routes exceeding 1000 must be split into A/B before use. See ROUTE-FLAGGING.md. |
+| RTE-07 | Campaign Routing Flag | `campaigns.needs_routing` set true on creation; auto-cleared when shortfall ≤ 500 leaflets. Prompts user to add routes via `/leaflet-plan-routes` Mode A. See ROUTE-FLAGGING.md. |
+| RTE-08 | Route Enrichment | Manually-created routes with null `household_count` in route_postcodes must be enriched with real Census data via `/leaflet-plan-routes` Mode B. Detected at query time — no separate flag column needed. See ROUTE-FLAGGING.md. |
 
 ### DEM-10: Demographic Enrichment
 

@@ -12,7 +12,7 @@
 The Route Planning Engine generates a campaign's delivery routes from a natural-language area
 description. It resolves the area to constituent postcode sectors, filters by demographic
 criteria (owner-occupied tenure), excludes restricted areas by radius, chunks the remaining
-sectors into 800-1200 door delivery routes, and presents a plan for the user to approve and
+sectors into 500-1000 door delivery routes, and presents a plan for the user to approve and
 instantiate into the database.
 
 ---
@@ -96,10 +96,13 @@ GET /dataset/NM_2072_1.data.json
 **Method:** ONS standard — a 2021 Output Area contains **approximately 125 households** on average
 (Census design target: 100-625, mean ~125 for residential OAs).
 
-For more precise counts, query NOMIS `NM_2001_1` (TS001 - Usual residents / households):
+For precise counts, use NOMIS `NM_2059_1` (TS041 — Number of Households):
 ```
-GET /dataset/NM_2001_1.data.json?geography={oa21_numeric_id}&measures=20100
+Step 1: GET /dataset/NM_2059_1/geography/{oa1},{oa2},...def.sdmx.json  → NomisKeys per OA
+Step 2: GET /dataset/NM_2059_1.data.json?geography={key1},{key2},...&measures=20100 → household counts
 ```
+⚠️ Do NOT use NM_2001_1 — it returns no data at OA21 level.
+Round all counts to nearest 50 before storing — exact Census figures look arbitrary to team members.
 
 **House count per route = sum of household counts across all OAs in that route.**
 This is what populates `target_areas.house_count` — the number the user sees on the card.
@@ -112,7 +115,7 @@ Already on stack (CDN: `https://unpkg.com/turf@3.0.14/turf.min.js`)
 
 Used for:
 - **Exclusion radius check:** `turf.distance(point, restrictedCentre, {units:'miles'}) < radius`
-- **Route chunking:** Cluster OA centroids into groups of 800-1200 doors using proximity
+- **Route chunking:** Cluster OA centroids into groups of 500-1000 doors using proximity
 - **Contiguity:** Keep geographically adjacent OAs together in the same route
 
 ---
@@ -248,7 +251,7 @@ User selects. The selection gives us the outcode(s) to process.
 ### Step 3 — Confirm Parameters
 Pre-filled form, all editable:
 - **Demographic filter:** Owner-occupied ≥ [60]% ✓
-- **Route size:** [800] – [1200] doors
+- **Route size:** [500] – [1000] doors
 - **Leaflet budget:** pulled from `campaign.target_leaflets`
 - **Campaign-specific exclusions:** list (add/remove inline)
 - **Global exclusions:** shown read-only (WA14 1QP etc.)
@@ -262,7 +265,7 @@ The engine:
 3. Fetches NOMIS tenure for each unique OA (batched, cached)
 4. Filters out OAs below owner-occupied threshold
 5. Checks each OA centroid against all exclusion radii (Turf.js)
-6. Clusters remaining OAs into routes of 800-1200 doors (proximity grouping)
+6. Clusters remaining OAs into routes of 500-1000 doors (proximity grouping)
 7. Names each route: `{admin_district} {N}` (e.g. "Didsbury 1", "Didsbury 2")
 
 ### Step 5 — Review Plan
@@ -352,10 +355,26 @@ to use postcodes.io at display time (existing implementation).
 
 ---
 
+## Environment Notes
+
+- **Shell:** Git Bash on Windows — `/tmp` does not work. Use full Windows paths: `c:/Users/richa/...`
+- **Python scripts:** `python "c:/path/to/script.py"` — works fine for API calls with `requests` or `urllib`
+- **SSL:** Use `ssl.create_default_context(); ctx.verify_mode = ssl.CERT_NONE` for NOMIS if SSL errors occur
+
+---
+
+## Related Documents
+
+- **ROUTE-FLAGGING.md** — authoritative rules: when routes/campaigns are flagged, size rules, enrichment detection
+- **`~/.claude/commands/leaflet-plan-routes.md`** — the skill that executes both Mode A (create) and Mode B (enrich)
+
+---
+
 ## Sources
 
 - postcodes.io docs: https://postcodes.io/docs
 - NOMIS API: https://www.nomisweb.co.uk/api/v01/
-- NOMIS TS054 dataset: NM_2072_1
+- NOMIS TS054 dataset: NM_2072_1 (tenure/owner-occupied)
+- NOMIS TS041 dataset: NM_2059_1 (household counts — use this, not NM_2001_1)
 - ONS OA design spec: ~125 households per Output Area
 - Turf.js: https://unpkg.com/turf@3.0.14/

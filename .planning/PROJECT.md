@@ -202,7 +202,9 @@ This is a brownfield project. Codebase analysis completed:
 - Credentials in config.js, RLS enabled
 - route_postcodes table: full unit postcode expansion (enquiry auto-matching ready)
 - Route card street names (click-to-expand) + map boundary polygon (Turf.js convex hull)
-- `needs_routing` flag on campaigns - prompts when 500+ leaflets short
+- `needs_routing` flag on campaigns - prompts when 500+ leaflets short (see ROUTE-FLAGGING.md)
+- Route enrichment: routes with null `household_count` in route_postcodes detected at query time and enriched via `/leaflet-plan-routes` Mode B (see ROUTE-FLAGGING.md)
+- Route size rule: 500–1000 doors per route, rounded to nearest 50, split as A/B if exceeded
 - Auto-assign enquiries to routes via postcode lookup
 - Stats API endpoint (get_delivery_stats RPC) for external reporting
 - Demographic feedback table auto-capture from enquiries
