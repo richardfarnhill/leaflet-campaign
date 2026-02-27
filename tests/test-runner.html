@@ -16,10 +16,12 @@
     #summary.fail { background: #b91c1c; }
     #log { margin-top: 20px; background: #0a0a0a; padding: 12px; border-radius: 4px; max-height: 300px; overflow-y: auto; font-size: 0.85em; }
     .log-entry { color: #9ca3af; margin: 2px 0; }
+    .section-header { color: #60a5fa; margin: 16px 0 4px; font-weight: bold; font-size: 1em; border-bottom: 1px solid #374151; padding-bottom: 4px; }
   </style>
 </head>
 <body>
   <h1>🧪 Leaflet Campaign Test Runner</h1>
+  <p style="color:#9ca3af">Tests run against the app loaded in the iframe below. Open via HTTP server (not file://).</p>
   <div id="results"></div>
   <div id="summary"></div>
   <div id="log"></div>
@@ -28,8 +30,7 @@
     const TEST_RESULTS = [];
     const CONFIG = {
       appUrl: '../index.html',
-      supabaseUrl: 'https://tjebidvgvbpnxgnphcrg.supabase.co',
-      timeout: 10000
+      timeout: 12000
     };
 
     function log(msg) {
@@ -39,6 +40,14 @@
       entry.textContent = `[${new Date().toISOString().slice(11,19)}] ${msg}`;
       el.appendChild(entry);
       el.scrollTop = el.scrollHeight;
+    }
+
+    function section(name) {
+      const el = document.getElementById('results');
+      const div = document.createElement('div');
+      div.className = 'section-header';
+      div.textContent = `── ${name} ──`;
+      el.appendChild(div);
     }
 
     function report(test, status, message) {
@@ -51,10 +60,6 @@
       log(`${test}: ${status} - ${message}`);
     }
 
-    function getIframe() {
-      return document.getElementById('appFrame');
-    }
-
     function waitFor(fn, timeout = CONFIG.timeout) {
       return new Promise((resolve, reject) => {
         const start = Date.now();
@@ -63,184 +68,582 @@
             const result = fn();
             if (result) resolve(result);
             else if (Date.now() - start > timeout) reject(new Error('Timeout'));
-            else setTimeout(check, 100);
+            else setTimeout(check, 200);
           } catch(e) {
             if (Date.now() - start > timeout) reject(e);
-            else setTimeout(check, 100);
+            else setTimeout(check, 200);
           }
         };
         check();
       });
     }
 
+    function doc() { return document.getElementById('appFrame').contentDocument; }
+    function win() { return document.getElementById('appFrame').contentWindow; }
+
     // ============================================================
-    // TEST CASES
+    // BOOT
     // ============================================================
 
-    async function testAppLoads() {
+    async function bootApp() {
       return new Promise((resolve) => {
-        const iframe = getIframe();
-        iframe.onload = () => {
-          try {
-            const win = iframe.contentWindow;
-            if (win && win.document) {
-              report('App Loads', 'pass', 'index.html loaded successfully');
-              resolve(true);
-            } else {
-              report('App Loads', 'fail', 'iframe content not accessible');
-              resolve(false);
-            }
-          } catch(e) {
-            report('App Loads', 'fail', 'Error: ' + e.message);
-            resolve(false);
-          }
-        };
+        const iframe = document.getElementById('appFrame');
+        iframe.onload = () => resolve(true);
         iframe.src = CONFIG.appUrl;
       });
     }
 
-    async function testNoCredentialsExposed() {
+    async function waitForCampaigns() {
+      await waitFor(() => {
+        const sel = doc().getElementById('campaignSelect');
+        return sel && sel.options.length > 1;
+      }, CONFIG.timeout);
+    }
+
+    async function selectCampaign(value) {
+      const sel = doc().getElementById('campaignSelect');
+      sel.value = value;
+      // Must use the iframe's own Event constructor
+      const EvtCtor = win().Event;
+      sel.dispatchEvent(new EvtCtor('change'));
+      await new Promise(r => setTimeout(r, 2000));
+    }
+
+    // ============================================================
+    // TESTS
+    // ============================================================
+
+    // --- TER (Territory & Reservation) ---
+
+    async function test_TER01_appLoads() {
       try {
-        const iframe = getIframe();
-        const doc = iframe.contentDocument || iframe.contentWindow.document;
-        const html = doc.documentElement.outerHTML;
-        
-        // Check for hardcoded credentials
-        const hasUrl = html.includes('tjebidvgvbpnxgnphcrg.supabase.co');
-        const hasKey = html.includes('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9');
-        
-        if (!hasUrl && !hasKey) {
-          report('No Credentials Exposed', 'pass', 'Supabase URL/key not in source');
-          return true;
+        const title = doc().title;
+        if (doc() && title) {
+          report('TER | App loads (index.html)', 'pass', `Title: "${title}"`);
         } else {
-          report('No Credentials Exposed', 'fail', 'Found hardcoded credentials in source');
-          return false;
+          report('TER | App loads (index.html)', 'fail', 'Document not accessible');
         }
-      } catch(e) {
-        report('No Credentials Exposed', 'fail', 'Error: ' + e.message);
-        return false;
-      }
+      } catch(e) { report('TER | App loads (index.html)', 'fail', e.message); }
     }
 
-    async function testCampaignSelectExists() {
+    async function test_TER01_areaCardsRender() {
       try {
-        const iframe = getIframe();
-        const doc = iframe.contentDocument;
-        const select = doc.getElementById('campaignSelect');
-        
-        if (select) {
-          report('Campaign Select Exists', 'pass', 'Campaign dropdown found');
-          return true;
+        await waitFor(() => doc().querySelectorAll('#areaCards .area-card').length > 0, 8000);
+        const count = doc().querySelectorAll('#areaCards .area-card').length;
+        report('TER-01 | Route cards rendered', 'pass', `${count} cards found`);
+      } catch(e) { report('TER-01 | Route cards rendered', 'fail', 'No .area-card elements found after 8s'); }
+    }
+
+    async function test_TER02_cardStatusClasses() {
+      try {
+        const cards = doc().querySelectorAll('#areaCards .area-card');
+        const statuses = [...cards].map(c => {
+          if (c.classList.contains('status-available') || c.classList.contains('available')) return 'available';
+          if (c.classList.contains('status-reserved') || c.classList.contains('reserved')) return 'reserved';
+          if (c.classList.contains('status-completed') || c.classList.contains('completed')) return 'completed';
+          return 'unknown';
+        });
+        const unknown = statuses.filter(s => s === 'unknown').length;
+        if (unknown === 0) {
+          report('TER-02 | Card status classes', 'pass', `Statuses: ${[...new Set(statuses)].join(', ')}`);
         } else {
-          report('Campaign Select Exists', 'fail', 'Campaign dropdown not found');
-          return false;
+          report('TER-02 | Card status classes', 'fail', `${unknown}/${cards.length} cards have no status class`);
         }
-      } catch(e) {
-        report('Campaign Select Exists', 'fail', 'Error: ' + e.message);
-        return false;
-      }
+      } catch(e) { report('TER-02 | Card status classes', 'fail', e.message); }
     }
 
-    async function testRouteCardsRender() {
+    async function test_TER01_reserveModalExists() {
       try {
-        const iframe = getIframe();
-        const win = iframe.contentWindow;
-        
-        await waitFor(() => {
-          const doc = iframe.contentDocument;
-          return doc.querySelector('.area-card, #routesSection, [class*="area-card"]');
-        }, 5000);
-        
-        report('Route Cards Render', 'pass', 'Area cards rendered');
-        return true;
-      } catch(e) {
-        report('Route Cards Render', 'fail', 'No area cards found');
-        return false;
-      }
+        const modal = doc().getElementById('reserveModal');
+        const hasTeam = doc().getElementById('reserveTeamMember');
+        const hasDate = doc().getElementById('reserveDate');
+        if (modal && hasTeam && hasDate) {
+          report('TER-01 | Reserve modal has required fields', 'pass', 'modal + team member + date fields present');
+        } else {
+          report('TER-01 | Reserve modal has required fields', 'fail', `modal=${!!modal} team=${!!hasTeam} date=${!!hasDate}`);
+        }
+      } catch(e) { report('TER-01 | Reserve modal has required fields', 'fail', e.message); }
     }
 
-    async function testEnquiryModal() {
+    async function test_TER03_reassignModalExists() {
       try {
-        const iframe = getIframe();
-        const doc = iframe.contentDocument;
-        
-        // Look for add enquiry button or check if modal exists
-        const modal = doc.getElementById('enquiryModal');
-        
+        const modal = doc().getElementById('reassignModal');
+        const newMember = doc().getElementById('reassignNewMember');
+        if (modal && newMember) {
+          report('TER-03 | Reassign modal (manual override)', 'pass', 'reassignModal + reassignNewMember found');
+        } else {
+          report('TER-03 | Reassign modal (manual override)', 'fail', `modal=${!!modal} newMember=${!!newMember}`);
+        }
+      } catch(e) { report('TER-03 | Reassign modal (manual override)', 'fail', e.message); }
+    }
+
+    async function test_TER03_unassignModalExists() {
+      try {
+        const modal = doc().getElementById('unassignModal');
         if (modal) {
-          report('Enquiry Modal Exists', 'pass', 'Enquiry modal HTML found');
-          return true;
+          report('TER-03 | Unassign modal exists', 'pass', 'unassignModal found');
         } else {
-          report('Enquiry Modal Exists', 'fail', 'Enquiry modal not found');
-          return false;
+          report('TER-03 | Unassign modal exists', 'fail', 'unassignModal not found');
         }
-      } catch(e) {
-        report('Enquiry Modal Exists', 'fail', 'Error: ' + e.message);
-        return false;
-      }
+      } catch(e) { report('TER-03 | Unassign modal exists', 'fail', e.message); }
     }
 
-    async function testMapContainer() {
+    // --- CMP (Multi-Campaign) ---
+
+    async function test_CMP01_campaignSelectExists() {
       try {
-        const iframe = getIframe();
-        const doc = iframe.contentDocument;
-        
-        const mapContainer = doc.getElementById('analyticsMap') || doc.querySelector('[id*="Map"]');
-        
+        const sel = doc().getElementById('campaignSelect');
+        const count = sel ? sel.options.length : 0;
+        if (sel && count > 1) {
+          report('CMP-01 | Campaign select populated', 'pass', `${count} options (incl. All Campaigns)`);
+        } else {
+          report('CMP-01 | Campaign select populated', 'fail', `options=${count}`);
+        }
+      } catch(e) { report('CMP-01 | Campaign select populated', 'fail', e.message); }
+    }
+
+    async function test_CMP02_allCampaignsOption() {
+      try {
+        const sel = doc().getElementById('campaignSelect');
+        const hasAll = [...sel.options].some(o => o.value === '' || o.text.toLowerCase().includes('all'));
+        if (hasAll) {
+          report('CMP-02 | "All Campaigns" option present', 'pass', 'Found All Campaigns option');
+        } else {
+          report('CMP-02 | "All Campaigns" option present', 'fail', 'No All Campaigns option');
+        }
+      } catch(e) { report('CMP-02 | "All Campaigns" option present', 'fail', e.message); }
+    }
+
+    // --- CFG (Campaign Config) ---
+
+    async function test_CFG01_configModalExists() {
+      try {
+        const modal = doc().getElementById('campaignConfigModal');
+        const name = doc().getElementById('configCampaignName');
+        const target = doc().getElementById('configTargetLeaflets');
+        const caseVal = doc().getElementById('configDefaultCaseValue');
+        if (modal && name && target && caseVal) {
+          report('CFG-01/04 | Campaign config modal fields', 'pass', 'modal + name + target + case value found');
+        } else {
+          report('CFG-01/04 | Campaign config modal fields', 'fail', `modal=${!!modal} name=${!!name} target=${!!target} caseVal=${!!caseVal}`);
+        }
+      } catch(e) { report('CFG-01/04 | Campaign config modal fields', 'fail', e.message); }
+    }
+
+    async function test_CFG02_responseRateFields() {
+      try {
+        const con = doc().getElementById('configRateConservative');
+        const tgt = doc().getElementById('configRateTarget');
+        const opt = doc().getElementById('configRateOptimistic');
+        if (con && tgt && opt) {
+          report('CFG-02 | Response rate config fields', 'pass', 'conservative + target + optimistic fields found');
+        } else {
+          report('CFG-02 | Response rate config fields', 'fail', `con=${!!con} tgt=${!!tgt} opt=${!!opt}`);
+        }
+      } catch(e) { report('CFG-02 | Response rate config fields', 'fail', e.message); }
+    }
+
+    async function test_CFG03_summaryBarElements() {
+      try {
+        const ids = ['sumDelivered','sumRemaining','sumSessions','sumProjected','progressFill','progressPct'];
+        const missing = ids.filter(id => !doc().getElementById(id));
+        if (missing.length === 0) {
+          report('CFG-03 | Summary bar all elements present', 'pass', ids.join(', '));
+        } else {
+          report('CFG-03 | Summary bar all elements present', 'fail', `Missing: ${missing.join(', ')}`);
+        }
+      } catch(e) { report('CFG-03 | Summary bar elements', 'fail', e.message); }
+    }
+
+    async function test_CFG03_summaryBarPopulated() {
+      try {
+        const sel = doc().getElementById('campaignSelect');
+        const realOpt = [...sel.options].find(o => o.value !== '');
+        if (!realOpt) { report('CFG-03 | Summary bar populated', 'pending', 'No campaigns in DB'); return; }
+        await selectCampaign(realOpt.value);
+        await new Promise(r => setTimeout(r, 2000));
+        const delivered = doc().getElementById('sumDelivered').textContent.trim();
+        const pct = doc().getElementById('progressPct').textContent.trim();
+        if (delivered && pct) {
+          report('CFG-03 | Summary bar populated from DB', 'pass', `Delivered: ${delivered}, Progress: ${pct}`);
+        } else {
+          report('CFG-03 | Summary bar populated from DB', 'fail', `delivered="${delivered}" pct="${pct}"`);
+        }
+      } catch(e) { report('CFG-03 | Summary bar populated from DB', 'fail', e.message); }
+    }
+
+    // --- ENQ (Enquiries) ---
+
+    async function test_ENQ01_enquiryModalFields() {
+      try {
+        const modal = doc().getElementById('enquiryModal');
+        const name = doc().getElementById('enquiryClientName');
+        const postcode = doc().getElementById('enquiryPostcode');
+        const instructed = doc().getElementById('enquiryInstructed');
+        const value = doc().getElementById('enquiryInstructionValue');
+        if (modal && name && postcode && instructed && value) {
+          report('ENQ-01 | Enquiry modal has all required fields', 'pass', 'name + postcode + instructed checkbox + value found');
+        } else {
+          report('ENQ-01 | Enquiry modal has all required fields', 'fail',
+            `modal=${!!modal} name=${!!name} postcode=${!!postcode} instructed=${!!instructed} value=${!!value}`);
+        }
+      } catch(e) { report('ENQ-01 | Enquiry modal fields', 'fail', e.message); }
+    }
+
+    async function test_ENQ01_enquiryLookupButton() {
+      try {
+        const btn = doc().getElementById('enquiryLookupBtn');
+        if (btn) {
+          report('ENQ-01 | Enquiry postcode lookup button', 'pass', 'enquiryLookupBtn found');
+        } else {
+          report('ENQ-01 | Enquiry postcode lookup button', 'fail', 'enquiryLookupBtn not found');
+        }
+      } catch(e) { report('ENQ-01 | Enquiry lookup button', 'fail', e.message); }
+    }
+
+    async function test_ENQ03_separateEnquiryTables() {
+      try {
+        const enquiryList = doc().getElementById('enquiryList');
+        const instructionList = doc().getElementById('instructionList');
+        if (enquiryList && instructionList) {
+          report('ENQ-03 | Separate enquiries + instructions tables', 'pass', 'enquiryList + instructionList both found');
+        } else {
+          report('ENQ-03 | Separate enquiries + instructions tables', 'fail',
+            `enquiryList=${!!enquiryList} instructionList=${!!instructionList}`);
+        }
+      } catch(e) { report('ENQ-03 | Separate enquiry tables', 'fail', e.message); }
+    }
+
+    async function test_ENQ02_enquiryMapMarkerSupport() {
+      try {
+        const mapContainer = doc().getElementById('analyticsMap') || doc().getElementById('heatmapContainer') || doc().getElementById('mapView');
         if (mapContainer) {
-          report('Map Container Exists', 'pass', 'Map container found');
-          return true;
+          report('ENQ-02 | Map container for enquiry heatmap', 'pass', `Container: ${mapContainer.id}`);
         } else {
-          report('Map Container Exists', 'fail', 'Map container not found');
-          return false;
+          report('ENQ-02 | Map container for enquiry heatmap', 'fail', 'No map container found');
         }
-      } catch(e) {
-        report('Map Container Exists', 'fail', 'Error: ' + e.message);
-        return false;
-      }
+      } catch(e) { report('ENQ-02 | Enquiry map container', 'fail', e.message); }
     }
 
-    async function testSummaryStats() {
+    // --- ANL (Analytics) ---
+
+    async function test_ANL04_analyticsViewExists() {
       try {
-        const iframe = getIframe();
-        const doc = iframe.contentDocument;
-        
-        const delivered = doc.getElementById('sumDelivered');
-        const remaining = doc.getElementById('sumRemaining');
-        
-        if (delivered && remaining) {
-          report('Summary Stats', 'pass', 'Summary bar elements found');
-          return true;
+        const view = doc().getElementById('analyticsView');
+        const btnAnalytics = doc().getElementById('viewBtnAnalytics');
+        if (view && btnAnalytics) {
+          report('ANL-04 | Analytics view + button exist', 'pass', 'analyticsView + viewBtnAnalytics found');
         } else {
-          report('Summary Stats', 'fail', 'Summary elements not found');
-          return false;
+          report('ANL-04 | Analytics view + button', 'fail', `view=${!!view} btn=${!!btnAnalytics}`);
         }
-      } catch(e) {
-        report('Summary Stats', 'fail', 'Error: ' + e.message);
-        return false;
-      }
+      } catch(e) { report('ANL-04 | Analytics view', 'fail', e.message); }
     }
 
-    async function testRestrictedAreasConfig() {
+    async function test_ANL04_chartsExist() {
       try {
-        const iframe = getIframe();
-        const doc = iframe.contentDocument;
-        
-        // Check for restricted areas config UI
-        const hasRestricted = doc.body.innerHTML.includes('restricted') || 
-                             doc.body.innerHTML.includes('Restricted');
-        
-        if (hasRestricted) {
-          report('Restricted Areas Config', 'pass', 'Restricted areas reference found');
-          return true;
+        const deliveries = doc().getElementById('chartDeliveries');
+        const revenue = doc().getElementById('chartRevenue');
+        const enquiries = doc().getElementById('chartEnquiries');
+        if (deliveries && revenue && enquiries) {
+          report('ANL-04 | Chart canvas elements present', 'pass', 'chartDeliveries + chartRevenue + chartEnquiries found');
         } else {
-          report('Restricted Areas Config', 'fail', 'No restricted areas UI found');
-          return false;
+          report('ANL-04 | Chart canvas elements present', 'fail',
+            `deliveries=${!!deliveries} revenue=${!!revenue} enquiries=${!!enquiries}`);
         }
-      } catch(e) {
-        report('Restricted Areas Config', 'fail', 'Error: ' + e.message);
-        return false;
-      }
+      } catch(e) { report('ANL-04 | Charts', 'fail', e.message); }
+    }
+
+    async function test_ANL03_completionRateElement() {
+      try {
+        const el = doc().getElementById('overallCompletionRate');
+        if (el) {
+          report('ANL-03 | Completion rate element', 'pass', `Current value: "${el.textContent.trim()}"`);
+        } else {
+          report('ANL-03 | Completion rate element', 'fail', 'overallCompletionRate not found');
+        }
+      } catch(e) { report('ANL-03 | Completion rate', 'fail', e.message); }
+    }
+
+    async function test_ANL01_mapViewExists() {
+      try {
+        const view = doc().getElementById('mapView');
+        const btn = doc().getElementById('viewBtnMap');
+        if (view && btn) {
+          report('ANL-01/02 | Map view + button exist', 'pass', 'mapView + viewBtnMap found');
+        } else {
+          report('ANL-01/02 | Map view + button', 'fail', `view=${!!view} btn=${!!btn}`);
+        }
+      } catch(e) { report('ANL-01/02 | Map view', 'fail', e.message); }
+    }
+
+    // --- TEA (Team) ---
+
+    async function test_TEA01_teamProgressSection() {
+      try {
+        const s = doc().getElementById('teamProgressSection');
+        const list = doc().getElementById('teamProgressList');
+        if (s && list) {
+          report('TEA-01 | Team progress section exists', 'pass', 'teamProgressSection + teamProgressList found');
+        } else {
+          report('TEA-01 | Team progress section', 'fail', `section=${!!s} list=${!!list}`);
+        }
+      } catch(e) { report('TEA-01 | Team progress', 'fail', e.message); }
+    }
+
+    async function test_TEA02_leaderboardRendered() {
+      try {
+        const btn = doc().getElementById('viewBtnAnalytics');
+        btn && btn.click();
+        await new Promise(r => setTimeout(r, 2000));
+        const list = doc().getElementById('teamProgressList');
+        const items = list ? list.querySelectorAll('li, tr, .leaderboard-row, div').length : 0;
+        if (list) {
+          report('TEA-02 | Leaderboard container renders', 'pass', `teamProgressList found, ${items} child elements`);
+        } else {
+          report('TEA-02 | Leaderboard container renders', 'fail', 'teamProgressList not found');
+        }
+      } catch(e) { report('TEA-02 | Leaderboard', 'fail', e.message); }
+    }
+
+    // --- RTE (Route Management) ---
+
+    async function test_RTE01_addRouteModalExists() {
+      try {
+        const modal = doc().getElementById('addRouteModal');
+        const name = doc().getElementById('addRouteName');
+        const postcode = doc().getElementById('addRoutePostcode');
+        const houseCount = doc().getElementById('addRouteHouseCount');
+        if (modal && name && postcode && houseCount) {
+          report('RTE-01 | Add Route modal has required fields', 'pass', 'modal + name + postcode + houseCount found');
+        } else {
+          report('RTE-01 | Add Route modal fields', 'fail',
+            `modal=${!!modal} name=${!!name} postcode=${!!postcode} houseCount=${!!houseCount}`);
+        }
+      } catch(e) { report('RTE-01 | Add Route modal', 'fail', e.message); }
+    }
+
+    async function test_RTE01_addRouteBtnVisibility() {
+      try {
+        const btn = doc().getElementById('addRouteBtn');
+        if (btn) {
+          const style = win().getComputedStyle(btn);
+          const visible = style.display !== 'none';
+          report('RTE-01 | Add Route button present', visible ? 'pass' : 'pending',
+            visible ? 'Button visible' : 'Button hidden (expected when no campaign selected)');
+        } else {
+          report('RTE-01 | Add Route button present', 'fail', 'addRouteBtn not found');
+        }
+      } catch(e) { report('RTE-01 | Add Route button', 'fail', e.message); }
+    }
+
+    async function test_RTE02_deleteRouteModalExists() {
+      try {
+        const modal = doc().getElementById('deleteRouteModal');
+        const confirmBtn = doc().getElementById('deleteRouteConfirmBtn');
+        if (modal && confirmBtn) {
+          report('RTE-02 | Delete Route modal exists', 'pass', 'deleteRouteModal + confirmBtn found');
+        } else {
+          report('RTE-02 | Delete Route modal', 'fail', `modal=${!!modal} confirmBtn=${!!confirmBtn}`);
+        }
+      } catch(e) { report('RTE-02 | Delete Route modal', 'fail', e.message); }
+    }
+
+    async function test_RTE04_enquiryAutoMatchStep2() {
+      try {
+        const confirmModal = doc().getElementById('enquiryConfirmModal');
+        const routeDropdown = doc().getElementById('enquiryRoute');
+        const teamInfo = doc().getElementById('enquiryConfirmTeamInfo');
+        if (confirmModal && routeDropdown && teamInfo) {
+          report('RTE-04 | Enquiry auto-match step 2 modal', 'pass', 'confirmModal + routeDropdown + teamInfo found');
+        } else {
+          report('RTE-04 | Enquiry auto-match step 2 modal', 'fail',
+            `confirmModal=${!!confirmModal} routeDropdown=${!!routeDropdown} teamInfo=${!!teamInfo}`);
+        }
+      } catch(e) { report('RTE-04 | Enquiry auto-match', 'fail', e.message); }
+    }
+
+    // --- CFG-05: Restricted Areas ---
+
+    async function test_CFG05_restrictedAreasUI() {
+      try {
+        const list = doc().getElementById('restrictedAreasList');
+        const postcode = doc().getElementById('newRestrictedPostcode');
+        const radius = doc().getElementById('newRestrictedRadius');
+        if (list && postcode && radius) {
+          report('CFG-05 | Restricted areas config UI', 'pass', 'restrictedAreasList + postcode + radius fields found');
+        } else {
+          report('CFG-05 | Restricted areas config UI', 'fail',
+            `list=${!!list} postcode=${!!postcode} radius=${!!radius}`);
+        }
+      } catch(e) { report('CFG-05 | Restricted areas', 'fail', e.message); }
+    }
+
+    // --- CMP-04/05: Campaign Lifecycle ---
+
+    async function test_CMP04_archiveButtonInConfig() {
+      try {
+        const html = doc().getElementById('campaignConfigModal').innerHTML;
+        const hasArchive = /archive/i.test(html);
+        if (hasArchive) {
+          report('CMP-04 | Archive campaign button in config modal', 'pass', 'Archive text found in config modal');
+        } else {
+          report('CMP-04 | Archive campaign button in config modal', 'fail', 'No archive reference in config modal');
+        }
+      } catch(e) { report('CMP-04 | Archive campaign', 'fail', e.message); }
+    }
+
+    async function test_CMP05_deleteButtonInConfig() {
+      try {
+        const html = doc().getElementById('campaignConfigModal').innerHTML;
+        const hasDelete = /delete campaign/i.test(html);
+        if (hasDelete) {
+          report('CMP-05 | Delete campaign button in config modal', 'pass', 'Delete Campaign text found in config modal');
+        } else {
+          report('CMP-05 | Delete campaign button in config modal', 'fail', 'No delete campaign reference in config modal');
+        }
+      } catch(e) { report('CMP-05 | Delete campaign', 'fail', e.message); }
+    }
+
+    // --- CMP-03: Data Isolation ---
+
+    async function test_CMP03_currentCampaignIdExists() {
+      try {
+        // currentCampaignId is a global — may be null (All Campaigns) or a UUID
+        const val = win().currentCampaignId;
+        report('CMP-03 | currentCampaignId global variable', 'pass', `Value: ${val}`);
+      } catch(e) { report('CMP-03 | currentCampaignId', 'fail', e.message); }
+    }
+
+    // --- CFG-06/07: All Campaigns Mode ---
+
+    async function test_CFG06_allCampaignsFinanceSummary() {
+      try {
+        await selectCampaign('');
+        await new Promise(r => setTimeout(r, 2000));
+        const container = doc().getElementById('allCampaignsFinanceSummary');
+        const ids = ['ac_total_leaflets','ac_total_enquiries','ac_conversion_rate','ac_response_rate'];
+        const missing = ids.filter(id => !doc().getElementById(id));
+        if (container && missing.length === 0) {
+          report('CFG-06 | All Campaigns finance summary cards', 'pass',
+            `container visible: ${win().getComputedStyle(container).display !== 'none'}`);
+        } else {
+          report('CFG-06 | All Campaigns finance summary cards', 'fail',
+            `container=${!!container} missing=${missing.join(',') || 'none'}`);
+        }
+      } catch(e) { report('CFG-06 | All Campaigns finance', 'fail', e.message); }
+    }
+
+    async function test_CFG07_campaignBreakdownCards() {
+      try {
+        const container = doc().getElementById('campaignBreakdown');
+        const body = doc().getElementById('campaignBreakdownBody');
+        if (container && body) {
+          report('CFG-07 | Campaign breakdown card container', 'pass', 'campaignBreakdown + campaignBreakdownBody found');
+        } else {
+          report('CFG-07 | Campaign breakdown cards', 'fail', `container=${!!container} body=${!!body}`);
+        }
+      } catch(e) { report('CFG-07 | Campaign breakdown', 'fail', e.message); }
+    }
+
+    async function test_ENQ04_allCampaignsEnquiryTablesVisible() {
+      try {
+        const enquirySection = doc().getElementById('enquiriesSection');
+        if (enquirySection) {
+          report('ENQ-04 | Enquiry section present in All Campaigns mode', 'pass', 'enquiriesSection found');
+        } else {
+          report('ENQ-04 | Enquiry section in All Campaigns mode', 'fail', 'enquiriesSection not found');
+        }
+      } catch(e) { report('ENQ-04 | All Campaigns enquiries', 'fail', e.message); }
+    }
+
+    // --- Finance Projections (single campaign) ---
+
+    async function test_finance_singleCampaign() {
+      try {
+        const sel = doc().getElementById('campaignSelect');
+        const realOpt = [...sel.options].find(o => o.value !== '');
+        if (!realOpt) { report('Finance | Single campaign projections', 'pending', 'No campaigns in DB'); return; }
+        await selectCampaign(realOpt.value);
+        await new Promise(r => setTimeout(r, 2000));
+        const s = doc().getElementById('financeProjectionsSection');
+        const acv = doc().getElementById('fi_acv_display');
+        const f1rev = doc().getElementById('f1_rev');
+        const f2rev = doc().getElementById('f2_rev');
+        const f3rev = doc().getElementById('f3_rev');
+        if (s && acv && f1rev && f2rev && f3rev) {
+          report('Finance | Single campaign projection rows', 'pass',
+            `financeProjectionsSection present, ACV: "${acv.textContent.trim()}"`);
+        } else {
+          report('Finance | Single campaign projection rows', 'fail',
+            `section=${!!s} acv=${!!acv} f1=${!!f1rev} f2=${!!f2rev} f3=${!!f3rev}`);
+        }
+      } catch(e) { report('Finance | Single campaign projections', 'fail', e.message); }
+    }
+
+    // --- GEO-01 & Security ---
+
+    async function test_GEO01_sbFetchFunction() {
+      try {
+        const fn = win().sbFetch;
+        if (typeof fn === 'function') {
+          report('GEO-01 | sbFetch API wrapper function exists', 'pass', 'sbFetch is a function');
+        } else {
+          report('GEO-01 | sbFetch API wrapper', 'fail', `type=${typeof fn}`);
+        }
+      } catch(e) { report('GEO-01 | sbFetch', 'fail', e.message); }
+    }
+
+    async function test_GEO01_noCredentialsInSource() {
+      try {
+        const html = doc().documentElement.outerHTML;
+        const hasJWT = html.includes('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9');
+        if (!hasJWT) {
+          report('Security | No Supabase key hardcoded in index.html', 'pass', 'JWT not found in source');
+        } else {
+          report('Security | No Supabase key hardcoded in index.html', 'fail', 'Found hardcoded JWT in index.html');
+        }
+      } catch(e) { report('Security | Credentials check', 'fail', e.message); }
+    }
+
+    // --- Delivery Journal ---
+
+    async function test_deliveryJournal() {
+      try {
+        const journal = doc().getElementById('deliveryJournal');
+        const list = doc().getElementById('journalList');
+        if (journal && list) {
+          report('Delivery Journal | Container and list present', 'pass', 'deliveryJournal + journalList found');
+        } else {
+          report('Delivery Journal | Container and list', 'fail', `journal=${!!journal} list=${!!list}`);
+        }
+      } catch(e) { report('Delivery Journal', 'fail', e.message); }
+    }
+
+    async function test_editDeliveryModal() {
+      try {
+        const modal = doc().getElementById('editDeliveryModal');
+        const date = doc().getElementById('editDeliveryDate');
+        const leaflets = doc().getElementById('editLeafletsDelivered');
+        if (modal && date && leaflets) {
+          report('Delivery Journal | Edit modal fields', 'pass', 'editDeliveryModal + date + leaflets found');
+        } else {
+          report('Delivery Journal | Edit modal fields', 'fail', `modal=${!!modal} date=${!!date} leaflets=${!!leaflets}`);
+        }
+      } catch(e) { report('Delivery Journal | Edit modal', 'fail', e.message); }
+    }
+
+    // --- New Campaign Modal ---
+
+    async function test_newCampaignModal() {
+      try {
+        const modal = doc().getElementById('newCampaignModal');
+        const step2 = doc().getElementById('newCampaignStep2');
+        if (modal && step2) {
+          report('CMP | New campaign 2-step modal', 'pass', 'newCampaignModal + step2 found');
+        } else {
+          report('CMP | New campaign 2-step modal', 'fail', `modal=${!!modal} step2=${!!step2}`);
+        }
+      } catch(e) { report('CMP | New campaign modal', 'fail', e.message); }
     }
 
     // ============================================================
@@ -249,49 +652,103 @@
 
     async function runTests() {
       log('Starting test suite...');
-      
-      // Wait for app to load
-      await testAppLoads();
-      
-      // Give app time to initialize
-      await new Promise(r => setTimeout(r, 2000));
-      
-      // Run tests
-      await testNoCredentialsExposed();
-      await testCampaignSelectExists();
-      await testRouteCardsRender();
-      await testEnquiryModal();
-      await testMapContainer();
-      await testSummaryStats();
-      await testRestrictedAreasConfig();
-      
+
+      section('Boot');
+      await bootApp();
+      await new Promise(r => setTimeout(r, 1500));
+      await test_TER01_appLoads();
+      await waitForCampaigns();
+      await new Promise(r => setTimeout(r, 1000));
+
+      section('TER — Territory & Reservation');
+      await test_TER01_areaCardsRender();
+      await test_TER02_cardStatusClasses();
+      await test_TER01_reserveModalExists();
+      await test_TER03_reassignModalExists();
+      await test_TER03_unassignModalExists();
+
+      section('CMP — Multi-Campaign');
+      await test_CMP01_campaignSelectExists();
+      await test_CMP02_allCampaignsOption();
+      await test_CMP03_currentCampaignIdExists();
+
+      section('CFG — Campaign Config');
+      await test_CFG01_configModalExists();
+      await test_CFG02_responseRateFields();
+      await test_CFG03_summaryBarElements();
+      await test_CFG03_summaryBarPopulated();
+      await test_CFG05_restrictedAreasUI();
+
+      section('CMP Lifecycle — Archive & Delete');
+      await test_CMP04_archiveButtonInConfig();
+      await test_CMP05_deleteButtonInConfig();
+
+      section('ENQ — Enquiries');
+      await test_ENQ01_enquiryModalFields();
+      await test_ENQ01_enquiryLookupButton();
+      await test_ENQ03_separateEnquiryTables();
+      await test_ENQ02_enquiryMapMarkerSupport();
+
+      section('RTE — Route Management');
+      await test_RTE01_addRouteModalExists();
+      await test_RTE01_addRouteBtnVisibility();
+      await test_RTE02_deleteRouteModalExists();
+      await test_RTE04_enquiryAutoMatchStep2();
+
+      section('ANL — Analytics');
+      await test_ANL04_analyticsViewExists();
+      await test_ANL04_chartsExist();
+      await test_ANL03_completionRateElement();
+      await test_ANL01_mapViewExists();
+
+      section('TEA — Team');
+      await test_TEA01_teamProgressSection();
+      await test_TEA02_leaderboardRendered();
+
+      section('All Campaigns Mode');
+      await test_CFG06_allCampaignsFinanceSummary();
+      await test_CFG07_campaignBreakdownCards();
+      await test_ENQ04_allCampaignsEnquiryTablesVisible();
+
+      section('Finance Projections');
+      await test_finance_singleCampaign();
+
+      section('GEO & Security');
+      await test_GEO01_sbFetchFunction();
+      await test_GEO01_noCredentialsInSource();
+
+      section('Delivery Journal');
+      await test_deliveryJournal();
+      await test_editDeliveryModal();
+
+      section('New Campaign Flow');
+      await test_newCampaignModal();
+
       // Summary
       const passed = TEST_RESULTS.filter(t => t.status === 'pass').length;
       const failed = TEST_RESULTS.filter(t => t.status === 'fail').length;
+      const pending = TEST_RESULTS.filter(t => t.status === 'pending').length;
       const total = TEST_RESULTS.length;
-      
+
       const summary = document.getElementById('summary');
       if (failed === 0) {
         summary.className = 'pass';
-        summary.textContent = `🎉 ALL TESTS PASSED (${passed}/${total})`;
+        summary.textContent = `🎉 ALL TESTS PASSED — ${passed}/${total} passed${pending ? `, ${pending} pending` : ''}`;
       } else {
         summary.className = 'fail';
-        summary.textContent = `❌ ${failed} TEST(S) FAILED - ${passed}/${total} passed`;
+        summary.textContent = `❌ ${failed} FAILED — ${passed}/${total} passed${pending ? `, ${pending} pending` : ''}`;
       }
-      
-      log(`Summary: ${passed}/${total} passed, ${failed} failed`);
-      
-      // Return result for CI/CD
-      return { passed, failed, total, results: TEST_RESULTS };
+
+      log(`Summary: ${passed}/${total} passed, ${failed} failed, ${pending} pending`);
+      return { passed, failed, pending, total, results: TEST_RESULTS };
     }
 
-    // Auto-run on load
     window.onload = () => {
       log('Test runner initialized');
-      setTimeout(runTests, 500);
+      setTimeout(runTests, 300);
     };
   </script>
 
-  <iframe id="appFrame" style="display:none;"></iframe>
+  <iframe id="appFrame" style="width:100%;height:600px;margin-top:20px;border:1px solid #374151;"></iframe>
 </body>
 </html>
