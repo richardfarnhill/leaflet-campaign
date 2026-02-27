@@ -28,7 +28,7 @@
 **Phase:** 10 of 10 (Backlog)
 **Status:** Production-ready. All core phases 1-9 complete. Password bypass still in place — re-enable before go-live.
 
-**Last activity:** 2026-02-27 — Test suite rewrite + E2E tests + pre-commit security hook.
+**Last activity:** 2026-02-27 — 17 routes planned and inserted for 14k_Feb_2026 campaign (13,450 doors, avg 89% owner-occ). Streets left empty pending street-name extraction fix from other agent.
 
 **Progress:** `[████████████████████░░] 95%` (9/9 core phases + polish)
 
