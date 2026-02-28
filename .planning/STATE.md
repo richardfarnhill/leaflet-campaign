@@ -122,7 +122,47 @@ None.
 - **Drop unused table** (optional): `DROP TABLE IF EXISTS campaign_members CASCADE;`
 - **14k_Feb_2026 re-plan** — prompt ready at [REPLAN-14K-PROMPT-CORRECTED.md](./REPLAN-14K-PROMPT-CORRECTED.md)
 - **Postcode OA lookup** — M, SK, WF, WA loaded; CH, CW, LS, HD, HX, BD, OL, BL, WN, TN, EX still needed — see [POSTCODE_LOAD_STATUS.md](./POSTCODE_LOAD_STATUS.md)
-- **Street name source** — unresolved — see [OPEN-ISSUES.md](./OPEN-ISSUES.md)
+- **Enrich remaining 17 routes with street names** — use `/leaflet-enrich-streets` skill (OI-01 now resolved, tested on E2E route)
+
+---
+
+## Session Summary (2026-02-28 — OI-01 Resolution)
+
+### What was done
+
+**Street Name Enrichment — OI-01 RESOLVED**
+
+1. **Researched 4 data sources in parallel:**
+   - Nominatim (OpenStreetMap) ✓ **Selected**
+   - Overpass API ✓ (investigated, fallback option)
+   - OS Open Names ✓ (investigated, CSV-based alternative)
+   - postcodes.io + Royal Mail PAF ✓ (no free option)
+
+2. **Created Python enrichment script:**
+   - `scripts/enrich_streets_os_names.py` — Nominatim-based street fetching
+   - Respects rate limits (1 req/sec per Nominatim policy)
+   - Batch-friendly (tested on single postcode route)
+   - Supabase-integrated (reads/writes via MCP tool)
+
+3. **Created new Claude skill:**
+   - `/leaflet-enrich-streets` — High-level orchestration for route enrichment
+   - Documents Nominatim method, rate limiting, edge cases
+   - Integrated with existing `/leaflet-plan-routes` skill
+
+4. **Tested on E2E Test Route:**
+   - Before: `streets: []` (empty)
+   - After: `streets: ["Dewsbury Road"]` (fetched from Nominatim)
+   - Status: ✅ Verified in DB via SQL
+
+5. **Updated all affected docs:**
+   - ROUTE-FLAGGING.md: corrected street extraction method
+   - leaflet-plan-routes.md: pointed to Nominatim, `/leaflet-enrich-streets`
+   - OPEN-ISSUES.md: marked OI-01 as resolved with implementation details
+
+### What's next
+
+- Run `/leaflet-enrich-streets` on remaining 17 routes in 14k_Feb_2026 campaign
+- Optional: test OS Open Names CSV method for faster bulk enrichment (no rate limits)
 
 ---
 

@@ -153,6 +153,18 @@ h2{font-size:1rem;color:#1a3a5c;margin-bottom:12px;margin-top:24px;}
 .finance-table td.highlight{font-weight:700;color:#1a3a5c;}
 .actual-row td{background:#eafaf1;}
 footer{text-align:center;font-size:0.72rem;color:#aaa;padding:20px;}
+@media(max-width:600px){
+  header{padding:10px 14px;}
+  header h1{font-size:1rem;}
+  .campaign-selector{flex-wrap:wrap;gap:6px;margin-top:6px;}
+  .campaign-selector select{flex:1 1 100%;min-width:0;}
+  .summary-bar{padding:10px 14px;gap:8px;}
+  .stat{min-width:70px;}
+  .stat .val{font-size:1.1rem;}
+  .main{padding:12px 14px;}
+  .area-cards-grid{grid-template-columns:1fr;}
+  .sync-bar{padding:4px 14px;font-size:0.72rem;}
+}
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -1130,13 +1142,36 @@ async function loadCampaigns(){
         Logger.warn('No active campaigns - showing empty state');
       }
     } else {
-      Logger.error('No campaigns found or campaigns array is empty');
-      Logger.info('Checking campaigns table directly...');
+      Logger.warn('No active campaigns - showing empty state');
+      const emptyOpt=document.createElement('option');
+      emptyOpt.value='';
+      emptyOpt.textContent='No active campaigns';
+      select.appendChild(emptyOpt);
     }
     return campaigns;
   }catch(e){
     Logger.error('Failed to load campaigns',e);
     console.error('Full error:', e);
+    // Show visible error in dropdown so user knows something went wrong
+    const select=document.getElementById('campaignSelect');
+    if(select){
+      select.innerHTML='';
+      const errOpt=document.createElement('option');
+      errOpt.value='';
+      errOpt.textContent='\u26a0 Failed to load campaigns';
+      select.appendChild(errOpt);
+    }
+    // Add retry button if not already present
+    const existing=document.getElementById('campaignRetryBtn');
+    if(!existing){
+      const btn=document.createElement('button');
+      btn.id='campaignRetryBtn';
+      btn.textContent='\u21ba Retry';
+      btn.style.cssText='background:#e74c3c;color:white;padding:4px 10px;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;font-weight:600;';
+      btn.onclick=async function(){btn.remove();await loadCampaigns();};
+      const sel=document.querySelector('.campaign-selector');
+      if(sel) sel.appendChild(btn);
+    }
     return [];
   }
 }

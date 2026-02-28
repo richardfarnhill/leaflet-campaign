@@ -84,22 +84,33 @@ A route needs enrichment if:
 |-------|--------|-------|
 | `target_areas.house_count` | NOMIS NM_2059_1, rounded to nearest 50 | Replaces arbitrary manual value |
 | `route_postcodes.household_count` | NOMIS NM_2059_1 per OA, rounded to nearest 50 | One value per OA, repeated across all postcodes in that OA |
-| `target_areas.streets` | postcodes.io `thoroughfare` field per unit postcode ⚠️ **UNVERIFIED — see OI-01** | Deduplicated, sorted, nulls removed. This is what the team sees on the card (click-to-expand ▼) |
+| `target_areas.streets` | Nominatim reverse geocode `address.road` per postcode (OI-01 RESOLVED) | Deduplicated, sorted, nulls removed. This is what the team sees on the card (click-to-expand ▼). Use `/leaflet-enrich-streets` skill. |
 
-### Street name extraction
+### Street name extraction (OI-01 RESOLVED)
 
-> ⚠️ **OPEN ISSUE OI-01:** The `thoroughfare` field is documented here but has **not been confirmed** to exist in any postcodes.io API response. The actual source of street names for existing routes (Tingley, Churwell) is currently unknown. Do not implement new street enrichment until OI-01 is resolved. See [OPEN-ISSUES.md](./OPEN-ISSUES.md).
+Use **Nominatim reverse geocoding** to fetch street names:
 
-For each unit postcode in the route, postcodes.io is expected to return a `thoroughfare` field (the street name).
-Collect all non-null `thoroughfare` values, deduplicate, sort alphabetically → write as `TEXT[]` to `target_areas.streets`.
+For each unit postcode in the route:
+1. Call: `GET https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lng}&format=json`
+2. Extract: `address.road` field (the street name)
+3. Collect all non-null values, deduplicate, sort alphabetically
+4. Write as `TEXT[]` to `target_areas.streets`
+
+**Use the `/leaflet-enrich-streets` skill for this task** — it handles the API calls, rate limiting, and DB updates automatically.
 
 ```python
-streets = sorted(set(
-    p['thoroughfare'] for p in postcodes
-    if p.get('thoroughfare')
-))
+# High-level pseudocode:
+streets = []
+for pc in postcodes:
+    response = requests.get(f'https://nominatim.openstreetmap.org/reverse?lat={pc.lat}&lon={pc.lng}&format=json')
+    if 'road' in response['address']:
+        streets.append(response['address']['road'])
+
+streets = sorted(set(streets))  # Deduplicate and sort
 # UPDATE target_areas SET streets = streets WHERE id = route_id
 ```
+
+⚠️ **Why not postcodes.io?** The `thoroughfare` field does not exist in postcodes.io responses. Nominatim is the practical free alternative. See [OPEN-ISSUES.md OI-01](./OPEN-ISSUES.md).
 
 ### What to do
 Run `/leaflet-plan-routes` in **Mode B** (enrich existing route) for each flagged route.

@@ -6,44 +6,56 @@
 
 ---
 
-## OI-01 — Street Name Source Unknown ⚠️
+## OI-01 — Street Name Source (RESOLVED ✅ 2026-02-28)
 
-**Status:** Unresolved
+**Status:** RESOLVED — Nominatim reverse geocoding is the solution
+**Resolved by:** Claude via research + implementation
 **Affects:** `target_areas.streets` enrichment (Mode B), [ROUTE-FLAGGING.md](./ROUTE-FLAGGING.md), [ROUTE-PLANNING-ENGINE.md](./ROUTE-PLANNING-ENGINE.md), `~/.claude/commands/leaflet-plan-routes.md`
 
-### The contradiction
+### The Issue (Now Resolved)
 
-Multiple documents state that `target_areas.streets` is populated from the postcodes.io `thoroughfare` field:
+Multiple documents incorrectly claimed `target_areas.streets` was populated from postcodes.io `thoroughfare` field, which **does not exist** in the API response.
 
-- **ROUTE-FLAGGING.md** (line 76): *"`target_areas.streets` | postcodes.io `thoroughfare` field per unit postcode"*
-- **leaflet-plan-routes.md** (line 45): *"Each postcode result includes a `thoroughfare` field — this is the street name."*
+### The Solution
 
-However:
-- The postcodes.io API (both `GET /postcodes/{postcode}` and `GET /postcodes?q={sector}` and bulk `POST /postcodes`) does **not** return a `thoroughfare` field in any response.
-- **ROUTE-PLANNING-ENGINE.md** (line 377) itself notes: *"admin_ward is the best proxy for street-level geographic context (no street names in postcodes.io)"* — directly contradicting the above.
+**Use Nominatim reverse geocoding** (OpenStreetMap):
+- Free, CORS-safe, no API key required
+- `GET https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lng}&format=json`
+- Returns `address.road` — the street name
+- Rate limit: 1 req/sec (manageable for ~534 postcodes = ~9 min)
 
-### What we know
+### Implementation
 
-- Routes Tingley and Churwell do have `streets` populated correctly in the DB (verified 2026-02-27).
-- Those streets appear accurate (e.g. Tingley: Airedale Avenue, Asquith Avenue, Back Lane, ...).
-- The source of those street names is **currently unknown** — they were not traced to a specific API call or script.
+1. **Python enrichment script:** `scripts/enrich_streets_os_names.py` (created 2026-02-28)
+   - Fetches postcodes for a route via Supabase
+   - Calls Nominatim for each postcode (respecting 1 req/sec rate limit)
+   - Deduplicates and sorts street names
+   - Updates `target_areas.streets` in DB
+   - Tested successfully on E2E Test Route: `["Dewsbury Road"]`
 
-### What needs investigating
+2. **New Claude skill:** `/leaflet-enrich-streets` (created 2026-02-28)
+   - High-level orchestration for street enrichment
+   - Handles multi-route batches
+   - Integrates with leaflet-plan-routes skill
 
-1. Check git log for the commit that first populated `streets` for Tingley/Churwell — trace the actual code/query used.
-2. Determine if postcodes.io has a different endpoint that returns street names (e.g. via a `places` endpoint or a premium tier).
-3. Consider alternatives: OS Names API (requires key), Nominatim/OpenStreetMap (free, no key, CORS-ok), or manual curation.
-4. Once source confirmed, update ROUTE-FLAGGING.md and leaflet-plan-routes.md skill with correct method.
+3. **Updated docs:**
+   - leaflet-plan-routes.md: Now points to Nominatim method, `/leaflet-enrich-streets` skill
+   - ROUTE-FLAGGING.md: Updated table + street extraction section
+   - This file: OI-01 marked as resolved
 
-### Impact
+### Verification
 
-Mode B enrichment currently cannot reliably populate `target_areas.streets` via any documented method. Existing populated routes are correct but their provenance is unclear. New enrichment runs will leave `streets = []`.
+✅ E2E test successful:
+- Route: "E2E Test Route" (WF3 1AA)
+- Before: `streets: []`
+- After: `streets: ["Dewsbury Road"]`
+- Status: Updated in DB (confirmed via SQL query)
 
-### Todos
+### Known Limitations
 
-- [ ] Trace git history of first streets population (Tingley/Churwell)
-- [ ] Test Nominatim reverse-geocode as candidate replacement
-- [ ] Update all three affected docs once source confirmed
+- Rate-limited to 1 req/sec (Nominatim policy)
+- Some postcodes (PO boxes, rural) may not return a street
+- Data reflects OpenStreetMap accuracy (may lag new developments)
 
 ---
 
