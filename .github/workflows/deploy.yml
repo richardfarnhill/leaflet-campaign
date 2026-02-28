@@ -30,8 +30,8 @@ jobs:
           SBK: ${{ secrets.SUPABASE_KEY }}
           APWD: ${{ secrets.APP_PASSWORD }}
         run: |
-          mkdir -p leaflet-campaign
-          cat > leaflet-campaign/config.js << 'CONFEOF'
+          cd leaflet-campaign
+          cat > config.js << 'CONFEOF'
           // Auto-generated from GitHub Secrets
           // DO NOT EDIT - regenerated on each deploy
           const CONFIG = {
@@ -41,6 +41,7 @@ jobs:
           };
           CONFEOF
           echo "✅ config.js successfully generated"
+          ls -la config.js index.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
