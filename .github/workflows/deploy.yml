@@ -30,16 +30,8 @@ jobs:
           SBK: ${{ secrets.SUPABASE_KEY }}
           APWD: ${{ secrets.APP_PASSWORD }}
         run: |
-          cat > config.js << 'CONFEOF'
-          // Auto-generated from GitHub Secrets
-          // DO NOT EDIT - regenerated on each deploy
-          const CONFIG = {
-            SUPABASE_URL: '$SBU',
-            SUPABASE_KEY: '$SBK',
-            APP_PASSWORD: '$APWD'
-          };
-          CONFEOF
-          echo "✅ config.js successfully generated"
+          printf '// Auto-generated from GitHub Secrets\n// DO NOT EDIT - regenerated on each deploy\nconst CONFIG = {\n  SUPABASE_URL: "%s",\n  SUPABASE_KEY: "%s",\n  APP_PASSWORD: "%s"\n};\n' "$SBU" "$SBK" "$APWD" > config.js
+          echo "✅ config.js successfully generated ($(wc -c < config.js) bytes)"
           ls -lh config.js index.html
 
       - name: Setup Pages
@@ -49,6 +41,7 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
+          # config.js is gitignored but we generate it above — tar picks it up from disk
 
       - name: Deploy to GitHub Pages
         id: deployment
