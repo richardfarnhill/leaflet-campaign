@@ -1,6 +1,6 @@
 # Project State
 
-**Last updated:** 2026-02-27 (v1.1 release)
+**Last updated:** 2026-02-28 (GitHub Pages production fully fixed — OI-04 closed)
 
 ---
 
@@ -53,7 +53,7 @@
      REQUIRED: Claim here before making ANY code changes. Remove when done.
      Format: - [AGENT] [scope] — [brief description] — claimed [YYYY-MM-DD HH:MM UTC] -->
 
-None.
+<!-- no active claims -->
 
 ---
 
@@ -118,11 +118,54 @@ None.
 
 ## Outstanding Items
 
+- **GitHub Pages deployment pipeline** — ✅ **FULLY RESOLVED 2026-02-28** — Two bugs fixed: (1) single-quoted heredoc prevented secret expansion → switched to `printf`; (2) Pages was set to `legacy` build mode (serving raw git branch) instead of `workflow` mode (serving GitHub Actions artifact) → switched via API. `config.js` now live in production with real credentials. See OI-04 in OPEN-ISSUES.md.
 - **Re-enable password** before go-live: find `if(false && !getCookie(COOKIE)){` in index.html, remove `false &&`
 - **Drop unused table** (optional): `DROP TABLE IF EXISTS campaign_members CASCADE;`
 - **14k_Feb_2026 re-plan** — prompt ready at [REPLAN-14K-PROMPT-CORRECTED.md](./REPLAN-14K-PROMPT-CORRECTED.md)
 - **Postcode OA lookup** — M, SK, WF, WA loaded; CH, CW, LS, HD, HX, BD, OL, BL, WN, TN, EX still needed — see [POSTCODE_LOAD_STATUS.md](./POSTCODE_LOAD_STATUS.md)
 - **Enrich remaining 17 routes with street names** — use `/leaflet-enrich-streets` skill (OI-01 now resolved, tested on E2E route)
+
+---
+
+## Session Summary (2026-02-28 — GitHub Pages Production Fix — FULLY RESOLVED)
+
+### What was done
+
+**GitHub Pages Deployment Pipeline — OI-04 FULLY RESOLVED**
+
+**Session 1 (initial attempt):**
+1. Created `.github/workflows/deploy.yml` — generates `config.js` from GitHub Secrets at build time
+2. Added 3 GitHub Secrets via CLI: `SUPABASE_URL`, `SUPABASE_KEY`, `APP_PASSWORD`
+3. Fixed upload path (3 attempts — wrong directory → correct repo root)
+4. Workflow succeeded (25+ MB artifact) but app still failed
+
+**Session 2 (root cause found and fixed — two bugs):**
+
+**Bug 1 — Shell variable expansion blocked:**
+- The heredoc used `<< 'CONFEOF'` (single-quoted delimiter)
+- In bash, a single-quoted heredoc delimiter disables ALL variable expansion inside the body
+- `$SBU`, `$SBK`, `$APWD` were written literally as those strings into `config.js`
+- Fix: replaced heredoc with `printf '...' "$SBU" "$SBK" "$APWD" > config.js`
+- Committed as `0adb573`
+
+**Bug 2 — GitHub Pages build mode was `legacy`:**
+- `gh api repos/richardfarnhill/leaflet-campaign/pages` showed `"build_type": "legacy"`
+- Legacy mode serves directly from the `main` branch via a separate `pages-build-deployment` workflow
+- Our Actions workflow uploaded correct artifacts, but Pages was ignoring them and serving raw git (no `config.js`)
+- Fix: `gh api --method PUT repos/richardfarnhill/leaflet-campaign/pages -f build_type=workflow`
+- Triggered fresh `workflow_dispatch` run → config.js now live
+
+**Verified working:**
+```
+curl https://richardfarnhill.github.io/leaflet-campaign/config.js
+# Returns: const CONFIG = { SUPABASE_URL: "https://tjebidvgvbpnxgnphcrg.supabase.co", ... }
+```
+Campaign dropdown confirmed working in production. ✅
+
+### What's next
+
+- Run `/leaflet-enrich-streets` on remaining 17 routes in 14k_Feb_2026 campaign
+- Re-enable password check before production launch (OI-02)
 
 ---
 

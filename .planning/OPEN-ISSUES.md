@@ -1,8 +1,104 @@
 # Open Issues
 
 **Project:** Leaflet Campaign Tracker
-**Last updated:** 2026-02-27
+**Last updated:** 2026-02-28
 **Purpose:** Canonical register of unresolved concerns, contradictions, and open questions. Update this file when issues are discovered or resolved.
+
+---
+
+## OI-04 — Campaign Dropdown Fails in GitHub Pages Production (RESOLVED ✅ 2026-02-28)
+
+**Status:** FULLY RESOLVED and user-verified working in production
+**Resolved by:** Claude (commits `0adb573` + API call to switch Pages build mode)
+**Affects:** GitHub Pages deployment, production build pipeline
+
+### The Issue
+
+Campaign dropdown worked in dev but failed on the live GitHub Pages site (`https://richardfarnhill.github.io/leaflet-campaign/`):
+- `config.js` is in `.gitignore` (contains Supabase credentials) — so it never gets committed to git
+- Without `config.js`, the global `CONFIG` object is undefined → `sbFetch()` calls `fetch(undefined + path)` → all API calls fail
+- Symptom: campaign dropdown shows "Failed to Load..." and stays empty
+
+### Root Causes (Two Bugs)
+
+**Bug 1 — Single-quoted heredoc blocked secret expansion:**
+
+The workflow generated `config.js` using:
+```bash
+cat > config.js << 'CONFEOF'
+const CONFIG = {
+  SUPABASE_URL: '$SBU',   ← written literally as "$SBU", not the secret value
+  ...
+};
+CONFEOF
+```
+In bash, a single-quoted heredoc delimiter (`<< 'EOF'`) disables ALL variable expansion inside the body. The file was created with the literal string `$SBU` instead of the Supabase URL.
+
+**Bug 2 — GitHub Pages was in `legacy` build mode:**
+
+Running `gh api repos/richardfarnhill/leaflet-campaign/pages` revealed `"build_type": "legacy"`. In legacy mode, GitHub Pages serves content directly from the `main` branch (via a separate auto-triggered `pages-build-deployment` workflow). Our GitHub Actions workflow was successfully uploading artifacts with a correct `config.js`, but Pages was **ignoring those artifacts** and serving the raw git tree instead — where `config.js` doesn't exist.
+
+This is why `config.js` returned 404 even after a successful workflow run.
+
+### The Fix
+
+**Fix 1 — `printf` instead of heredoc** (commit `0adb573`):
+```bash
+printf '// Auto-generated from GitHub Secrets\n// DO NOT EDIT\nconst CONFIG = {\n  SUPABASE_URL: "%s",\n  SUPABASE_KEY: "%s",\n  APP_PASSWORD: "%s"\n};\n' "$SBU" "$SBK" "$APWD" > config.js
+```
+`printf` with double-quoted arguments expands `$SBU` etc. correctly.
+
+**Fix 2 — Switch Pages build mode to `workflow`**:
+```bash
+gh api --method PUT repos/richardfarnhill/leaflet-campaign/pages -f build_type=workflow
+gh workflow run deploy.yml   # trigger fresh deployment
+```
+Now GitHub Pages only serves content from our Actions artifact, not the raw branch.
+
+### Deployment Architecture (Current)
+
+```
+git push to main
+    └─→ .github/workflows/deploy.yml triggers
+            ├─ Checkout code
+            ├─ Generate config.js from GitHub Secrets (printf, no heredoc)
+            ├─ actions/configure-pages@v4
+            ├─ actions/upload-pages-artifact@v3  (includes generated config.js)
+            └─ actions/deploy-pages@v4
+                    └─→ https://richardfarnhill.github.io/leaflet-campaign/ updated
+```
+
+GitHub Secrets in repo:
+- `SUPABASE_URL` — Supabase project URL
+- `SUPABASE_KEY` — JWT anon key
+- `APP_PASSWORD` — app access password (see config.js locally)
+
+### Verification
+
+```
+curl https://richardfarnhill.github.io/leaflet-campaign/config.js
+# Returns:
+# const CONFIG = {
+#   SUPABASE_URL: "https://tjebidvgvbpnxgnphcrg.supabase.co",
+#   SUPABASE_KEY: "eyJ...",
+#   APP_PASSWORD: "..."
+# };
+```
+
+✅ `config.js` is 404-free in production
+✅ Campaign dropdown loads correctly (user-confirmed)
+✅ All Supabase API calls working
+
+### Lessons Learned
+
+- `<< 'HEREDOC'` (single-quoted) = no variable expansion. `<< HEREDOC` (unquoted) = expansion enabled. Use `printf` when in doubt.
+- GitHub Pages has two modes: `legacy` (raw branch) and `workflow` (Actions artifact). Check `build_type` via API if workflow succeeds but site doesn't update.
+- `upload-pages-artifact` tars from disk — gitignored files that exist on disk ARE included.
+
+### Related Files
+
+- Workflow: `.github/workflows/deploy.yml`
+- Previous related issue: OI-02 (password bypass before go-live)
 
 ---
 

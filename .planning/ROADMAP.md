@@ -323,3 +323,15 @@ Bramhall A–G (7), Cheadle Hulme A–B (2), Knutsford A (1), Lymm A (1), Poynto
 **Route planning scripts** saved at `c:/Users/richa/` (not in repo — data files only).
 
 *Last updated: 2026-02-27 — v1.1 release.*
+
+---
+
+### GitHub Pages Production Fix (2026-02-28)
+
+Production app (`https://richardfarnhill.github.io/leaflet-campaign/`) had broken campaign dropdown despite successful workflow deployments. Two bugs found and fixed:
+
+**Bug 1 — Single-quoted heredoc** (`<< 'CONFEOF'`): prevented bash from expanding `$SBU`/`$SBK`/`$APWD` environment variables — literal strings written to `config.js`. Fixed: switched to `printf` (commit `0adb573`).
+
+**Bug 2 — Pages build mode was `legacy`**: GitHub Pages was serving the raw `main` branch via an auto-triggered `pages-build-deployment` workflow, completely ignoring our Actions artifact. Fixed: `gh api --method PUT ... -f build_type=workflow`.
+
+`config.js` now live in production with real credentials. Campaign dropdown working. ✅

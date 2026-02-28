@@ -78,7 +78,25 @@
 
 **Authentication:**
 - Location: `index.html` lines 7-19
-- Responsibilities: Password check via cookie (hardcoded password)
+- Responsibilities: Password check via cookie
+- Password sourced from `CONFIG.APP_PASSWORD` (loaded from `config.js`)
+
+## Deployment Pipeline
+
+**Build type:** GitHub Actions → GitHub Pages (workflow mode, NOT legacy)
+
+**Flow:**
+1. Push to `main` triggers `.github/workflows/deploy.yml`
+2. Workflow generates `config.js` from GitHub Secrets (using `printf` — NOT heredoc)
+3. Artifact uploaded via `actions/upload-pages-artifact@v3` (includes generated `config.js` from disk even though it is gitignored)
+4. Deployed via `actions/deploy-pages@v4`
+
+**Why `config.js` is not in git:**
+- Contains Supabase credentials (URL + JWT key) and app password
+- Generated fresh on every deploy from GitHub Secrets: `SUPABASE_URL`, `SUPABASE_KEY`, `APP_PASSWORD`
+- Local dev uses a committed `config.js` (gitignored) with same structure
+
+**Important:** GitHub Pages must be set to `build_type: workflow` (not `legacy`). Legacy mode serves the raw git branch and ignores Actions artifacts. Verified 2026-02-28 via `gh api`.
 
 ## Error Handling
 

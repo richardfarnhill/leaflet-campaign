@@ -4,11 +4,12 @@
 
 ## Security Issues
 
-**Hardcoded Credentials:**
-- Issue: Password `WillsX2025!` and Supabase JWT key embedded in JavaScript source
-- Files: `index.html` lines 9, 134-135
-- Impact: Anyone viewing source can access Supabase backend
-- Fix approach: Move to proper auth system or environment variables
+**Credentials in source — RESOLVED ✅ (Phase 7 + 2026-02-28):**
+- Password and Supabase JWT key moved out of `index.html` into `config.js` (Phase 7 T5)
+- `config.js` is gitignored — never committed to version control
+- In production, `config.js` is generated at build time from GitHub Secrets by `.github/workflows/deploy.yml`
+- Remaining concern: the Supabase anon key is still visible in browser DevTools network tab (inherent to client-side Supabase) — mitigated by RLS policies on all tables
+- **Password bypass still active** (OI-02): `if(false && !getCookie(COOKIE)){` in index.html — must remove `false &&` before go-live
 
 **No Role-Based Access:**
 - Issue: Single password grants full read/write access
