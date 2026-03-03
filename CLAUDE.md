@@ -28,6 +28,7 @@ STATE.md contains a full navigation table. Quick reference:
 | Route enrichment rules | `.planning/ROUTE-FLAGGING.md` |
 | Route planning engine spec | `.planning/ROUTE-PLANNING-ENGINE.md` |
 | Run route planning / enrichment | `~/.claude/commands/leaflet-plan-routes.md` (skill) |
+| Enrich street names for routes | `~/.claude/commands/leaflet-enrich-streets.md` (skill) — use `/leaflet-enrich-streets` |
 | Postcode OA lookup load progress | `.planning/POSTCODE_LOAD_STATUS.md` |
 | 14k campaign re-plan prompt | `.planning/REPLAN-14K-PROMPT-CORRECTED.md` |
 | Unresolved issues & concerns | `.planning/OPEN-ISSUES.md` |
