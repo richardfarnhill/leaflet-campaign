@@ -20,6 +20,7 @@ Prerequisites:
 import json
 import requests
 import sys
+import time
 from pathlib import Path
 
 # Supabase config
@@ -45,12 +46,13 @@ class OSNamesStreetLookup:
         self.use_api = use_api
         self.csv_data = None
         self.api_cache = {}  # Cache API results
+        self.last_api_call = 0  # Track last API call time for rate limiting
 
         if csv_path and Path(csv_path).exists():
             self._load_csv(csv_path)
-            print(f"✓ Loaded OS Open Names from CSV: {csv_path}")
+            print(f"[OK] Loaded OS Open Names from CSV: {csv_path}")
         elif not use_api:
-            print("⚠ CSV not found. Switching to API mode.")
+            print("[WARN] CSV not found. Switching to API mode.")
             self.use_api = True
 
     def _load_csv(self, csv_path):
@@ -100,7 +102,7 @@ class OSNamesStreetLookup:
             postcode = pc_data.get('postcode')
 
             if lat is None or lng is None:
-                print(f"  ⚠ {postcode}: missing lat/lng, skipping")
+                print(f"  [WARN] {postcode}: missing lat/lng, skipping")
                 continue
 
             if self.use_api:
@@ -124,7 +126,7 @@ class OSNamesStreetLookup:
         try:
             indices = self.tree.query_ball_point([lat, lng], radius_degrees)
         except Exception as e:
-            print(f"  ⚠ {postcode}: spatial query failed: {e}")
+            print(f"  [WARN] {postcode}: spatial query failed: {e}")
             return []
 
         if not indices:
@@ -142,6 +144,7 @@ class OSNamesStreetLookup:
         """
         Use Nominatim (free, CORS-safe from Node script) to find street names.
         Falls back to OS Names API if available (requires API key).
+        Enforces 1 req/sec rate limit per Nominatim policy.
         """
         # Check cache first
         cache_key = f"{lat:.4f},{lng:.4f}"
@@ -150,21 +153,27 @@ class OSNamesStreetLookup:
 
         streets = []
 
+        # Enforce rate limiting: 1 request per second
+        elapsed = time.time() - self.last_api_call
+        if elapsed < 1.1:  # 1.1 second buffer
+            time.sleep(1.1 - elapsed)
+
         # Method 1: Try Nominatim reverse geocode (free, CORS-safe)
         try:
             nominatim_url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lng}&format=json"
             headers = {'User-Agent': 'LeafletCampaignTracker/1.0'}
 
+            self.last_api_call = time.time()
             response = requests.get(nominatim_url, headers=headers, timeout=5)
             response.raise_for_status()
 
             data = response.json()
             if 'address' in data and 'road' in data['address']:
                 streets.append(data['address']['road'])
-                print(f"  ✓ {postcode}: found via Nominatim")
+                print(f"  [OK] {postcode}: found via Nominatim")
 
         except requests.RequestException as e:
-            print(f"  ⚠ {postcode}: Nominatim error: {e}")
+            print(f"  [WARN] {postcode}: Nominatim error: {e}")
 
         # Cache result (even if empty)
         self.api_cache[cache_key] = streets
@@ -200,7 +209,7 @@ class OSNamesStreetLookup:
             results.append(result)
 
             print(
-                f"  ✓ {route['route_name']}: {len(streets)} streets, "
+                f"  [OK] {route['route_name']}: {len(streets)} streets, "
                 f"{len(route['postcodes'])} postcodes"
             )
 
@@ -222,7 +231,7 @@ def load_supabase_config():
         if url_match and key_match:
             return url_match.group(1), key_match.group(1)
     except Exception as e:
-        print(f"⚠ Could not load config.js: {e}")
+        print(f"[WARN] Could not load config.js: {e}")
 
     return None, None
 
@@ -299,10 +308,10 @@ def update_routes_in_db(supabase_url, supabase_key, enriched_routes):
                 'streets': route['streets']
             }).eq('id', route['route_id']).execute()
 
-            print(f"  ✓ Updated DB: {route['route_name']}")
+            print(f"  [OK] Updated DB: {route['route_name']}")
 
         except Exception as e:
-            print(f"  ✗ DB update failed for {route['route_name']}: {e}")
+            print(f"  [ERROR] DB update failed for {route['route_name']}: {e}")
 
 
 def main():
@@ -355,7 +364,7 @@ def main():
     )
 
     if not routes:
-        print("✗ No routes found")
+        print("[ERROR] No routes found")
         sys.exit(1)
 
     print(f"Found {len(routes)} route(s)")
@@ -369,7 +378,7 @@ def main():
     for route in enriched:
         print(f"  {route['route_name']}: {len(route['streets'])} streets")
         if route['streets']:
-            print(f"    → {', '.join(route['streets'][:5])}{'...' if len(route['streets']) > 5 else ''}")
+            print(f"    > {', '.join(route['streets'][:5])}{'...' if len(route['streets']) > 5 else ''}")
 
     # Update DB
     if args.dry_run:
@@ -377,7 +386,7 @@ def main():
     else:
         print(f"\nUpdating DB...")
         update_routes_in_db(supabase_url, supabase_key, enriched)
-        print(f"✓ Complete!")
+        print(f"[OK] Complete!")
 
 
 if __name__ == '__main__':

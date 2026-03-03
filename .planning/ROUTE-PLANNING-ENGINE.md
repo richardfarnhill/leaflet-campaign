@@ -361,7 +361,27 @@ postcode sets. Proper per-route geographic boundary definition is deferred to Pl
 postcodes.io API calls — more reliable, no rate limits, no WSL networking issues. Keep the
 ONSPD filtered.csv or the filter script at `.planning/postcode-data/fetch.py` for reuse.
 
-**Data source note:** ONSPD does NOT contain street names. Street names on route cards were intended to use postcodes.io `thoroughfare` field, but this field has **not been confirmed** to exist in any postcodes.io API response. See [OPEN-ISSUES.md OI-01](./OPEN-ISSUES.md) — street name source is currently unresolved.
+**Street name enrichment — ✅ RESOLVED (OI-01, 2026-02-28):**
+ONSPD does NOT contain street names. postcodes.io does not return street names either (`thoroughfare` field does not exist). The resolved approach is **Nominatim reverse geocoding** (OpenStreetMap, free, no API key):
+
+- For each postcode in a route, call `GET https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lng}&format=json`
+- Extract `address.road` (fallback: `address.residential`)
+- Deduplicate and sort → write to `target_areas.streets`
+
+**Rate limit:** Nominatim enforces 1 req/sec per IP. **Do NOT run multiple routes in parallel** — this causes 429s that persist for several minutes.
+
+**Practical approach:**
+- Run 1–2 routes at a time using `scripts/enrich_sequential.py`
+- The script targets only zero-street routes automatically (safe to re-run)
+- Use 1.5s delay between requests; back off 15s on 429
+- ~25–50 postcodes per route = ~1–2 minutes per route
+
+**To enrich a batch of routes:**
+```
+cd "c:\Users\richa\Dev Projects\projects\leaflet-campaign\leaflet-campaign"
+python scripts/enrich_sequential.py
+```
+The script will process all remaining zero-street routes for the `14k_Feb_2026` campaign sequentially. Let it run; don't interrupt mid-route or you may get partial results. See `scripts/enrich_sequential.py` for implementation.
 
 ---
 

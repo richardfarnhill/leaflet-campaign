@@ -123,7 +123,7 @@
 - **Drop unused table** (optional): `DROP TABLE IF EXISTS campaign_members CASCADE;`
 - **14k_Feb_2026 re-plan** — prompt ready at [REPLAN-14K-PROMPT-CORRECTED.md](./REPLAN-14K-PROMPT-CORRECTED.md)
 - **Postcode OA lookup** — M, SK, WF, WA loaded; CH, CW, LS, HD, HX, BD, OL, BL, WN, TN, EX still needed — see [POSTCODE_LOAD_STATUS.md](./POSTCODE_LOAD_STATUS.md)
-- **Enrich remaining 17 routes with street names** — use `/leaflet-enrich-streets` skill (OI-01 now resolved, tested on E2E route)
+- **Enrich remaining 6 routes with street names** — 12/18 done; 6 still empty: Poynton A/B/C/D, Wilmslow A/B. Run `python scripts/enrich_sequential.py` (1–2 routes at a time; Nominatim 1 req/sec limit — no parallel runs). See ROUTE-PLANNING-ENGINE.md for full notes.
 
 ---
 
