@@ -122,17 +122,18 @@ Multiple documents incorrectly claimed `target_areas.streets` was populated from
 
 ### Implementation
 
-1. **Python enrichment script:** `scripts/enrich_streets_os_names.py` (created 2026-02-28)
-   - Fetches postcodes for a route via Supabase
-   - Calls Nominatim for each postcode (respecting 1 req/sec rate limit)
+1. **Canonical Python script:** `scripts/enrich_sequential.py`
+   - Fetches all zero-street routes for the campaign via Supabase REST API
+   - Calls Nominatim for each postcode (1.5s delay between requests)
    - Deduplicates and sorts street names
-   - Updates `target_areas.streets` in DB
-   - Tested successfully on E2E Test Route: `["Dewsbury Road"]`
+   - Updates `target_areas.streets` after each route completes (safe to interrupt)
+   - Run from project root: `python scripts/enrich_sequential.py`
+   - **Do NOT run in parallel** — Nominatim bans concurrent requests with 429s
 
-2. **New Claude skill:** `/leaflet-enrich-streets` (created 2026-02-28)
-   - High-level orchestration for street enrichment
-   - Handles multi-route batches
-   - Integrates with leaflet-plan-routes skill
+2. **Claude skill:** `/leaflet-enrich-streets`
+   - Orchestrates the enrichment process
+   - Contains full usage instructions, troubleshooting, and single-route inline script
+   - Located at `~/.claude/commands/leaflet-enrich-streets.md`
 
 3. **Updated docs:**
    - leaflet-plan-routes.md: Now points to Nominatim method, `/leaflet-enrich-streets` skill
