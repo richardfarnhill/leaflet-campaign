@@ -1,6 +1,6 @@
 # Project State
 
-**Last updated:** 2026-02-28 (GitHub Pages production fully fixed — OI-04 closed)
+**Last updated:** 2026-03-03 (Street enrichment 14/18 done; docs & skill fully overhauled)
 
 ---
 
@@ -14,8 +14,8 @@
 | Multi-agent coordination protocol | [COORDINATION.md](./COORDINATION.md) |
 | Route enrichment rules (what/when/why) | [ROUTE-FLAGGING.md](./ROUTE-FLAGGING.md) |
 | Route planning engine technical spec | [ROUTE-PLANNING-ENGINE.md](./ROUTE-PLANNING-ENGINE.md) |
-| Route planning & enrichment skill | `~/.claude/commands/leaflet-plan-routes.md` |
-| Street name research prompt (OI-01) | [STREET-NAMES-RESEARCH-PROMPT.md](./STREET-NAMES-RESEARCH-PROMPT.md) |
+| Route planning & enrichment skill | `~/.claude/commands/leaflet-plan-routes.md` — use `/leaflet-plan-routes` |
+| Street name enrichment skill | `~/.claude/commands/leaflet-enrich-streets.md` — use `/leaflet-enrich-streets` |
 | Unresolved open issues | [OPEN-ISSUES.md](./OPEN-ISSUES.md) |
 | DB schema | `supabase_schema.sql` |
 | Codebase reference | [codebase/](./codebase/) |
@@ -27,7 +27,7 @@
 **Phase:** 10 of 10 (Backlog)
 **Status:** Production-ready. All core phases 1-9 complete. Password bypass still in place — re-enable before go-live.
 
-**Last activity:** 2026-02-27 — 17 routes planned and inserted for 14k_Feb_2026 campaign (13,450 doors, avg 89% owner-occ). Streets left empty pending street-name extraction fix from other agent.
+**Last activity:** 2026-03-03 — Street enrichment: 14/18 routes done. 6 still empty: Poynton A/B/C/D, Wilmslow A/B. Use `/leaflet-enrich-streets` to continue.
 
 **Progress:** `[████████████████████░░] 95%` (9/9 core phases + polish)
 
@@ -164,7 +164,7 @@ Campaign dropdown confirmed working in production. ✅
 
 ### What's next
 
-- Run `/leaflet-enrich-streets` on remaining 17 routes in 14k_Feb_2026 campaign
+- Run `/leaflet-enrich-streets` to finish remaining routes in 14k_Feb_2026 campaign (6 left: Poynton A/B/C/D, Wilmslow A/B)
 - Re-enable password check before production launch (OI-02)
 
 ---
@@ -182,10 +182,10 @@ Campaign dropdown confirmed working in production. ✅
    - postcodes.io + Royal Mail PAF ✓ (no free option)
 
 2. **Created Python enrichment script:**
-   - `scripts/enrich_streets_os_names.py` — Nominatim-based street fetching
-   - Respects rate limits (1 req/sec per Nominatim policy)
-   - Batch-friendly (tested on single postcode route)
-   - Supabase-integrated (reads/writes via MCP tool)
+   - `scripts/enrich_sequential.py` — canonical script (superseded initial prototype)
+   - Strictly sequential, 1.5s delay between Nominatim requests
+   - Uses Supabase REST API directly (no pip package required)
+   - Idempotent: only targets zero-street routes, safe to re-run
 
 3. **Created new Claude skill:**
    - `/leaflet-enrich-streets` — High-level orchestration for route enrichment
@@ -204,8 +204,8 @@ Campaign dropdown confirmed working in production. ✅
 
 ### What's next
 
-- Run `/leaflet-enrich-streets` on remaining 17 routes in 14k_Feb_2026 campaign
-- Optional: test OS Open Names CSV method for faster bulk enrichment (no rate limits)
+- Run `/leaflet-enrich-streets` to finish remaining routes in 14k_Feb_2026 campaign (6 left: Poynton A/B/C/D, Wilmslow A/B)
+- ~~Optional: test OS Open Names CSV method~~ — resolved with Nominatim; no further action needed
 
 ---
 
