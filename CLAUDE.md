@@ -1,46 +1,92 @@
-# Project Instructions for Claude
+# Claude Instructions — Leaflet Campaign Tracker
+
+## Navigation First
+
+**Always read `SOP.md` at the start of a session.** It routes you to the right document for your task.
+
+If you see a doc that contradicts the code, do not assume the code is wrong. Check `SOP.md` → then `STATE.md` → then ask the user.
+
+---
+
+## Critical Environment
+
+| Setting | Value |
+|---------|-------|
+| **Architecture** | Single file (`index.html`). No build system. No framework. |
+| **Backend** | Supabase — project ref `tjebidvgvbpnxgnphcrg` |
+| **Shell** | Git Bash on Windows |
+| **Paths** | Unix syntax, Windows absolute paths: `c:/Users/richa/Dev Projects/projects/leaflet-campaign/leaflet-campaign/` |
+| **Temp files** | Never use `/tmp` — use `c:/Users/richa/AppData/Local/Temp/` or project folder |
+| **Python** | `python "c:/path/to/script.py"` — always quote paths |
+| **pip** | `python -m pip install ...` |
+| **Supabase MCP** | `mcp__claude_ai_Supabase__execute_sql` / `mcp__claude_ai_Supabase__apply_migration` |
+
+---
+
+## Pre-flight Checklist
+
+Run this before touching any file:
+
+- [ ] Read `SOP.md` — confirm your intent and which docs apply
+- [ ] Read `.planning/STATE.md` — what is the current project position?
+- [ ] Check `## Active Tasks` in STATE.md — is OpenCode already on this?
+- [ ] If task is claimed: **STOP** — tell the user, do not overlap
+- [ ] Claim your task in STATE.md before making any changes
+- [ ] Release your claim when work is committed
+
+---
+
+## Code Standards
+
+**Vanilla-Plus architecture — keep it simple:**
+
+- All logic lives in `index.html`. Section headers like `/* === SECTION: Route Planning === */` are mandatory — the file is 150KB+, navigation matters.
+- No new external libraries without user approval.
+- All Supabase calls must be wrapped in `try/catch` with visible UI error feedback — there is no build-time safety net.
+- Never shadow or conflict with existing global variables. Search the file before adding new ones.
+- CSS: inline `<style>` tags or existing styles only. No Tailwind, no CDN additions without approval.
+- Test your logic against `supabase_schema.sql` before running — the schema is the contract.
+
+---
+
+## Mandatory Maintenance
+
+These rules exist because doc drift has caused real bugs. They are not optional.
+
+| You change... | You update... | Timing |
+|---|---|---|
+| DB schema | `supabase_schema.sql` | Before session ends |
+| RPC or REST endpoint | `api_endpoints.md` | Before session ends |
+| Route rules / NOMIS patterns | `.planning/ROUTES.md` | Before session ends |
+| Deployment / workflow | `.github/workflows/deploy.yml` + STATE.md | Before session ends |
+| Postcode areas | `.planning/POSTCODE_LOAD_STATUS.md` | Immediately |
+| Open issue (new or resolved) | `.planning/OPEN-ISSUES.md` | Immediately |
+| Project state | `.planning/STATE.md` | End of session |
+
+---
 
 ## Multi-Agent Coordination
 
-This project is worked on concurrently by Claude and OpenCode.
+Claude and OpenCode work on this project concurrently.
 
-**At the start of every session:**
+**Claim format:**
+```
+- Claude [scope] — [description] — claimed YYYY-MM-DD HH:MM UTC
+```
 
-1. Read `.planning/COORDINATION.md` — full protocol lives here
-2. Read `.planning/STATE.md` — current position, decisions, outstanding items
-3. Check `## Active Tasks` in STATE.md — if OpenCode has claimed your intended work, stop and tell the user
-4. Find unclaimed work: plans without SUMMARY.md, `.continue-here.md`, or ad-hoc tasks
-5. Claim your work before touching any files:
-   `- Claude [scope] — [brief description] — claimed [YYYY-MM-DD HH:MM UTC]`
-6. Remove your claim from STATE.md when your work is committed
+**Never start work without claiming.** Never leave a stale claim — remove it when done.
 
----
-
-## Key Reference Documents
-
-STATE.md contains a full navigation table. Quick reference:
-
-| Task | Document |
-|------|---------|
-| Understand the project | `.planning/PROJECT.md` |
-| Check requirements | `.planning/REQUIREMENTS.md` |
-| Find a phase plan | `.planning/phases/{N}-{name}/{N}-01-PLAN.md` |
-| Route enrichment rules | `.planning/ROUTE-FLAGGING.md` |
-| Route planning engine spec | `.planning/ROUTE-PLANNING-ENGINE.md` |
-| Run route planning / enrichment | `~/.claude/commands/leaflet-plan-routes.md` (skill) |
-| Enrich street names for routes | `~/.claude/commands/leaflet-enrich-streets.md` (skill) — use `/leaflet-enrich-streets` |
-| Postcode OA lookup load progress | `.planning/POSTCODE_LOAD_STATUS.md` |
-| 14k campaign re-plan prompt | `.planning/REPLAN-14K-PROMPT-CORRECTED.md` |
-| Unresolved issues & concerns | `.planning/OPEN-ISSUES.md` |
-| DB schema | `supabase_schema.sql` |
-| Codebase analysis | `.planning/codebase/` |
+Full coordination protocol: see `SOP.md` → Pre-flight Checklist.
 
 ---
 
-## Project Context
+## Key Skills
 
-Single-file app (`index.html`). No build system. Supabase backend.
-Shell is **Git Bash on Windows** — use Unix syntax, Windows paths (`c:/Users/richa/...`), never `/tmp`.
-Python available via `python "c:/path/to/script.py"`.
-Supabase MCP tools: `mcp__claude_ai_Supabase__execute_sql` / `mcp__claude_ai_Supabase__apply_migration`.
-Project ref: `tjebidvgvbpnxgnphcrg`.
+| Skill | Command |
+|-------|---------|
+| Plan or enrich routes | `/leaflet-plan-routes` |
+| Enrich street names (Nominatim) | `/leaflet-enrich-streets` |
+
+---
+
+*Last updated: 2026-03-04*

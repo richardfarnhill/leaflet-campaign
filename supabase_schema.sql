@@ -1,7 +1,7 @@
 -- ============================================================
 -- LEAFLET CAMPAIGN - ACTUAL CURRENT SCHEMA
 -- Retrieved from Supabase via REST API
--- Date: 2026-02-25
+-- Date: 2026-03-03
 -- ============================================================
 
 -- ============================================================
@@ -193,6 +193,71 @@ CREATE INDEX IF NOT EXISTS idx_enquiries_enquiry_date ON enquiries(enquiry_date)
 CREATE INDEX IF NOT EXISTS idx_enquiries_campaign ON enquiries(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_cases_instruction_date ON cases(instruction_date);
 CREATE INDEX IF NOT EXISTS idx_cases_campaign ON cases(campaign_id);
+
+-- ============================================================
+-- ROUTE POSTCODES (postcode-level data per target area)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS route_postcodes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    target_area_id UUID NOT NULL REFERENCES target_areas(id) ON DELETE CASCADE,
+    postcode TEXT NOT NULL,
+    postcode_sector TEXT,
+    outcode TEXT,
+    oa21_code TEXT,
+    lat NUMERIC,
+    lng NUMERIC,
+    owner_occupied_pct NUMERIC,
+    household_count INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS route_postcodes_area_idx ON route_postcodes(target_area_id);
+CREATE INDEX IF NOT EXISTS route_postcodes_sector_idx ON route_postcodes(postcode_sector);
+CREATE INDEX IF NOT EXISTS route_postcodes_oa21_idx ON route_postcodes(oa21_code);
+
+-- ============================================================
+-- POSTCODE OA LOOKUP (bulk postcode → OA21 mapping)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS postcode_oa_lookup (
+    postcode TEXT NOT NULL,
+    oa21_code TEXT NOT NULL,
+    PRIMARY KEY (postcode)
+);
+
+CREATE INDEX IF NOT EXISTS idx_postcode_oa_lookup_oa21 ON postcode_oa_lookup(oa21_code);
+
+-- ============================================================
+-- RESTRICTED AREAS (exclusion zones for route planning)
+-- ============================================================
+-- campaign_id NULL = global exclusion; set = campaign-specific
+CREATE TABLE IF NOT EXISTS restricted_areas (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    postcode_prefix TEXT NOT NULL,
+    radius_miles NUMERIC,
+    label TEXT,
+    campaign_id UUID REFERENCES campaigns(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_restricted_areas_campaign ON restricted_areas(campaign_id);
+
+-- ============================================================
+-- DEMOGRAPHIC FEEDBACK (enquiry-level demographic enrichment)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS demographic_feedback (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    campaign_id UUID REFERENCES campaigns(id) ON DELETE CASCADE,
+    enquiry_id UUID REFERENCES enquiries(id) ON DELETE CASCADE,
+    oa21_code TEXT,
+    postcode TEXT,
+    owner_occupied_pct NUMERIC,
+    instructed BOOLEAN DEFAULT false,
+    instruction_value NUMERIC,
+    recorded_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_demographic_feedback_campaign ON demographic_feedback(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_demographic_feedback_enquiry ON demographic_feedback(enquiry_id);
+CREATE INDEX IF NOT EXISTS idx_demographic_feedback_oa21 ON demographic_feedback(oa21_code);
 
 -- ============================================================
 -- RPC: Delivery Stats API (Phase 8 T5)

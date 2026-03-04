@@ -1,122 +1,155 @@
 # Leaflet Campaign Tracker
 
-**Commercial Delivery Management Software**  
+**Commercial Delivery Management Software**
 *All rights reserved. Not for public distribution or open source use.*
 
 ---
 
 ## Overview
 
-A card-based leaflet delivery tracking system for commercial teams. Enables teams to reserve geographic delivery areas, track deliveries, manage enquiries, and visualize campaign analytics with heatmaps.
+A card-based leaflet delivery tracking system for commercial teams. Teams reserve geographic delivery areas, record deliveries, track enquiries and cases, and analyse campaign performance with heatmaps and analytics.
+
+**Current status:** v1 complete (Phases 1–9). Phase 10 backlog in progress.
+
+---
 
 ## Features
 
-- **Area Reservation** - Teams claim geographic chunks (800-1200 doors) with date selection
-- **Real-time Availability** - Live status of available/reserved/completed areas
-- **Campaign Management** - Multiple campaigns with aggregated analytics
-- **Analytics Dashboard** - Charts for deliveries, enquiries, revenue over time
-- **Heat Maps** - Visualize completed areas AND enquiry locations
-- **Team Leaderboards** - Gamify delivery completion
-- **Enquiry Tracking** - Record client details, postcode, instructions, values
+- **Area Reservation** — Teams claim geographic routes (500–1,000 doors) with date selection
+- **Real-time Availability** — Live status: available / reserved / completed
+- **Campaign Management** — Multiple campaigns with aggregated analytics
+- **Analytics Dashboard** — Deliveries, enquiries, revenue over time
+- **Heat Maps** — Completed areas and enquiry locations
+- **Team Leaderboards** — Gamified delivery completion
+- **Enquiry & Case Tracking** — Client details, postcode, instruction status, values
+- **Route Planning Engine** — Auto-generate routes from demographic filters (owner-occupied %)
+- **Street-Level Enrichment** — Nominatim reverse geocoding for route street lists
+- **Demographic Feedback** — Enquiry outcomes linked to Census OA tenure data
+
+---
 
 ## Technology Stack
 
-- **Frontend:** Vanilla JavaScript (index.html, styles.css, app.js)
-- **Backend:** Supabase (PostgreSQL + PostGIS)
-- **Maps:** Leaflet.js
-- **Charts:** Chart.js
-- **APIs:** OS Names API, postcodes.io, Census 2021 (free)
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Vanilla JavaScript, single `index.html` |
+| Backend | Supabase (PostgreSQL + PostGIS) |
+| Maps | Leaflet.js |
+| Charts | Chart.js |
+| Geospatial | Turf.js |
+| Postcode data | postcodes.io |
+| Census data | NOMIS NM_2072_1 (Census 2021 TS054 Tenure) |
+| Street names | Nominatim (OpenStreetMap) |
+| Deployment | GitHub Pages via GitHub Actions |
 
-## Setup
-
-### 1. Clone & Install
-
-```bash
-git clone https://github.com/richardfarnhill/leaflet-campaign.git
-cd leaflet-campaign
-```
-
-### 2. Configure Environment
-
-```bash
-cp .env.example .env
-# Edit .env with your Supabase credentials
-```
-
-### 3. Database Setup
-
-Run the schema in Supabase:
-```bash
-# Import supabase_schema.sql via Supabase SQL Editor
-# Or use Supabase CLI:
-supabase db push
-```
-
-### 4. Deploy
-
-Deploy to any static hosting (Netlify, Vercel, GitHub Pages):
-```bash
-# Update index.html to load from .env
-# (env loading implementation required)
-```
-
-## Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `SUPABASE_URL` | Your Supabase project URL |
-| `SUPABASE_ANON_KEY` | Supabase anon key |
-| `APP_PASSWORD` | Application password |
+---
 
 ## Project Structure
 
 ```
 leaflet-campaign/
-├── index.html          # Main application
-├── styles.css          # Styles (to be created)
-├── app.js              # JavaScript (to be created)
-├── supabase_schema.sql # Database schema
-├── .env.example        # Environment template
-├── .gitignore         # Git ignore rules
-└── .planning/          # GSD planning docs
-    ├── PROJECT.md
-    ├── REQUIREMENTS.md
-    ├── ROADMAP.md
-    └── research/
+├── index.html              # Entire application (single-file, ~150KB)
+├── config.js               # Credentials — generated at deploy time, never commit
+├── config.example.js       # Template for local config
+├── supabase_schema.sql     # Canonical DB schema — keep current
+├── api_endpoints.md        # RPC + REST endpoint reference — keep current
+├── SOP.md                  # Standard Operating Procedures — read first
+├── CLAUDE.md               # LLM instructions
+├── .env.example            # Environment variable template
+├── .gitignore
+├── scripts/                # Data enrichment and loading scripts
+│   ├── enrich_sequential.py        # Street name enrichment (Nominatim)
+│   ├── load_postcode_area.py       # ONSPD postcode-OA loading
+│   ├── fetch_nomis_households.py   # NOMIS household counts
+│   └── backfill_demographics.js   # Demographic feedback backfill
+├── .planning/              # Project planning and reference docs
+│   ├── STATE.md            # Live project state
+│   ├── ROUTES.md           # Route planning/enrichment rules and data sources
+│   ├── OPEN-ISSUES.md      # Bug and concern register
+│   ├── POSTCODE_LOAD_STATUS.md
+│   ├── REQUIREMENTS.md
+│   └── codebase/           # Architecture analysis
+└── .github/
+    └── workflows/deploy.yml  # GitHub Pages deployment
 ```
-
-## Roadmap
-
-See `.planning/ROADMAP.md` for development phases.
-
-### Phases
-
-1. **Database Foundation** - ✅ Complete
-2. **Territory & Reservation** - ✅ Complete
-3. **Delivery Recording** - ✅ Complete
-4. **Analytics & Heatmaps** - ✅ Complete
-5. **Campaign Management** - ✅ Complete
-6. **Enquiry & Team** - 🔄 In Progress (Route creation)
-7. **Core Enhancements** - ⏳ Pending (Route cards, completion, security)
-8. **Auto-assignment & API** - ⏳ Pending (Enquiry auto-assign, demographics)
-9. **UI/UX** - ⏳ Pending (Dark mode)
-10. **Backlog** - CSV/Sheets, Gmail, ClickUp, Planning
-
-## Security
-
-- **IMPORTANT:** Never commit `.env` or sensitive credentials
-- Use Supabase Row Level Security (RLS) policies
-- Rotate keys periodically
-- Use environment variables for all secrets
-
-## License
-
-**PROPRIETARY - All rights reserved**
-
-This software is commercial and confidential. Do not distribute, modify, or use without explicit permission from the owner.
 
 ---
 
-## Support
+## Setup (Local Development)
 
-For internal team use only. Contact the project owner for access.
+### 1. Clone
+
+```bash
+git clone https://github.com/richardfarnhill/leaflet-campaign.git
+cd leaflet-campaign/leaflet-campaign
+```
+
+### 2. Configure credentials
+
+```bash
+cp config.example.js config.js
+# Edit config.js with your Supabase URL and anon key
+```
+
+> `config.js` is in `.gitignore` — never commit it. In production it is generated by the GitHub Actions workflow.
+
+### 3. Database
+
+Open `supabase_schema.sql` in the Supabase SQL Editor and run it against your project.
+
+### 4. Run
+
+Open `index.html` directly in a browser, or serve with any static server:
+```bash
+npx serve .
+```
+
+---
+
+## Deployment
+
+Deployed to GitHub Pages via `.github/workflows/deploy.yml`.
+
+The workflow injects `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `APP_PASSWORD` from GitHub repository secrets into `config.js` at build time. No `.env` file is used in production.
+
+To deploy: push to `main`. The workflow runs automatically.
+
+---
+
+## Phase Roadmap
+
+| Phase | Goal | Status |
+|-------|------|--------|
+| 1 | Database Foundation | ✅ Complete |
+| 2 | Territory & Reservation | ✅ Complete |
+| 3 | Delivery Recording | ✅ Complete |
+| 4 | Analytics & Heatmaps | ✅ Complete |
+| 5 | Campaign Management | ✅ Complete |
+| 6 | Enquiry & Team | ✅ Complete |
+| 7 | Core Enhancements | ✅ Complete |
+| 8 | Route Planning & Auto-assignment | ✅ Complete |
+| 9 | Demographic Enrichment | ✅ Complete |
+| 10 | Backlog (integrations, polish) | ⏳ In progress |
+
+See `.planning/STATE.md` for current position and active tasks.
+
+---
+
+## Security
+
+- **Never commit** `config.js` or any credentials
+- Supabase Row Level Security (RLS) enabled on all tables
+- Password bypass (`false &&`) is present in `index.html` for testing — **must be removed before go-live** (see OI-02 in `.planning/OPEN-ISSUES.md`)
+
+---
+
+## License
+
+**PROPRIETARY — All rights reserved.**
+Commercial and confidential. Do not distribute, modify, or use without explicit permission from the owner.
+
+---
+
+## For LLMs / Agents
+
+Start with `SOP.md` — it routes you to the correct document for your task.

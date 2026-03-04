@@ -138,22 +138,21 @@ VALUES ('WF12 7DX', true, 1000)
 RETURNING postcode, oa21_code, owner_occupied_pct;
 ```
 
-**Trigger lookup chain:**
+**Trigger lookup chain (`trg_enrich_demographic_feedback`):**
 1. If `oa21_code` already provided → use it directly
-2. Else look up postcode in `route_postcodes` (our leaflet routes, has owner_occupied_pct)
-3. Else look up postcode in `postcode_oa_lookup` (full England & Wales coverage)
-4. If oa21_code found → look up `owner_occupied_pct` from `oa_demographics` table
-5. If nothing found → oa21_code stays NULL (trigger does not block insert)
+2. Else look up postcode in `route_postcodes` → get `oa21_code`
+3. If `oa21_code` found → look up `owner_occupied_pct` from `route_postcodes`
+4. If nothing found → fields stay NULL (trigger does not block insert)
 
-**Note:** Step 4 requires the `oa_demographics` table to be populated. This is not yet
-done for all England & Wales OAs — only for the 349 OAs in our current routes.
-See `scripts/nomis_backfill.py` for the NOMIS fetch pattern.
+**Note:** `owner_occupied_pct` is only populated where `route_postcodes` has been
+backfilled from NOMIS. For postcodes outside our routes, `owner_occupied_pct` will
+be NULL even after trigger runs. `postcode_oa_lookup` resolves the OA code but does
+not supply demographic rates — that data lives in `route_postcodes` only.
 
 ---
 
 ## Notes
 
 - `ON CONFLICT (postcode) DO NOTHING` — safe to re-run any outcode
-- The trigger currently has NOT NULL on oa21_code — this needs relaxing before
-  inserts from outside our route areas will work. See task notes.
+- `oa21_code` in `demographic_feedback` is nullable — inserts from outside our route areas work fine; fields will just be NULL
 - Scotland excluded: OA codes start with S — not in NOMIS TS054 England/Wales dataset

@@ -1,24 +1,23 @@
 # Project State
 
-**Last updated:** 2026-03-03 (Street enrichment 14/18 done; docs & skill fully overhauled)
+**Last updated:** 2026-03-04 (Documentation rationalisation complete — SOP.md, ROUTES.md, CLAUDE.md rewritten; archive and campaigns folders created)
 
 ---
 
 ## Key Documents
 
+> Navigation has moved to [SOP.md](../../SOP.md) at the repo root — check there first.
+
 | What you need | Where to find it |
 |---------------|-----------------|
-| Project vision & goals | [PROJECT.md](./PROJECT.md) |
+| Full document index & routing | [SOP.md](../../SOP.md) |
+| Route rules, planning, enrichment | [ROUTES.md](./ROUTES.md) |
 | Feature requirements | [REQUIREMENTS.md](./REQUIREMENTS.md) |
-| Phase plan & progress | [ROADMAP.md](./ROADMAP.md) |
-| Multi-agent coordination protocol | [COORDINATION.md](./COORDINATION.md) |
-| Route enrichment rules (what/when/why) | [ROUTE-FLAGGING.md](./ROUTE-FLAGGING.md) |
-| Route planning engine technical spec | [ROUTE-PLANNING-ENGINE.md](./ROUTE-PLANNING-ENGINE.md) |
-| Route planning & enrichment skill | `~/.claude/commands/leaflet-plan-routes.md` — use `/leaflet-plan-routes` |
-| Street name enrichment skill | `~/.claude/commands/leaflet-enrich-streets.md` — use `/leaflet-enrich-streets` |
 | Unresolved open issues | [OPEN-ISSUES.md](./OPEN-ISSUES.md) |
-| DB schema | `supabase_schema.sql` |
+| DB schema (full, canonical) | `supabase_schema.sql` |
 | Codebase reference | [codebase/](./codebase/) |
+| Route planning & enrichment skill | `/leaflet-plan-routes` |
+| Street name enrichment skill | `/leaflet-enrich-streets` |
 
 ---
 
@@ -53,7 +52,7 @@
      REQUIRED: Claim here before making ANY code changes. Remove when done.
      Format: - [AGENT] [scope] — [brief description] — claimed [YYYY-MM-DD HH:MM UTC] -->
 
-<!-- no active claims -->
+<!-- ✅ Claude [docs] — Documentation rationalisation: SOP.md created, CLAUDE.md rewritten, ROUTES.md merged, api_endpoints.md synced, README.md updated, archive/ and campaigns/ folders created — completed 2026-03-04 -->
 
 ---
 
